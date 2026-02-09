@@ -25,7 +25,8 @@
     "db:seed": "pnpm --filter @ingexpert/database db:seed",
     "db:studio": "pnpm --filter @ingexpert/database db:studio",
     "db:reset": "pnpm --filter @ingexpert/database db:reset",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "version:sync": "tsx scripts/sync-version.ts"
   },
   "devDependencies": {
     "@ingexpert/config": "workspace:*",
