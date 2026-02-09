@@ -1,0 +1,33 @@
+{
+  "name": "@rikal/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint.base.mjs",
+    "./eslint/nest": "./eslint.nest.mjs",
+    "./eslint/next": "./eslint.next.mjs",
+    "./prettier": "./prettier.config.mjs"
+  },
+  "scripts": {
+    "lint": "eslint . --fix"
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:linting",
+    "eslint": "catalog:tooling",
+    "eslint-config-prettier": "catalog:linting",
+    "eslint-plugin-prettier": "catalog:linting",
+    "globals": "catalog:linting",
+    "prettier": "catalog:tooling",
+    "typescript": "catalog:tooling",
+    "typescript-eslint": "catalog:linting"
+  },
+  "peerDependencies": {
+    "eslint-config-next": "*"
+  },
+  "peerDependenciesMeta": {
+    "eslint-config-next": {
+      "optional": true
+    }
+  }
+}

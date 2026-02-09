@@ -1,0 +1,119 @@
+model Deck {
+  id          String  @id @default(uuid())
+  
+  // ============================================================
+  // CORE RELATIONS
+  // ============================================================
+  userId      String  @map("user_id")
+  parentId    String? @map("parent_id") // For nested decks
+  collectionId String?
+  
+  // ============================================================
+  // DISPLAY & SETTINGS
+  // ============================================================
+  name        String
+  description String?
+  icon        String? @default("📚")
+  color       String? @default("#3B82F6")
+  position    Int     @default(0) // Sort order
+
+  // ============================================================
+  // LEARNING PARAMETERS
+  // ============================================================
+  desiredRetention Float @default(0.9) @map("desired_retention") // 90% = FSRS target
+  leechThreshold   Int   @default(8) @map("leech_threshold") // Mark card as leech after 8 lapses
+  deckOptions      Json  @default("{}") @map("deck_options") // Serialized DeckConfig
+  newCardsLimit    Int @default(20) @map("new_cards_limit")
+  reviewCardsLimit Int @default(200) @map("review_cards_limit")
+
+  // ============================================================
+  // STATS (Denormalized)
+  // ============================================================
+  cardCount         Int @default(0) @map("card_count")
+  reviewCount       Int @default(0) @map("review_count")
+  newCount          Int @default(0) @map("new_count") // 10x faster deck list
+  learningCount     Int @default(0) @map("learning_count")
+  relearningCount   Int @default(0) @map("relearning_count")
+  dueCount          Int @default(0) @map("due_count") // Cards due for review
+  totalLearningTime Int @default(0) @map("total_learning_time") // seconds
+
+  // ============================================================
+  // SYNC METADATA
+  // ============================================================
+  version      Int      @default(0)
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+  lastSyncedBy String?  @map("last_synced_by")
+  syncStatus   String   @default("synced") @map("sync_status") // 'synced' | 'pending' | 'conflict'
+  lastConflictAt DateTime? @map("last_conflict_at")
+  conflictCount  Int       @default(0) @map("conflict_count")
+
+  // ============================================================
+  // TIMESTAMPS
+  // ============================================================
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastReviewedAt DateTime? @map("last_reviewed_at")
+
+  // ============================================================
+  // RELATIONS
+  // ============================================================
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Deck?          @relation("DeckHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children      Deck[]         @relation("DeckHierarchy")
+  cards         Card[]
+  sharedDecks   SharedDeck[]
+  studySessions StudySession[]
+  deckHistories DeckHistory[]
+  dailyStats    DeckDailyStats[]
+  collection    Collection?    @relation(fields: [collectionId], references: [id])
+
+  @@unique([userId, name]) // User can't have duplicate deck names
+  @@index([userId])
+  @@index([parentId])
+  @@index([userId, createdAt])
+  @@map("decks")
+}
+
+model DeckHistory {
+  id     String @id @default(uuid())
+  deckId String @map("deck_id")
+  userId String @map("user_id") // Denormalize for queries
+
+  // What changed
+  cardsAdded   Int @default(0) @map("cards_added")
+  cardsRemoved Int @default(0) @map("cards_removed")
+  reviewsCount Int @default(0) @map("reviews_count")
+
+  // Timestamps
+  date      DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId, date])
+  @@index([userId, date])
+  @@map("deck_histories")
+}
+
+model SharedDeck {
+  id     String @id @default(uuid())
+  deckId String @map("deck_id")
+  userId String @map("user_id") // Owner
+
+  // Sharing settings
+  shareCode     String  @unique @default(cuid()) @map("share_code") // Public link
+  isPublic      Boolean @default(false) @map("is_public")
+  allowDownload Boolean @default(true) @map("allow_download")
+  viewCount     Int     @default(0) @map("view_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deckId])
+  @@index([shareCode])
+  @@index([userId])
+  @@map("shared_decks")
+}

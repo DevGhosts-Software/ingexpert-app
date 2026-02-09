@@ -1,0 +1,77 @@
+model AICardGeneration {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  deckId String @map("deck_id")
+
+  // ============================================================
+  // INPUT SOURCE
+  // ============================================================
+  sourceText String
+  sourceType String // "pdf", "text", "url", "audio_transcript"
+  prompt     String?
+  sourceUrl  String? @map("source_url") // For retrieval
+
+  // ============================================================
+  // OUTPUT & TRACKING
+  // ============================================================
+  cardsGenerated Int       @default(0) @map("cards_generated")
+  cardIds        String[]  @default([]) @map("card_ids")
+  status         String @default("pending")
+  errorMessage   String?
+  
+  // ============================================================
+  // QUALITY & FEEDBACK
+  // ============================================================
+  averageQualityScore Float? @map("average_quality_score") // 0-1
+  userApprovedCount   Int    @default(0) @map("user_approved_count")
+  userRejectedCount   Int    @default(0) @map("user_rejected_count")
+  
+  // ============================================================
+  // LLM METADATA & COST
+  // ============================================================
+  model       String @default("claude-3.5-sonnet")
+  temperature Float  @default(0.7)
+  inputTokens  Int   @default(0) @map("input_tokens")
+  outputTokens Int   @default(0) @map("output_tokens")
+  costUSD      Float? @map("cost_usd") // For billing
+  
+  // ============================================================
+  // REGENERATION CONTEXT
+  // ============================================================
+  parentGenerationId String? @map("parent_generation_id") // For regenerations
+  regenerationReason String? @map("regeneration_reason")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  feedback AIGenerationFeedback[]
+  
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([deckId])
+  @@map("ai_card_generations")
+}
+
+model AIGenerationFeedback {
+  id           String @id @default(uuid())
+  generationId String @map("generation_id")
+  cardId       String @map("card_id")
+  
+  // ============================================================
+  // FEEDBACK CONTENT
+  // ============================================================
+  rating       Int // 1-5 stars
+  comment      String?
+  wasApproved  Boolean @map("was_approved")
+  issues       String[] @default([]) // ["too_easy", "unclear", "wrong_answer"]
+  
+  synced       Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  generation AICardGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  
+  @@index([generationId])
+  @@index([cardId])
+  @@map("ai_generation_feedback")
+}

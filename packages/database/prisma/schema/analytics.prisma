@@ -1,0 +1,115 @@
+model UserDailyStats {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  date   DateTime @db.Date // Date bucket (e.g., 2026-01-14)
+  
+  // ============================================================
+  // ACTIVITY METRICS
+  // ============================================================
+  cardsReviewed  Int @default(0) @map("cards_reviewed")
+  cardsCorrect   Int @default(0) @map("cards_correct")
+  accuracy       Float? // cardsCorrect / cardsReviewed
+  totalTimeMs    Int @default(0) @map("total_time_ms")
+  newCardsAdded  Int @default(0) @map("new_cards_added")
+  
+  // ============================================================
+  // LEARNING HEALTH
+  // ============================================================
+  averageConfidence Float? @map("average_confidence")
+  guessRate     Float? @map("guess_rate") // How many were guesses
+  correctByRating Json? @map("correct_by_rating") // {1: 5, 2: 10, 3: 30, 4: 40}
+  
+  // ============================================================
+  // FSRS INSIGHTS
+  // ============================================================
+  avgStabilityBefore Float? @map("avg_stability_before")
+  avgStabilityAfter  Float? @map("avg_stability_after")
+  avgDifficultyBefore Float? @map("avg_difficulty_before")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("user_daily_stats")
+}
+
+model DeckDailyStats {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  deckId String @map("deck_id")
+  date   DateTime @db.Date
+  
+  // ============================================================
+  // DAILY ACTIVITY
+  // ============================================================
+  cardsReviewed Int @default(0) @map("cards_reviewed")
+  cardsCorrect  Int @default(0) @map("cards_correct")
+  newCardsAdded Int @default(0) @map("new_cards_added")
+  totalTimeMs   Int @default(0) @map("total_time_ms")
+  
+  // ============================================================
+  // STATE DISTRIBUTION (Snapshot at end of day)
+  // ============================================================
+  newCount      Int @default(0) @map("new_count")      // Cards in NEW state
+  learningCount Int @default(0) @map("learning_count") // Cards in LEARNING
+  reviewCount   Int @default(0) @map("review_count")   // Cards in REVIEW (mature)
+  relearningCount Int @default(0) @map("relearning_count")
+  
+  // ============================================================
+  // PROGRESS METRICS
+  // ============================================================
+  maturationRate Float? @map("maturation_rate") // % of cards advancing to REVIEW
+  dueCount Int @default(0) @map("due_count") // Cards due at end of day
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  
+  @@unique([deckId, date])
+  @@index([deckId, date])
+  @@index([userId, deckId, date])
+  @@map("deck_daily_stats")
+}
+
+model CardPerformanceSummary {
+  id     String @id @default(uuid())
+  cardId String @unique @map("card_id")
+  userId String @map("user_id") // Denormalize for queries
+  
+  // ============================================================
+  // AGGREGATE PERFORMANCE
+  // ============================================================
+  totalReviews    Int @default(0) @map("total_reviews")
+  correctReviews  Int @default(0) @map("correct_reviews")
+  successRate     Float? // correctReviews / totalReviews
+  avgReviewTimeMs Int? @map("avg_review_time_ms")
+  
+  // ============================================================
+  // RECENT PERFORMANCE (Last 7 days)
+  // ============================================================
+  recentReviews   Int @default(0) @map("recent_reviews")
+  recentCorrect   Int @default(0) @map("recent_correct")
+  recentAccuracy  Float? @map("recent_accuracy")
+  
+  // ============================================================
+  // DIFFICULTY & HEALTH
+  // ============================================================
+  difficulty      String @default("medium") // "easy", "medium", "hard", "problem"
+  avgConfidence   Float? @map("avg_confidence")
+  varianceInRating Float? // Measure of inconsistent performance
+  lastReviewedAt  DateTime? @map("last_reviewed_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, difficulty])
+  @@index([userId, successRate])
+  @@map("card_performance_summaries")
+}

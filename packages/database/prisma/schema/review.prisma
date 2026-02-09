@@ -1,0 +1,88 @@
+model Review {
+  id     String @id @default(uuid())
+
+  // ============================================================
+  // CORE RELATIONS
+  // ============================================================
+  cardId String @map("card_id")
+  userId String @map("user_id")
+  deckId String @map("deck_id") // Denormalize for deck-level queries
+
+  // ============================================================
+  // REVIEW OUTCOME
+  // ============================================================
+  rating Int // 1=Again, 2=Hard, 3=Good, 4=Easy
+  state  CardState @map("card_state") // State before review
+
+  // ============================================================
+  // TIMING & CONTEXT
+  // ============================================================
+  reviewTimeMs   Int      @map("review_time_ms") // How long to answer
+  reviewedAt     DateTime @default(now()) @map("reviewed_at")
+  userConfidence Int? // 1-5 confidence scale
+  wasGuess       Boolean @default(false) // Did user just guess?
+  contextNotes   String? // User's own notes during review
+  deviceType     String? // "desktop", "mobile", "tablet"
+  connectionType String? // "wifi", "4g", "3g" (affects timing)
+
+  // ============================================================
+  // FSRS ALGORITHM METRICS
+  // ============================================================
+  stabilityAfter  Float? @map("stability_after")
+  difficultyAfter Float? @map("difficulty_after")
+  intervalDays    Int?   @map("interval_days") // Days until next review
+
+  // ============================================================
+  // SYNC METADATA
+  // ============================================================
+  version            Int       @default(0) // Conflict detection
+  synced             Boolean   @default(false)
+  syncedAt           DateTime? @map("synced_at")
+  clientId           String?   @map("client_id")
+  clientVersion      Int?      @map("client_version")
+  stateBeforeString  String?   @map("state_before_string") @db.Text
+  stateAfterString   String?   @map("state_after_string") @db.Text
+  idempotencyKey     String?   @unique @map("idempotency_key") // Deduplication
+  syncBatchId        String?   @map("sync_batch_id")
+  conflictResolution String?   @map("conflict_resolution")
+
+  // ============================================================
+  // RELATIONS
+  // ============================================================
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([cardId])
+  @@index([userId, reviewedAt]) // User's review history
+  @@index([deckId, reviewedAt]) // Deck's review history
+  @@index([idempotencyKey])
+  @@index([syncBatchId])
+  @@index([reviewedAt]) // For analytics
+  @@index([userId, reviewedAt, rating]) // User performance over time
+  @@map("reviews")
+}
+
+model StudySession {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  deckId String @map("deck_id")
+
+  // Session stats
+  cardsReviewed Int @default(0) @map("cards_reviewed")
+  correctCount  Int @default(0) @map("correct_count")
+  totalTimeMs   Int @default(0) @map("total_time_ms")
+
+  // Device info
+  platform String? // "web", "mobile", "desktop"
+
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+  @@index([deckId, startedAt])
+  @@map("study_sessions")
+}

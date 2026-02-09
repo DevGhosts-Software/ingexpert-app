@@ -1,0 +1,49 @@
+{
+  "name": "@rikal/database",
+  "version": "0.1.0",
+  "description": "Prisma schema and generated Prisma Client for Rikal",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "Alejandro Castro",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alee053/rikal",
+    "directory": "packages/database"
+  },
+  "scripts": {
+    "build": "tsc",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --force",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "lint": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "prisma",
+    "database",
+    "schema",
+    "orm"
+  ],
+  "devDependencies": {
+    "@types/node": "catalog:tooling",
+    "@types/pg": "^8.16.0",
+    "dotenv": "^17.2.3",
+    "eslint": "catalog:tooling",
+    "prettier": "catalog:tooling",
+    "prisma": "catalog:prisma",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:tooling",
+    "typescript-eslint": "catalog:linting"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "catalog:prisma-client",
+    "@prisma/client": "catalog:prisma-client",
+    "pg": "^8.16.3"
+  }
+}

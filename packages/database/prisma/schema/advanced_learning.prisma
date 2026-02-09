@@ -1,0 +1,158 @@
+model CardLearningPath {
+  id     String @id @default(uuid())
+  
+  // ============================================================
+  // CORE RELATIONS
+  // ============================================================
+  userId String @map("user_id")
+  deckId String @map("deck_id")
+  
+  // ============================================================
+  // PATH & PROGRESSION
+  // ============================================================
+  cardSequence  String[] @map("card_sequence") // Order user reviewed cards
+  concept       String? // AI-extracted topic (e.g., "Spanish verb conjugation")
+  conceptId     String? @map("concept_id") // Link to semantic concept
+  
+  // ============================================================
+  // MASTERY METRICS
+  // ============================================================
+  startedAt     DateTime @default(now()) @map("started_at")
+  mastered      Boolean @default(false)
+  masteredAt    DateTime? @map("mastered_at")
+  initialDifficulty Float? @map("initial_difficulty")
+  finalDifficulty   Float? @map("final_difficulty")
+  
+  // ============================================================
+  // AI RECOMMENDATIONS
+  // ============================================================
+  recommendedNextConcept String? @map("recommended_next_concept")
+  
+  // ============================================================
+  // TIMESTAMPS
+  // ============================================================
+  version      Int      @default(0)
+  syncStatus   String   @default("synced") @map("sync_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // ============================================================
+  // RELATIONS
+  // ============================================================
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedConcept Concept? @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+  
+  @@index([userId, concept])
+  @@index([userId, mastered])
+  @@map("card_learning_paths")
+}
+
+model LearningAnomaly {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  
+  // ============================================================
+  // ANOMALY DETAILS
+  // ============================================================
+  type   String // "performance_drop", "unusual_timing", "inconsistency", "success_streak"
+  severity String @default("medium") // "low", "medium", "high"
+  description  String
+  
+  // ============================================================
+  // CONTEXT
+  // ============================================================
+  cardId       String? @map("card_id")
+  deckId       String? @map("deck_id")
+  metric       Float? // The anomalous value
+  expectedRange String? @map("expected_range") // e.g., "0.5-0.9"
+  
+  // ============================================================
+  // AI ANALYSIS
+  // ============================================================
+  aiSuggestion String? @map("ai_suggestion") // "Take a break", "Review prerequisites", etc.
+  
+  // ============================================================
+  // RESOLUTION
+  // ============================================================
+  acknowledged Boolean @default(false)
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, type])
+  @@index([userId, createdAt])
+  @@map("learning_anomalies")
+}
+
+model StudyRecommendation {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  
+  // ============================================================
+  // RECOMMENDATION CONTENT
+  // ============================================================
+  type   String // "review_leech", "interleave_concept", "increase_retention_goal", "change_study_time"
+  description String
+  
+  // ============================================================
+  // ACTION & OUTCOME
+  // ============================================================
+  actionTaken Boolean @default(false) @map("action_taken")
+  actionTakenAt DateTime? @map("action_taken_at")
+  success     Boolean? // Did it improve learning?
+  metric      String? // Which metric was tracked (accuracy, consistency, etc)
+  beforeValue Float? @map("before_value")
+  afterValue  Float? @map("after_value")
+  
+  // ============================================================
+  // AI METADATA
+  // ============================================================
+  generatedBy String @default("claude-3.5-sonnet") // Which model created this
+  confidence  Float? // Confidence score (0-1)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  evaluatedAt DateTime? @map("evaluated_at") // When we measured the outcome
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, actionTaken])
+  @@index([userId, success])
+  @@map("study_recommendations")
+}
+
+model Concept {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  
+  // ============================================================
+  // CONCEPT DEFINITION
+  // ============================================================
+  name     String // "Spanish verb conjugation", "Calculus derivatives"
+  description String?
+  parentConceptId String? @map("parent_concept_id") // Hierarchy
+  deckId   String? @map("deck_id") // Which deck introduced this
+  
+  // ============================================================
+  // MASTERY TRACKING
+  // ============================================================
+  cardIds  String[] @map("card_ids") // Cards testing this concept
+  masteryScore Float @default(0) @map("mastery_score") // 0-1
+  estimatedDifficulty Float? @map("estimated_difficulty")
+  
+  version      Int      @default(0)
+  syncStatus   String   @default("synced") @map("sync_status")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent Concept? @relation("ConceptHierarchy", fields: [parentConceptId], references: [id])
+  children Concept[] @relation("ConceptHierarchy")
+  learningPaths CardLearningPath[]
+  
+  @@unique([userId, name])
+  @@index([userId, masteryScore])
+  @@map("concepts")
+}

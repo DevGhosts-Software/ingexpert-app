@@ -1,0 +1,32 @@
+model UserLearningProfile {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  
+  // ============================================================
+  // LEARNING STYLE & PREFERENCES
+  // ============================================================
+  learningStyle String[] @default([]) // ["visual", "auditory", "kinesthetic"]
+  preferredDailyGoal Int @default(30) // minutes/day
+  preferredCardsPerDay Int @default(50)
+  studyTimeOfDay String @default("morning") // "morning", "afternoon", "evening"
+  
+  // ============================================================
+  // PROFICIENCY SETTINGS
+  // ============================================================
+  nativeLanguage String @default("en")
+  proficiencyLevel String @default("intermediate") // "beginner", "intermediate", "advanced"
+  contentDifficultyTarget String @default("challenging") // "easy", "moderate", "challenging"
+  
+  // ============================================================
+  // AI TUNING
+  // ============================================================
+  useAIHints Boolean @default(true) @map("use_ai_hints")
+  aiHintAggressiveness Float @default(0.5) // 0-1
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_learning_profiles")
+}

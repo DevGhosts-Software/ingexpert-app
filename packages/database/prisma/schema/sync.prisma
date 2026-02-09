@@ -1,0 +1,298 @@
+// File: prisma/schema/sync.prisma
+// Purpose: Complete sync infrastructure models for concurrent multi-device sync
+// Status: Must be added BEFORE Phase 1 implementation
+// Integration: Works with existing card.prisma, deck.prisma, review.prisma
+
+// ============================================================================
+// 1. SYNC_LOG: Audit trail + deduplication
+// ============================================================================
+// Purpose: Track all sync operations, enable idempotent replays
+// Use Case: Client retries sync after network failure → idempotencyKey prevents duplicates
+
+model SyncLog {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  clientId        String?   @map("client_id")
+  
+  // Operation classification
+  entityType      String    @map("entity_type")      // "Card", "Deck", "Review"
+  entityIds       String[]  @map("entity_ids") @default([])
+  operation       String    // "create", "update", "delete", "batch"
+  operationCount  Int       @map("operation_count") @default(1)
+  
+  // CRITICAL: Deduplication key (must be unique)
+  // Hash of: (userId, clientId, operation, entityIds, timestamp)
+  // Example: "card_abc_review_2026-01-29T20:45:30Z"
+  idempotencyKey  String    @unique @map("idempotency_key")
+  
+  // Results
+  status          String    @default("success")  // success | conflict | failure | partial
+  successCount    Int       @default(0) @map("success_count")
+  conflictCount   Int       @default(0) @map("conflict_count")
+  failureCount    Int       @default(0) @map("failure_count")
+  
+  // Failure tracking
+  errorMessage    String?   @map("error_message")
+  conflictDetails Json?     @map("conflict_details")  // [{cardId, serverVersion, clientVersion}, ...]
+  
+  // Timing metrics
+  requestedAt     DateTime  @default(now()) @map("requested_at")
+  processedAt     DateTime? @map("processed_at")
+  durationMs      Int?      // How long sync took
+  
+  // Server context (for debugging)
+  serverVersion   String?   @map("server_version")  // Git commit/release
+  databaseTx      String?   @map("database_tx")     // Postgres transaction ID
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, requestedAt(sort: Desc)])
+  @@index([idempotencyKey])
+  @@index([entityType, status])
+  @@index([userId, status])
+  @@map("sync_logs")
+}
+
+
+// ============================================================================
+// 2. SYNC_CONFLICT: Version conflict tracking and resolution
+// ============================================================================
+// Purpose: Store conflicts when concurrent updates race
+// Resolution Strategies:
+//   - "server_wins": Use server value (it's newer)
+//   - "client_wins": Use client value (user chose their device)
+//   - "auto_merge": System-generated merge (FSRS can merge some fields)
+//   - "manual_merge": User manually resolved in UI
+
+model SyncConflict {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  
+  // What conflicted
+  entityType        String    @map("entity_type")    // "Card", "Deck"
+  entityId          String    @map("entity_id")
+  
+  // Client state (what device tried to write)
+  clientVersion     Int       @map("client_version")
+  clientValue       Json      @map("client_value")   // Full entity payload
+  clientUpdateTime  DateTime  @map("client_update_time")
+  clientId          String?   @map("client_id")      // Which device
+  
+  // Server state (what already existed)
+  serverVersion     Int       @map("server_version")
+  serverValue       Json      @map("server_value")
+  serverUpdateTime  DateTime  @map("server_update_time")
+  
+  // Resolution
+  resolvedAt        DateTime? @map("resolved_at")
+  resolutionStrategy String?  @map("resolution_strategy")
+  resolvedValue     Json?     @map("resolved_value")  // Result after merge
+  
+  // Context
+  description       String?   // Human-readable explanation
+  
+  // Auto-resolution tracking (for analytics)
+  autoResolveAttempted Boolean @default(false) @map("auto_resolve_attempted")
+  autoResolveFailed   Boolean @default(false)  @map("auto_resolve_failed")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, resolvedAt])
+  @@index([entityType, entityId])
+  @@index([resolvedAt])  // Find unresolved conflicts WHERE resolvedAt IS NULL
+  @@unique([entityType, entityId, clientVersion, serverVersion])
+  @@map("sync_conflicts")
+}
+
+
+// ============================================================================
+// 3. CLIENT_STATE: Track what each device knows
+// ============================================================================
+// Purpose: Smart conflict detection and delta sync
+// Use Case: Client A last saw Card v3, Client B updated to v5
+//           → Know Client A is stale, only send delta updates
+// Benefit: Selective sync reduces bandwidth for 1000+ card decks
+
+model ClientState {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  clientId        String    @map("client_id")        // Unique per device (UUID)
+  
+  // Entity tracking
+  entityType      String    @map("entity_type")      // "Card", "Deck"
+  entityId        String    @map("entity_id")
+  
+  // Last known state on this client
+  version         Int
+  lastReceivedAt  DateTime  @map("last_received_at")  // When client got this version
+  lastReceivedValue Json    @map("last_received_value")
+  
+  // Device metadata (for support/debugging)
+  platform        String?   // "web", "mobile", "ios", "android"
+  appVersion      String?   @map("app_version")
+  lastSyncIPAddress String? @map("last_sync_ip")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([clientId, entityType, entityId])
+  @@index([userId, clientId])
+  @@index([entityId])  // "What clients have downloaded this card?"
+  @@map("client_states")
+}
+
+
+// ============================================================================
+// 4. SYNC_BATCH: Atomic transaction grouping
+// ============================================================================
+// Purpose: Group multiple operations into single atomic transaction
+// Benefit: All-or-nothing consistency (50 card updates succeed or all fail)
+// Example: Client offline, makes 50 reviews, syncs as single batch
+
+model SyncBatch {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  clientId        String?   @map("client_id")
+  
+  // Batch scope
+  operationCount  Int       @map("operation_count")
+  status          String    // "pending" | "processing" | "committed" | "rolled_back"
+  
+  // Atomic transaction
+  databaseTx      String?   @map("database_tx")      // Postgres XID for tracing
+  committedAt     DateTime? @map("committed_at")
+  
+  // Operation results
+  successCount    Int       @default(0) @map("success_count")
+  failureCount    Int       @default(0) @map("failure_count")
+  
+  // Timing
+  receivedAt      DateTime  @default(now()) @map("received_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  durationMs      Int?      @map("duration_ms")
+  
+  // Relations
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operations SyncOperation[]
+  
+  @@index([userId, status])
+  @@index([status, completedAt])
+  @@map("sync_batches")
+}
+
+model SyncOperation {
+  id              String    @id @default(uuid())
+  batchId         String    @map("batch_id")
+  
+  // Operation identity
+  entityType      String    @map("entity_type")      // "Card", "Deck", "Review"
+  entityId        String    @map("entity_id")
+  operation       String    // "create" | "update" | "delete"
+  
+  // Operation data
+  payload         Json      // Full entity data
+  previousVersion Int       @map("previous_version")
+  
+  // Operation result
+  status          String    @default("pending")     // pending | success | conflict | failure
+  newVersion      Int?      @map("new_version")
+  error           String?
+  
+  // Relations
+  batch SyncBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  
+  @@index([batchId])
+  @@map("sync_operations")
+}
+
+
+// ============================================================================
+// 5. SYNC_STATUS_SNAPSHOT: Real-time queue monitoring
+// ============================================================================
+// Purpose: Track sync queue health (updated via Redis pub/sub, snapshotted hourly)
+// Use Case: Client-side status indicator "4 items syncing" or "Synced!"
+// Performance: Read in < 10ms without hitting main database
+
+model SyncStatusSnapshot {
+  id              String    @id @default(uuid())
+  userId          String    @unique @map("user_id")
+  
+  // Current queue
+  pendingCount    Int       @default(0) @map("pending_count")
+  syncingNow      Boolean   @default(false) @map("syncing_now")
+  
+  // Last sync
+  lastSyncAt      DateTime? @map("last_sync_at")
+  lastSyncDurationMs Int?   @map("last_sync_duration_ms")
+  lastSyncStatus  String?   @map("last_sync_status")  // success | partial | error
+  
+  // 24-hour rolling stats
+  totalSyncs      Int       @default(0) @map("total_syncs")
+  successCount    Int       @default(0) @map("success_count")
+  failureCount    Int       @default(0) @map("failure_count")
+  successRate     Float?    @map("success_rate")      // successCount / totalSyncs
+  
+  // Conflict tracking
+  activeConflictCount Int   @default(0) @map("active_conflict_count")
+  unresolvedConflicts Int   @default(0) @map("unresolved_conflicts")
+  
+  // Health assessment
+  healthStatus    String    @default("good") @map("health_status")  // good | warning | error
+  lastCheckedAt   DateTime  @default(now()) @map("last_checked_at")
+  
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sync_status_snapshots")
+}
+
+
+// ============================================================================
+// 6. CARD_SYNC_STATS: Card-level sync analytics
+// ============================================================================
+// Purpose: Track sync success rate per card (identify problem cards)
+// Use Case: If Card X fails sync 10 times in a row, alert user
+
+model CardSyncStats {
+  id              String    @id @default(uuid())
+  cardId          String    @unique @map("card_id")
+  userId          String    @map("user_id")
+  
+  // Sync history
+  totalSyncs      Int       @default(0) @map("total_syncs")
+  successfulSyncs Int       @default(0) @map("successful_syncs")
+  failedSyncs     Int       @default(0) @map("failed_syncs")
+  conflictCount   Int       @default(0) @map("conflict_count")
+  
+  // Last sync details
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  lastSyncDurationMs Int?   @map("last_sync_duration_ms")
+  lastSyncDevice  String?   @map("last_sync_device")
+  
+  // Recent conflict history (last 30 days)
+  recentConflicts Int       @default(0) @map("recent_conflicts")
+  lastConflictAt  DateTime? @map("last_conflict_at")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([userId, conflictCount(sort: Desc)])
+  @@map("card_sync_stats")
+}
