@@ -1,17 +1,10 @@
 {
-  "name": "@rikal/database",
+  "name": "@ingexpert/database",
   "version": "0.1.0",
-  "description": "Prisma schema and generated Prisma Client for Rikal",
+  "description": "Prisma schema and generated Prisma Client for Ingexpert",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "private": true,
-  "license": "UNLICENSED",
-  "author": "Alejandro Castro",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Alee053/rikal",
-    "directory": "packages/database"
-  },
   "scripts": {
     "build": "tsc",
     "db:generate": "prisma generate",
@@ -24,12 +17,6 @@
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "keywords": [
-    "prisma",
-    "database",
-    "schema",
-    "orm"
-  ],
   "devDependencies": {
     "@types/node": "catalog:tooling",
     "@types/pg": "^8.16.0",

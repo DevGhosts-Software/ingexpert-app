@@ -1,5 +1,2 @@
-export * from './auth.schema';
-export * from './deck.schema';
-export * from './card.schema';
-export * from './user.schema';
-export * from './sync.schema';
+export const hello = "world";
+// TODO: Add Zod schemas here sharing types between API and Frontend

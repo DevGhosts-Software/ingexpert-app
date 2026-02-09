@@ -1,20 +1,51 @@
 {
   "name": "ingexpert-app",
+  "version": "0.1.0",
+  "description": "Ingexpert: Stock Management System",
   "private": true,
+  "license": "UNLICENSED",
+  "author": {
+    "name": "Alejandro Castro",
+    "email": "alejandro.castro.0520@gmail.com",
+    "url": "https://github.com/alee053"
+  },
   "scripts": {
+    "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "start": "turbo run start",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md,json,yaml}\"",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:cov": "turbo run test:cov",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "pnpm --filter @ingexpert/database db:migrate",
+    "db:seed": "pnpm --filter @ingexpert/database db:seed",
+    "db:studio": "pnpm --filter @ingexpert/database db:studio",
+    "db:reset": "pnpm --filter @ingexpert/database db:reset",
+    "type-check": "turbo run type-check"
   },
   "devDependencies": {
-    "prettier": "^3.7.4",
-    "turbo": "^2.8.3",
-    "typescript": "5.9.2"
+    "@ingexpert/config": "workspace:*",
+    "@types/glob": "^9.0.0",
+    "@types/node": "catalog:tooling",
+    "glob": "^13.0.0",
+    "prettier": "catalog:tooling",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "turbo": "catalog:tooling",
+    "typescript": "catalog:tooling"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "overrides": {
+      "@trpc/server": "10.45.4"
+    }
+  },
   "engines": {
-    "node": ">=18"
+    "node": ">=18",
+    "pnpm": ">=10.0.0"
   }
 }
