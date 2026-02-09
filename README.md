@@ -1,135 +1,83 @@
-# Turborepo starter
+# Ingexpert
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Ingexpert** is a high-performance Stock Management System designed for managing electronic supplies. It provides a robust, audited environment for tracking inventory levels, managing users, and ensuring accountability through a detailed transaction "blame" system.
 
-## Using this example
+## The Core Idea
 
-Run the following command:
+Ingexpert = **Inventory Management** (tracking) + **Transaction Auditing** (blame) + **Role-Based Access** (security) + **Real-time Updates**.
 
-```sh
-npx create-turbo@latest
-```
+## Roadmap
 
-## What's inside?
+The development is organized by Impact vs. Difficulty.
 
-This Turborepo includes the following packages/apps:
+### Phase 1 (MVP - Weeks 1-2)
 
-### Apps and Packages
+- **Inventory Core**: Product CRUD, SKU management, and stock level tracking.
+- **Database Schema**: Prisma-based PostgreSQL setup for all core entities.
+- **Basic Dashboard**: Visualizing current stock and low-stock items.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Phase 2 (Audit & Accountability - Weeks 3-4)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+- **Transaction System**: Implementation of the "blame" management system (logging who did what and when).
+- **Transaction Types**: Support for `IN`, `OUT`, and `ADJUSTMENT` operations.
+- **Audit Logs**: History view for every product and user.
 
-### Utilities
+### Phase 3 (Auth & Roles - Month 2)
 
-This Turborepo has some additional tools already setup for you:
+- **Supabase Integration**: Secure authentication and identity management.
+- **RBAC**: Implementing `ADMIN` and `USER` roles with specific dashboard access.
+- **User Management**: Interface for admins to manage system access.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Phase 4 (Advanced Features - Month 3+)
 
-### Build
+- **Low Stock Alerts**: Real-time notifications for items below threshold.
+- **Analytics**: Usage trends and inventory velocity reporting.
+- **Supplier Integration**: Tracking where supplies are coming from.
 
-To build all apps and packages, run the following command:
+## Workspace Structure
 
-```
-cd my-turborepo
+This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://pnpm.io/).
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+### Applications
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+- **`@ingexpert/api`** (`apps/api`): NestJS backend. Handles business logic, tRPC API, and database interactions.
+- **`@ingexpert/frontend`** (`apps/frontend`): Next.js frontend. Modern, responsive UI/UX using Tailwind CSS v4 and shadcn/ui.
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Packages
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+- **`@ingexpert/database`** (`packages/database`): Prisma schema and client. The single source of truth for the inventory data model.
+- **`@ingexpert/schema`** (`packages/schema`): Centralized Zod schemas and DTOs shared between API and Frontend.
+- **`@ingexpert/config`** (`packages/config`): Shared ESLint and Prettier configurations.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Quick Start
 
-### Develop
+1.  **Install dependencies:**
 
-To develop all apps and packages, run the following command:
+    ```bash
+    pnpm install
+    ```
 
-```
-cd my-turborepo
+2.  **Set up the database:**
+    Ensure a PostgreSQL instance is running and configured in `.env`.
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+    ```bash
+    pnpm db:generate # Generates Prisma Client and Types
+    pnpm db:migrate  # Applies migrations
+    ```
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+3.  **Start development:**
+    ```bash
+    pnpm dev
+    ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Scripts
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+- `pnpm dev`: Start all apps in development mode.
+- `pnpm build`: Build all apps and packages.
+- `pnpm lint`: Lint code quality.
+- `pnpm format`: Applies prettier rules.
+- `pnpm type-check`: Runs typescript compiler checks.
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+## License
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+UNLICENSED

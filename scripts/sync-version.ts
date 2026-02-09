@@ -1,0 +1,34 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as glob from 'glob';
+
+const rootDir = path.resolve(__dirname, '..');
+const rootPackageJsonPath = path.join(rootDir, 'package.json');
+
+// Read root package.json
+const rootPackageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf8'));
+const newVersion = rootPackageJson.version;
+
+console.log(`Syncing version ${newVersion} to all packages...`);
+
+// Find all package.json files in workspaces
+// Assuming standard pnpm workspace layout: apps/* and packages/*
+const workspacePatterns = ['apps/*/package.json', 'packages/*/package.json'];
+
+workspacePatterns.forEach((pattern) => {
+    const files = glob.sync(pattern, { cwd: rootDir, absolute: true });
+
+    files.forEach((filePath: string) => {
+        const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+        if (packageJson.version !== newVersion) {
+            console.log(`Updating ${packageJson.name} from ${packageJson.version} to ${newVersion}`);
+            packageJson.version = newVersion;
+            fs.writeFileSync(filePath, JSON.stringify(packageJson, null, 2) + '\n');
+        } else {
+            console.log(`Skipping ${packageJson.name} (already at ${newVersion})`);
+        }
+    });
+});
+
+console.log('Version sync complete.');

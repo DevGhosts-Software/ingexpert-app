@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+.next
+.turbo
+
+# Generated
+generated
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Misc
+.DS_Store
+*.log
+coverage
+
+# Ignored Components
+apps/web/src/components/ui/**
