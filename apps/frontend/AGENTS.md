@@ -74,11 +74,11 @@ The **Component** is the "Visualizer".
 
 ## 6. Implementation Mapping for AI Agents
 
-| Resource Type    | File Name (Kebab-Case) | Code Identifier                  |
-| :--------------- | :--------------------- | :------------------------------- |
-| **Container**    | `page.tsx`             | `export default function Page()` |
-| **Presenter**    | `product-list.tsx`     | `export function ProductList()`  |
-| **tRPC Query**   | `page.tsx`             | `trpc.products.list.useQuery()`  |
+| Resource Type  | File Name (Kebab-Case) | Code Identifier                  |
+| :------------- | :--------------------- | :------------------------------- |
+| **Container**  | `page.tsx`             | `export default function Page()` |
+| **Presenter**  | `product-list.tsx`     | `export function ProductList()`  |
+| **tRPC Query** | `page.tsx`             | `trpc.products.list.useQuery()`  |
 
 ## 7. Conventions & Best Practices
 

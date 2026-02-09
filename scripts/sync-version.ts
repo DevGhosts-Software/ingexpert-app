@@ -16,19 +16,19 @@ console.log(`Syncing version ${newVersion} to all packages...`);
 const workspacePatterns = ['apps/*/package.json', 'packages/*/package.json'];
 
 workspacePatterns.forEach((pattern) => {
-    const files = glob.sync(pattern, { cwd: rootDir, absolute: true });
+  const files = glob.sync(pattern, { cwd: rootDir, absolute: true });
 
-    files.forEach((filePath: string) => {
-        const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  files.forEach((filePath: string) => {
+    const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-        if (packageJson.version !== newVersion) {
-            console.log(`Updating ${packageJson.name} from ${packageJson.version} to ${newVersion}`);
-            packageJson.version = newVersion;
-            fs.writeFileSync(filePath, JSON.stringify(packageJson, null, 2) + '\n');
-        } else {
-            console.log(`Skipping ${packageJson.name} (already at ${newVersion})`);
-        }
-    });
+    if (packageJson.version !== newVersion) {
+      console.log(`Updating ${packageJson.name} from ${packageJson.version} to ${newVersion}`);
+      packageJson.version = newVersion;
+      fs.writeFileSync(filePath, JSON.stringify(packageJson, null, 2) + '\n');
+    } else {
+      console.log(`Skipping ${packageJson.name} (already at ${newVersion})`);
+    }
+  });
 });
 
 console.log('Version sync complete.');
