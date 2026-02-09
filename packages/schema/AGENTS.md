@@ -1,54 +1,52 @@
-# @rikal/schema - Gemini Agent Context
+# @ingexpert/schema - Gemini Agent Context
 
-This package serves as the **shared contract** for data validation and transfer objects (DTOs) across the Rikal ecosystem.
+This package serves as the **shared contract** for data validation and transfer objects (DTOs) across the Ingexpert ecosystem.
 
 ## 1. Purpose
 
-- **Single Source of Truth:** Defines Zod schemas used by both API (validation) and Web/Mobile clients (forms, sync).
+- **Single Source of Truth:** Defines Zod schemas used by both API (validation) and Frontend clients (forms).
 - **Type Safety:** Exports inferred TypeScript types (`*Dto`) to ensure end-to-end type safety.
-- **Standardization:** Enforces consistent validation rules (e.g., UUID formats, date strings).
+- **Standardization:** Enforces consistent validation rules (e.g., UUID formats, SKU patterns).
 
 ## 2. Exports
 
 All schemas and types are exported from `src/index.ts`.
 
-### Modules
+### Modules (To be Implemented)
 
-- **Auth:** `RegisterSchema`, `LoginSchema`
-- **Cards:** `CreateCardSchema`, `UpdateCardSchema`, `SyncReviewSchema`
-- **Decks:** `CreateDeckSchema`, `UpdateDeckSchema`
-- **Users:** `UpdateUserSchema`
-- **Sync:** `SyncOperationSchema`, `SyncBatchSchema`
+- **Auth:** `LoginSchema`, `RegisterSchema`
+- **Users:** `CreateUserSchema`, `UpdateUserSchema`
+- **Products:** `CreateProductSchema`, `UpdateProductSchema`, `ProductStockAdjustmentSchema`
+- **Transactions:** `CreateTransactionSchema`
 
 ## 3. Conventions
 
-- **Schemas:** PascalCase with `Schema` suffix (e.g., `CreateCardSchema`).
-- **DTOs:** PascalCase with `Dto` suffix, inferred from schema (e.g., `CreateCardDto`).
+- **Schemas:** PascalCase with `Schema` suffix (e.g., `CreateProductSchema`).
+- **DTOs:** PascalCase with `Dto` suffix, inferred from schema (e.g., `CreateProductDto`).
 - **Zod Usage:**
-  - Use modern Zod methods: `z.uuid()`, `z.email()`, `z.url()`.
-  - Dates: Use `z.iso.datetime()` for string inputs, transformed to `Date` objects where appropriate.
-  - Enums: Use `z.nativeEnum` for TypeScript enums shared from `@rikal/database`.
+  - Use modern Zod methods: `z.uuid()`, `z.email()`, `z.min()`.
+  - Enums: Use `z.nativeEnum` for TypeScript enums shared from `@ingexpert/database` (e.g., `Role`, `TransactionType`).
 
 ## 4. Usage Example
 
 ### API Router
 
 ```typescript
-import { CreateCardSchema } from '@rikal/schema';
+import { CreateProductSchema } from '@ingexpert/schema';
 
 // ...
-.input(CreateCardSchema)
+.input(CreateProductSchema)
 .mutation(...)
 ```
 
 ### React Form
 
 ```typescript
-import { CreateCardSchema, CreateCardDto } from '@rikal/schema';
+import { CreateProductSchema, CreateProductDto } from '@ingexpert/schema';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-const form = useForm<CreateCardDto>({
-  resolver: zodResolver(CreateCardSchema),
+const form = useForm<CreateProductDto>({
+  resolver: zodResolver(CreateProductSchema),
 });
 ```
