@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { User } from '@rikal/database';
+import { User } from '@ingexpert/database';
 import { CreateUserDto, UpdateUserDto } from './users.service';
 
 @Injectable()
@@ -23,9 +23,7 @@ export class AdminUsersService {
   }
 
   async findAll(): Promise<User[]> {
-    const users = await this.prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const users = await this.prisma.user.findMany({});
     return users;
   }
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { AdminUsersService } from './services/admin-users.service';
 import { z } from 'zod';
-import { CreateUserSchema, AdminUserUpdateSchema } from '@rikal/schema';
+import { CreateUserSchema, AdminUserUpdateSchema } from '@ingexpert/schema';
 
 @Injectable()
 export class AdminUsersRouter {

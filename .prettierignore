@@ -23,3 +23,5 @@ coverage
 
 # Ignored Components
 apps/web/src/components/ui/**
+
+pnpm-lock.yaml
