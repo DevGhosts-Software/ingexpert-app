@@ -19,7 +19,7 @@ export class UsersRouter {
       updateMe: this.trpc.protectedProcedure
         .input(UpdateUserSchema)
         .mutation(async ({ input, ctx }) => {
-          return await this.usersService.update(ctx.user.id, input, input.version);
+          return await this.usersService.update(ctx.user.id, input);
         }),
 
       removeMe: this.trpc.protectedProcedure.mutation(async ({ ctx }) => {

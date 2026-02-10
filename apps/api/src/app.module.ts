@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { TrpcModule } from './trpc/trpc.module';
 import { AppRouter } from './trpc/app.router';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AppRouter } from './trpc/app.router';
     ]),
     PrismaModule,
     TrpcModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [

@@ -8,11 +8,6 @@ export interface CreateUserDto {
   role?: UserRole;
   name?: string | null;
   avatar?: string | null;
-  timezone?: string;
-  locale?: string;
-  preferredRetention?: number;
-  darkMode?: boolean;
-  metadata?: Record<string, any>;
 }
 
 export type UpdateUserDto = Partial<Omit<CreateUserDto, 'id'>>;
@@ -72,42 +67,12 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, currentVersion?: number): Promise<User> {
-    if (currentVersion !== undefined) {
-      // Optimistic Locking
-      const result = await this.prisma.user.updateMany({
-        where: {
-          id,
-          version: currentVersion,
-        },
-        data: {
-          ...updateUserDto,
-          version: { increment: 1 },
-          lastSyncedAt: new Date(),
-        },
-      });
-
-      if (result.count === 0) {
-        const current = await this.prisma.user.findUnique({ where: { id } });
-        if (!current) {
-          throw new NotFoundException(`User with ID ${id} not found`);
-        }
-        throw new ConflictException('Resource modified on another device. Please refresh.');
-      }
-
-      return this.findOne(id);
-    }
-
-    // Fallback: Standard update
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
 
     const user = await this.prisma.user.update({
       where: { id },
-      data: {
-        ...updateUserDto,
-        version: { increment: 1 },
-        lastSyncedAt: new Date(),
-      },
+      data: updateUserDto,
     });
     return user;
   }
