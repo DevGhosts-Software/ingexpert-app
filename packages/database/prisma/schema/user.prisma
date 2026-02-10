@@ -1,0 +1,24 @@
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id String @id @default(uuid())
+
+  // ============================================================
+  // ACCOUNT & PROFILE
+  // ============================================================
+  email    String   @unique
+  role     UserRole @default(USER)
+  name     String?
+  avatar   String?
+  timezone String   @default("UTC")
+  locale   String   @default("en")
+
+  version      Int      @default(0)
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+
+  @@index([email])
+  @@map("users")
+}
