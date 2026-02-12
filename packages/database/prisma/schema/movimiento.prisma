@@ -1,0 +1,36 @@
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+}
+
+model Movimiento {
+  id                       String         @id @default(uuid())
+  tipo                     TipoMovimiento @map("tipo")
+  personalNombre           String         @map("personal_nombre") // Corresponde a "Personal" en SQL original (string)
+  destino                  String?        @map("destino")
+  idResponsableEntrega     String?        @map("id_responsable_entrega")
+  idResponsableRecepcion   String?        @map("id_responsable_recepcion")
+  fecha                    DateTime       @map("fecha")
+  idProyecto               String?        @map("id_proyecto")
+
+  // Relaciones
+  responsableEntrega   Personal? @relation("ResponsableEntrega", fields: [idResponsableEntrega], references: [id])
+  responsableRecepcion Personal? @relation("ResponsableRecepcion", fields: [idResponsableRecepcion], references: [id])
+  proyecto             Proyecto? @relation(fields: [idProyecto], references: [id])
+  detalles             DetalleMovimiento[]
+
+  @@map("movimientos")
+}
+
+model DetalleMovimiento {
+  id           String  @id @default(uuid())
+  idMovimiento String  @map("id_movimiento")
+  idItem       String  @map("id_item")
+  cantidad     Decimal @db.Decimal(10, 2) @map("cantidad")
+
+  movimiento Movimiento @relation(fields: [idMovimiento], references: [id], onDelete: Cascade)
+  item       Item       @relation(fields: [idItem], references: [id])
+
+  @@unique([idMovimiento, idItem])
+  @@map("detalles_movimiento")
+}
