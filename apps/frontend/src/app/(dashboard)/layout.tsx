@@ -11,13 +11,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   const {
     data: user,
     isLoading,
-    error,
+    isError,
   } = trpc.users.me.useQuery(undefined, {
     retry: false,
     enabled: mounted,
@@ -32,15 +33,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   useEffect(() => {
-    if (error) {
+    if (isError) {
       router.push('/login');
+      router.refresh();
     }
-  }, [error, router]);
+  }, [isError, router]);
 
   if (!mounted || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }

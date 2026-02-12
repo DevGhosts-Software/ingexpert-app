@@ -24,6 +24,7 @@ export class TrpcService {
 
   readonly protectedProcedure = this.t.procedure.use(async ({ ctx, next }) => {
     if (!ctx.user) {
+      ctx.res.clearCookie('token', { path: '/' });
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
     return next({
