@@ -1,0 +1,11 @@
+model Project {
+  id      String @id @default(uuid())
+  name    String @map("name")
+  contact String @map("contact")
+  address String @map("address")
+  manager String @map("manager")
+
+  movements Movement[]
+
+  @@map("projects")
+}

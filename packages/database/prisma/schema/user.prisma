@@ -1,0 +1,36 @@
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id String @id @default(uuid())
+
+  // ============================================================
+  // ACCOUNT & PROFILE
+  // ============================================================
+  email  String   @unique
+  role   UserRole @default(USER)
+  name   String?
+  avatar String?
+
+  staff Staff?
+
+  @@index([email])
+  @@map("users")
+}
+
+model Staff {
+  id String @id
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  workArea String? @map("work_area")
+
+  // Relations
+  deliveredMovements Movement[] @relation("ResponsibleDelivery")
+  receivedMovements  Movement[] @relation("ResponsibleReceipt")
+  disposals          Disposal[]
+
+  @@map("staff")
+}

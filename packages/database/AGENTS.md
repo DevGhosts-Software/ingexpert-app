@@ -6,14 +6,14 @@ This package manages the persistence layer for the Ingexpert application using P
 
 **@ingexpert/database** is the central hub for database definitions and client generation. It exports the Prisma Client instance used by the API.
 
-## 2. Entidades Principales
+## 2. Core Entities
 
-- **Usuario:** Usuarios del sistema con roles (`ADMIN`, `USUARIO`).
-- **Personal:** Información extendida de los usuarios.
-- **Item:** Artículos de inventario (PRODUCTO, EQUIPO, HERRAMIENTA, KIT) con stock y ubicación.
-- **Movimiento:** Registro de entradas y salidas de items, vinculado a Personal y Proyectos.
-- **Proyecto:** Proyectos a los que se destinan los materiales.
-- **Baja:** Registro de items retirados del inventario por diversos motivos.
+- **User:** System users with roles (`ADMIN`, `USER`).
+- **Staff:** Extended user information for movement responsibility.
+- **Item:** Inventory items (PRODUCT, EQUIPMENT, TOOL, KIT) with stock and location.
+- **Movement:** Log of stock entries and exits, linked to Staff and Projects.
+- **Project:** Projects where materials are destined.
+- **Disposal:** Log of items removed from inventory.
 
 ## 3. Technology Stack
 

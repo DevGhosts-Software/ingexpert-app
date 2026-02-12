@@ -1,0 +1,36 @@
+enum MovementType {
+  ENTRY
+  EXIT
+}
+
+model Movement {
+  id                    String       @id @default(uuid())
+  type                  MovementType @map("type")
+  personalName          String       @map("personal_name")
+  destination           String?      @map("destination")
+  responsibleDeliveryId String?      @map("responsible_delivery_id")
+  responsibleReceiptId  String?      @map("responsible_receipt_id")
+  date                  DateTime     @map("date")
+  projectId             String?      @map("project_id")
+
+  // Relations
+  responsibleDelivery Staff?           @relation("ResponsibleDelivery", fields: [responsibleDeliveryId], references: [id])
+  responsibleReceipt  Staff?           @relation("ResponsibleReceipt", fields: [responsibleReceiptId], references: [id])
+  project             Project?         @relation(fields: [projectId], references: [id])
+  details             MovementDetail[]
+
+  @@map("movements")
+}
+
+model MovementDetail {
+  id         String  @id @default(uuid())
+  movementId String  @map("movement_id")
+  itemId     String  @map("item_id")
+  quantity   Decimal @db.Decimal(10, 2) @map("quantity")
+
+  movement Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  item     Item     @relation(fields: [itemId], references: [id])
+
+  @@unique([movementId, itemId])
+  @@map("movement_details")
+}
