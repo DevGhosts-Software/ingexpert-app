@@ -12,12 +12,13 @@ This package serves as the **shared contract** for data validation and transfer 
 
 All schemas and types are exported from `src/index.ts`.
 
-### Modules (To be Implemented)
+### Modules
 
-- **Auth:** `LoginSchema`, `RegisterSchema`
+- **Auth:** `LoginSchema`, `RegisterSchema`, `RegisterFormSchema`
 - **Users:** `CreateUserSchema`, `UpdateUserSchema`
-- **Products:** `CreateProductSchema`, `UpdateProductSchema`, `ProductStockAdjustmentSchema`
-- **Transactions:** `CreateTransactionSchema`
+- **Items:** `CreateItemSchema`, `UpdateItemSchema`
+- **Projects:** `CreateProjectSchema`, `UpdateProjectSchema`
+- **Movements:** `CreateMovementSchema`, `MovementDetailSchema`
 
 ## 3. Conventions
 

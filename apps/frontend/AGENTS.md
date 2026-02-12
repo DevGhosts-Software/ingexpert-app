@@ -14,7 +14,7 @@ Before generating code, verify alignment with these documents:
 
 ## 3. Technology Stack
 
-- **Framework:** [Next.js 16 (App Router)](https://nextjs.org/docs)
+- **Framework:** [Next.js 15+ (App Router)](https://nextjs.org/docs)
 - **Language:** TypeScript 5.x
 - **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
 - **UI Components:** [shadcn/ui](https://ui.shadcn.com/) (Radix UI + Tailwind)
@@ -77,8 +77,8 @@ The **Component** is the "Visualizer".
 | Resource Type  | File Name (Kebab-Case) | Code Identifier                  |
 | :------------- | :--------------------- | :------------------------------- |
 | **Container**  | `page.tsx`             | `export default function Page()` |
-| **Presenter**  | `product-list.tsx`     | `export function ProductList()`  |
-| **tRPC Query** | `page.tsx`             | `trpc.products.list.useQuery()`  |
+| **Presenter**  | `item-list.tsx`        | `export function ItemList()`     |
+| **tRPC Query** | `page.tsx`             | `trpc.items.list.useQuery()`     |
 
 ## 7. Conventions & Best Practices
 

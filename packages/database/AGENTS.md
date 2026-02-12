@@ -25,17 +25,17 @@ This package manages the persistence layer for the Ingexpert application using P
 
 ### Schema Updates
 
-1.  **Modify:** Edit `prisma/schema.prisma`.
+1.  **Modify:** Edit files in `prisma/schema/*.prisma`.
 2.  **Generate:** Run `pnpm db:generate` to update the Prisma Client.
 3.  **Migrate:** Run `pnpm db:migrate` to create and apply SQL migrations.
 
 ### Best Practices
 
-- **Enums:** Use database-level enums for `Role` and `TransactionType`.
-- **Relations:** Ensure proper foreign key constraints (e.g., `Transaction` must belong to `User` and `Product`).
-- **Indexes:** SKUs and Emails are unique.
+- **Enums:** Use database-level enums for `UserRole`, `ItemType`, and `MovementType`.
+- **Relations:** Ensure proper foreign key constraints (e.g., `Movement` must link to `Staff` and optionally `Project`).
+- **Indexes:** Emails are unique.
 
 ## 5. Exports
 
 - **PrismaClient:** The instantiated client for database connectivity.
-- **Enums:** `Role`, `TransactionType` (exported from `@prisma/client`).
+- **Enums:** `UserRole`, `ItemType`, `MovementType` (exported from `@prisma/client`).
