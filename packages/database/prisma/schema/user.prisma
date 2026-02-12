@@ -14,6 +14,23 @@ model User {
   name   String?
   avatar String?
 
+  staff Staff?
+
   @@index([email])
   @@map("users")
+}
+
+model Staff {
+  id String @id
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  workArea String? @map("area_trabajo")
+
+  // Relations
+  deliveredMovements Movement[] @relation("ResponsableEntrega")
+  receivedMovements  Movement[] @relation("ResponsableRecepcion")
+  disposals          Disposal[]
+
+  @@map("staff")
 }
