@@ -30,8 +30,7 @@ export function LoginForm() {
   });
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.access_token);
+    onSuccess: () => {
       toast.success('Logged in successfully');
       router.push('/');
       router.refresh();

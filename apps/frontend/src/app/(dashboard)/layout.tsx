@@ -11,13 +11,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-    }
-  }, [router]);
+  }, []);
 
   const {
     data: user,
@@ -25,14 +20,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     error,
   } = trpc.users.me.useQuery(undefined, {
     retry: false,
-    enabled: mounted && !!(typeof window !== 'undefined' && localStorage.getItem('token')),
+    enabled: mounted,
+  });
+
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => {
+      router.push('/login');
+      router.refresh();
+      toast.success('Logged out successfully');
+    },
   });
 
   useEffect(() => {
     if (error) {
-      localStorage.removeItem('token');
       router.push('/login');
-      toast.error('Session expired. Please login again.');
     }
   }, [error, router]);
 
@@ -47,10 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
-    router.refresh();
-    toast.success('Logged out successfully');
+    logoutMutation.mutate();
   };
 
   return (

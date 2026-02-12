@@ -3,12 +3,18 @@ import { AppModule } from './app.module';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { AppRouter } from './trpc/app.router';
 import { TrpcContextService } from './trpc/trpc.context';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS for frontend
-  app.enableCors();
+  app.enableCors({
+    origin: true, // In production, replace with specific domain
+    credentials: true,
+  });
+
+  app.use(cookieParser());
 
   const trpcContextService = app.get(TrpcContextService);
   const appRouter = app.get(AppRouter);

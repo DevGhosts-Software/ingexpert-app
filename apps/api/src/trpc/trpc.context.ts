@@ -25,26 +25,29 @@ export class TrpcContextService {
 
   createContext = async (opts: trpcExpress.CreateExpressContextOptions) => {
     const authHeader = opts.req.headers.authorization;
+    let token = opts.req.cookies?.['token'];
+
+    if (!token && authHeader) {
+      token = authHeader.split(' ')[1];
+    }
+
     let user: (User & { role?: UserRole }) | null = null;
 
-    if (authHeader) {
-      const token = authHeader.split(' ')[1];
-      if (token) {
-        try {
-          const { data, error } = await this.supabase.auth.getUser(token);
-          if (!error && data.user) {
-            const dbUser = await this.prisma.user.findUnique({
-              where: { id: data.user.id },
-              select: { role: true },
-            });
-            user = {
-              ...data.user,
-              role: dbUser?.role,
-            };
-          }
-        } catch {
-          // Token invalid or expired
+    if (token) {
+      try {
+        const { data, error } = await this.supabase.auth.getUser(token);
+        if (!error && data.user) {
+          const dbUser = await this.prisma.user.findUnique({
+            where: { id: data.user.id },
+            select: { role: true },
+          });
+          user = {
+            ...data.user,
+            role: dbUser?.role,
+          };
         }
+      } catch {
+        // Token invalid or expired
       }
     }
 
