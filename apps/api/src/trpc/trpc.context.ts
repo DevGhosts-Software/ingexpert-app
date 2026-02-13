@@ -59,7 +59,7 @@ export class TrpcContextService {
 
     if (token) {
       try {
-        // 2. Decodificar sin verificar para saber qué algoritmo usa (HS256 vs RS256)
+        // 2. Decodificar sin verificar para saber qué algoritmo usa (HS256, RS256, ES256)
         const unverified = jwt.decode(token, { complete: true }) as any;
         const alg = unverified?.header?.alg;
 
@@ -71,8 +71,11 @@ export class TrpcContextService {
               ? jwtSecret // Estrategia Vieja (Secreto)
               : this.getKey; // Estrategia Nueva (JWKS)
 
-          jwt.verify(token!, strategy, { algorithms: ['RS256', 'HS256'] }, (err, decodedToken) => {
-            if (err) return reject(err);
+          jwt.verify(token!, strategy, { algorithms: ['RS256', 'HS256', 'ES256'] }, (err, decodedToken) => {
+            if (err) {
+              console.error(`JWT Verification Error [${alg}]:`, err.message);
+              return reject(err);
+            }
             resolve(decodedToken);
           });
         });
