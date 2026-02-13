@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
 
 export function LoginForm() {
   const router = useRouter();
@@ -79,17 +78,11 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loginMutation.isLoading}>
-              {loginMutation.isLoading ? 'Logging in...' : 'Login'}
+            <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Form>
-        <div className="mt-4 text-center text-sm">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="underline">
-            Register
-          </Link>
-        </div>
       </CardContent>
     </Card>
   );

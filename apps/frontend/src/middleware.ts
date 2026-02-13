@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // If user is logged in and tries to access auth pages, redirect to dashboard
-  if (token && (pathname === '/login' || pathname === '/register')) {
+  if (token && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -18,5 +18,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/login', '/register'],
+  matcher: ['/login'],
 };

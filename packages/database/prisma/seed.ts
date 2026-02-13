@@ -24,12 +24,12 @@ async function main() {
   });
 
   const email = 'admin@ingexpert.com';
-  const password = 'IngexpertAdmin2026!';
+  const password = '123456789';
 
   console.log(`Checking if Super Admin (${email}) exists...`);
 
   const { data: users, error: listError } = await supabase.auth.admin.listUsers();
-  
+
   if (listError) {
     console.error('Error listing users from Supabase:', listError.message);
     throw listError;
@@ -73,7 +73,7 @@ async function main() {
     console.log('Super Admin synced to local database');
   } else {
     console.log('Super Admin already exists in Supabase Auth.');
-    
+
     // Ensure it exists in Prisma too
     await prisma.user.upsert({
       where: { id: existingUser.id },
