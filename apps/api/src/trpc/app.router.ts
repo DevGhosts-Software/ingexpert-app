@@ -18,6 +18,12 @@ export class AppRouter {
       health: this.trpc.procedure.query(() => {
         return { status: 'ok', timestamp: new Date() };
       }),
+      debug: this.trpc.procedure.query(({ ctx }) => {
+        return {
+          cookies: ctx.req.cookies,
+          headers: ctx.req.headers,
+        };
+      }),
       auth: this.authRouter.router,
       users: this.usersRouter.router,
       adminUsers: this.adminUsersRouter.router,

@@ -14,10 +14,10 @@ export class AuthRouter {
     return this.trpc.router({
       login: this.trpc.procedure.input(LoginSchema).mutation(async ({ input, ctx }) => {
         const result = await this.authService.login(input);
-        ctx.res.cookie('token', result.access_token, {
+        ctx.res.cookie('ingexpert_token', result.access_token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: false, // Force false for local dev/debugging
+          sameSite: 'lax',
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
           path: '/',
         });
@@ -25,7 +25,7 @@ export class AuthRouter {
       }),
 
       logout: this.trpc.procedure.mutation(async ({ ctx }) => {
-        ctx.res.clearCookie('token', {
+        ctx.res.clearCookie('ingexpert_token', {
           path: '/',
         });
         return { success: true };

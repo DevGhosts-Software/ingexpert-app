@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')?.value;
+  const token = request.cookies.get('ingexpert_token')?.value;
   const { pathname } = request.nextUrl;
 
   // If user is logged in and tries to access auth pages, redirect to dashboard

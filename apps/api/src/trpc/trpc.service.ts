@@ -24,8 +24,12 @@ export class TrpcService {
 
   readonly protectedProcedure = this.t.procedure.use(async ({ ctx, next }) => {
     if (!ctx.user) {
-      ctx.res.clearCookie('token', { path: '/' });
-      throw new TRPCError({ code: 'UNAUTHORIZED' });
+      console.warn('Unauthorized access attempt: No user in context');
+      // ctx.res.clearCookie('ingexpert_token', { path: '/' });
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: 'No active session or invalid token'
+      });
     }
     return next({
       ctx: {
