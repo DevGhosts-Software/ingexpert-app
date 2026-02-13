@@ -67,6 +67,7 @@ apps/api/src/
   - Use `trpc.protectedProcedure` for authenticated endpoints.
   - Use `trpc.adminProcedure` for admin-only endpoints.
 - **User Management:** Public `/register` is disabled. Admins create users via `AdminUsersService`.
+
 ## 5. Development Workflow
 
 1.  **New Feature:**

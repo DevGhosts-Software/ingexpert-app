@@ -51,15 +51,10 @@ export class TrpcContextService {
     if (token) {
       try {
         const decoded = await new Promise<any>((resolve, reject) => {
-          jwt.verify(
-            token,
-            this.getKey,
-            { algorithms: ['RS256'] },
-            (err, decoded) => {
-              if (err) return reject(err);
-              resolve(decoded);
-            },
-          );
+          jwt.verify(token, this.getKey, { algorithms: ['RS256'] }, (err, decoded) => {
+            if (err) return reject(err);
+            resolve(decoded);
+          });
         });
 
         const userId = decoded.sub;

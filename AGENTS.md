@@ -5,6 +5,7 @@ This file serves as the **primary source of truth** for the Ingexpert project co
 ## 1. Project Overview
 
 **Ingexpert** is a high-performance, Corporate Stock Management System. It follows an **Offline-First / Admin-Only** user management philosophy:
+
 - **Public Registration is Disabled:** Only Admins can create new user accounts (Employees).
 - **Security:** End-to-end type safety with tRPC and RS256 JWT validation via JWKS.
 
