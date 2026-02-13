@@ -31,6 +31,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "catalog:prisma-client",
     "@prisma/client": "catalog:prisma-client",
+    "@supabase/supabase-js": "^2.95.3",
     "pg": "^8.16.3"
   }
 }

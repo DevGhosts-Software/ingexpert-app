@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { User, UserRole } from '@ingexpert/database';
 
 export interface CreateUserDto {
-  id: string;
+  id?: string;
   email: string;
   role?: UserRole;
   name?: string | null;

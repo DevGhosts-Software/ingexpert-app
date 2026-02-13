@@ -1,27 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as trpcExpress from '@trpc/server/adapters/express';
-import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
+import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@ingexpert/database';
 
 @Injectable()
 export class TrpcContextService {
-  private supabase: SupabaseClient;
-
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const anonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-
-    if (!supabaseUrl || !anonKey) {
-      throw new Error('Supabase URL or Anon Key not configured');
-    }
-
-    this.supabase = createClient(supabaseUrl, anonKey);
-  }
+  ) {}
 
   createContext = async (opts: trpcExpress.CreateExpressContextOptions) => {
     const authHeader = opts.req.headers.authorization;
@@ -31,22 +20,33 @@ export class TrpcContextService {
       token = authHeader.split(' ')[1];
     }
 
-    let user: (User & { role?: UserRole }) | null = null;
+    let user: { id: string; email?: string; role?: UserRole } | null = null;
 
     if (token) {
       try {
-        const { data, error } = await this.supabase.auth.getUser(token);
-        if (!error && data.user) {
-          const dbUser = await this.prisma.user.findUnique({
-            where: { id: data.user.id },
-            select: { role: true },
-          });
-          user = {
-            ...data.user,
-            role: dbUser?.role,
-          };
+        const secret = this.configService.get<string>('SUPABASE_JWT_SECRET');
+        if (!secret) {
+          throw new Error('SUPABASE_JWT_SECRET not configured');
         }
-      } catch {
+
+        const decoded = jwt.verify(token, secret) as any;
+        const userId = decoded.sub;
+
+        if (userId) {
+          const dbUser = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, role: true },
+          });
+
+          if (dbUser) {
+            user = {
+              id: dbUser.id,
+              email: dbUser.email,
+              role: dbUser.role,
+            };
+          }
+        }
+      } catch (error) {
         // Token invalid or expired
       }
     }
