@@ -4,7 +4,9 @@ This file serves as the **primary source of truth** for the Ingexpert project co
 
 ## 1. Project Overview
 
-**Ingexpert** is a comprehensive Stock Management System designed for managing electronic supplies. It features role-based access control (Admin/User), stock tracking, blame management (transaction auditing), and user management.
+**Ingexpert** is a high-performance, Corporate Stock Management System. It follows an **Offline-First / Admin-Only** user management philosophy:
+- **Public Registration is Disabled:** Only Admins can create new user accounts (Employees).
+- **Security:** End-to-end type safety with tRPC and RS256 JWT validation via JWKS.
 
 ## 2. Monorepo Architecture
 
@@ -15,7 +17,7 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 - **`apps/api` (`@ingexpert/api`)**
   - **Framework:** NestJS 11 + tRPC
   - **Purpose:** Backend logic, tRPC API, Stock management logic.
-  - **Auth:** Supabase Auth Integration.
+  - **Auth:** Supabase Auth (Admin API for creation, RS256/JWKS for validation).
   - **Dependencies:** `@ingexpert/database`, `@ingexpert/schema`.
 
 - **`apps/frontend` (`@ingexpert/frontend`)**

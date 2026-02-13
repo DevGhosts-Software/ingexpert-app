@@ -11,7 +11,7 @@ This document provides a detailed analysis and specific guidelines for the **Ing
 - **Framework:** [NestJS 11](https://docs.nestjs.com/) + tRPC
 - **Language:** TypeScript 5.x
 - **Database:** PostgreSQL (via `@ingexpert/database`)
-- **Auth:** Supabase Auth (Passport Strategy + tRPC Middleware)
+- **Auth:** Supabase Auth (RS256/JWKS validation + Admin Service Role for user management)
 - **Validation:** Zod (via `@ingexpert/schema`)
 
 ## 3. Project Architecture
@@ -26,11 +26,12 @@ apps/api/src/
 ├── trpc/                     # tRPC Core
 │   ├── trpc.module.ts
 │   ├── trpc.service.ts       # initTRPC, procedures
+│   ├── trpc.context.ts       # RS256/JWKS JWT Validation & Local DB Role check
 │   └── app.router.ts         # Root Router
 │
 ├── auth/                     # Authentication Module
 │   ├── auth.module.ts
-│   └── auth.router.ts        # tRPC Router
+│   └── auth.router.ts        # tRPC Router (Login/Logout only)
 │
 ├── prisma/                   # Database Module
 │   └── prisma.service.ts     # Scoped Prisma Client Wrapper
@@ -49,7 +50,7 @@ apps/api/src/
   - **Services (`/services`):** Contain business logic (e.g., stock calculations, transaction logging).
   - **Prisma:** Used directly in services.
 - **Validation:** Zod schemas are imported from `@ingexpert/schema`.
-- **Authorization:** Role-based access control (RBAC) via tRPC middleware (e.g., only `ADMIN` can manage users).
+- **Authorization:** Role-based access control (RBAC) via tRPC middleware. Only `ADMIN` can manage users via `AdminUsersService` (using Supabase Admin API).
 
 ## 4. Conventions & Best Practices
 
@@ -57,14 +58,15 @@ apps/api/src/
 
 - **PrismaService:** Always inject `PrismaService` to access the database.
 - **Transactions:** Use Prisma interactive transactions (`$transaction`) when updating stock and creating a transaction record simultaneously to ensure data integrity.
+- **Sync Trigger:** User profile creation in Prisma is handled by a PostgreSQL trigger on `auth.users` in Supabase.
 
 ### Authentication & Authorization
 
-- **Supabase:** The API verifies the JWT emitted by Supabase.
+- **JWT Validation:** The API verifies the RS256 JWT emitted by Supabase by fetching public keys from JWKS. No shared secret is used.
 - **Procedures:**
   - Use `trpc.protectedProcedure` for authenticated endpoints.
   - Use `trpc.adminProcedure` for admin-only endpoints.
-
+- **User Management:** Public `/register` is disabled. Admins create users via `AdminUsersService`.
 ## 5. Development Workflow
 
 1.  **New Feature:**

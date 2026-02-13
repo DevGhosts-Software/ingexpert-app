@@ -11,7 +11,9 @@ This document defines the architectural and coding standards for **Ingexpert**, 
 ### Role-Based Separation
 
 - **Separated Endpoints:** Avoid "hybrid" endpoints. Use distinct controllers for different access levels (e.g., `ProductsController` for public catalog and `AdminProductsController` for inventory management).
+- **Admin-Only User Creation:** Public registration is prohibited. New users must be created by an Admin using the Supabase Admin API.
 - **Context-Aware Retrieval:** User-facing endpoints must implicitly filter by `userId` extracted from the JWT (via `req.user.id`) where applicable.
+- **JWT Validation:** Use RS256 with JWKS. Verify tokens against Supabase's public keys.
 - **DTOs:** Use specific Data Transfer Objects for each role to prevent sensitive metadata leakage.
 
 ## 2. SOLID Implementation

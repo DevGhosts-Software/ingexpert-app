@@ -28,7 +28,7 @@ The project follows a **Feature-Sliced Design**.
 ```
 apps/frontend/src/
 ├── app/                      # Next.js App Router (CONTAINERS)
-│   ├── (auth)/               # Login/Register pages
+│   ├── (auth)/               # Login page (Admin-only registration)
 │   ├── (dashboard)/          # Protected routes
 │   │   ├── admin/            # Admin-only pages (User management)
 │   │   ├── inventory/        # Stock management
