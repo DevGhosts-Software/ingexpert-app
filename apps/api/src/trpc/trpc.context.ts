@@ -71,13 +71,18 @@ export class TrpcContextService {
               ? jwtSecret // Estrategia Vieja (Secreto)
               : this.getKey; // Estrategia Nueva (JWKS)
 
-          jwt.verify(token!, strategy, { algorithms: ['RS256', 'HS256', 'ES256'] }, (err, decodedToken) => {
-            if (err) {
-              console.error(`JWT Verification Error [${alg}]:`, err.message);
-              return reject(err);
-            }
-            resolve(decodedToken);
-          });
+          jwt.verify(
+            token!,
+            strategy,
+            { algorithms: ['RS256', 'HS256', 'ES256'] },
+            (err, decodedToken) => {
+              if (err) {
+                console.error(`JWT Verification Error [${alg}]:`, err.message);
+                return reject(err);
+              }
+              resolve(decodedToken);
+            },
+          );
         });
 
         // 4. Buscar usuario en Base de Datos
@@ -103,6 +108,15 @@ export class TrpcContextService {
       } catch (error: any) {
         // Token inválido, expirado o error de firma
         console.error('Context Auth Error:', error.message);
+
+        // Limpiamos la cookie si existe y falló la verificación
+        // para evitar ciclos de redirección en el frontend
+        if (opts.req.cookies?.['ingexpert_token']) {
+          opts.res.clearCookie('ingexpert_token', {
+            path: '/',
+          });
+        }
+
         // Dejamos user como null, no lanzamos error para permitir acceso a rutas públicas si las hubiera
       }
     }
