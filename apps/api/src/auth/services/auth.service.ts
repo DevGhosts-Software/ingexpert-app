@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { UserRole } from '@ingexpert/database';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from '@ingexpert/schema';
 
@@ -43,7 +44,7 @@ export class AuthService {
           id: data.user.id,
           email: data.user.email!,
           name: (data.user.user_metadata.nombre as string) || 'Usuario Sin Nombre',
-          role: (data.user.user_metadata.rol as any) || 'USER',
+          role: (data.user.user_metadata.rol as UserRole) || UserRole.USER,
         },
       });
     }
