@@ -1,18 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../../prisma/prisma.service';
-
-// Define local types matching the router schemas
-export interface LoginDto {
-  email: string;
-  password: string;
-}
+import { LoginDto } from '@ingexpert/schema';
 
 @Injectable()
 export class AuthService {

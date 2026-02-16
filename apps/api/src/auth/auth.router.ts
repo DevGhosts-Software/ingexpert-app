@@ -16,7 +16,7 @@ export class AuthRouter {
         const result = await this.authService.login(input);
         ctx.res.cookie('ingexpert_token', result.access_token, {
           httpOnly: true,
-          secure: false, // Force false for local dev/debugging
+          secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
           path: '/',
