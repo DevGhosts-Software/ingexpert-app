@@ -6,13 +6,13 @@ enum ItemType {
 }
 
 model Item {
-  id        String   @id @default(uuid())
-  name      String   @map("name")
-  location  String   @map("location")
-  stock     Decimal  @default(0) @map("stock") @db.Decimal(10, 2)
-  unit      String   @map("unit")
-  type      ItemType @map("type")
-  image_url String   @map("image_url")
+  id       String   @id @default(uuid())
+  name     String   @map("name")
+  location String   @map("location")
+  stock    Decimal  @default(0) @map("stock") @db.Decimal(10, 2)
+  unit     String   @map("unit")
+  type     ItemType @map("type")
+  imageUrl String   @map("image_url")
 
   // Relations
   disposal        Disposal?
