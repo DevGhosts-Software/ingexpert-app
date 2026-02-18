@@ -9,11 +9,11 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { DashboardNavbar } from '@/components/dashboard-navbar';
 
 const pageTitles: Record<string, string> = {
-  '/': 'Dashboard',
-  '/inventory': 'Inventory',
-  '/movements': 'Movements',
-  '/admin/users': 'User Management',
-  '/settings': 'Settings',
+  '/': 'Panel Principal',
+  '/inventory': 'Inventario',
+  '/movements': 'Movimientos',
+  '/admin/users': 'Gestión de Usuarios',
+  '/settings': 'Configuración',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
+          <p className="text-sm text-muted-foreground">Cargando tu panel...</p>
         </div>
       </div>
     );

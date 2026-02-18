@@ -18,30 +18,30 @@ interface InventoryStatsProps {
 const statCards = [
   {
     key: 'total' as keyof InventoryStats,
-    label: 'Total Items',
+    label: 'Total de Ítems',
     icon: Boxes,
-    description: 'Across all categories',
+    description: 'En todas las categorías',
     colorClass: 'text-blue-500',
   },
   {
     key: 'products' as keyof InventoryStats,
-    label: 'Products',
+    label: 'Productos',
     icon: Package,
-    description: 'Consumable goods',
+    description: 'Bienes de consumo',
     colorClass: 'text-green-500',
   },
   {
     key: 'equipment' as keyof InventoryStats,
-    label: 'Equipment',
+    label: 'Equipos',
     icon: Wrench,
-    description: 'Fixed assets & machinery',
+    description: 'Activos fijos y maquinaria',
     colorClass: 'text-purple-500',
   },
   {
     key: 'tools' as keyof InventoryStats,
-    label: 'Tools',
+    label: 'Herramientas',
     icon: Hammer,
-    description: 'Hand & power tools',
+    description: 'Herramientas manuales y eléctricas',
     colorClass: 'text-orange-500',
   },
 ];
@@ -64,7 +64,7 @@ export function InventoryStats({ stats }: InventoryStatsProps) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+          <CardTitle className="text-sm font-medium">Stock Bajo</CardTitle>
           <AlertTriangle className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
@@ -72,11 +72,11 @@ export function InventoryStats({ stats }: InventoryStatsProps) {
             <div className="text-2xl font-bold">{stats.lowStock}</div>
             {stats.lowStock > 0 && (
               <Badge variant="destructive" className="text-xs">
-                Alert
+                Alerta
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">Items needing restock</p>
+          <p className="text-xs text-muted-foreground">Ítems que necesitan reabastecimiento</p>
         </CardContent>
       </Card>
     </div>

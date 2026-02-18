@@ -20,17 +20,17 @@ import {
 
 const mainNavItems = [
   {
-    title: 'Dashboard',
+    title: 'Panel Principal',
     href: '/',
     icon: LayoutDashboard,
   },
   {
-    title: 'Inventory',
+    title: 'Inventario',
     href: '/inventory',
     icon: Package,
   },
   {
-    title: 'Movements',
+    title: 'Movimientos',
     href: '/movements',
     icon: ArrowLeftRight,
   },
@@ -38,12 +38,12 @@ const mainNavItems = [
 
 const adminNavItems = [
   {
-    title: 'Users',
+    title: 'Usuarios',
     href: '/admin/users',
     icon: Users,
   },
   {
-    title: 'Settings',
+    title: 'Configuración',
     href: '/settings',
     icon: Settings,
   },
@@ -64,7 +64,7 @@ export function AppSidebar() {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Ingexpert</span>
-                  <span className="truncate text-xs text-muted-foreground">Stock Management</span>
+                  <span className="truncate text-xs text-muted-foreground">Gestión de Stock</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -74,7 +74,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems.map((item) => (
@@ -94,7 +94,7 @@ export function AppSidebar() {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupLabel>Administración</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminNavItems.map((item) => (

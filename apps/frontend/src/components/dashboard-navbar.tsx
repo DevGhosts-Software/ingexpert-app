@@ -23,7 +23,7 @@ export function DashboardNavbar({ title, userEmail, userRole, onLogout }: Dashbo
       <div className="ml-auto flex items-center gap-2">
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Bell className="h-4 w-4" />
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">Notificaciones</span>
         </Button>
         <ModeToggle />
         <Separator orientation="vertical" className="h-4" />
@@ -33,7 +33,7 @@ export function DashboardNavbar({ title, userEmail, userRole, onLogout }: Dashbo
             <p className="text-xs text-muted-foreground capitalize">{userRole?.toLowerCase()}</p>
           </div>
           <Button variant="outline" size="sm" onClick={onLogout}>
-            Logout
+            Cerrar sesión
           </Button>
         </div>
       </div>
