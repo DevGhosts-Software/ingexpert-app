@@ -6,17 +6,18 @@ enum ItemType {
 }
 
 model Item {
-  id       String   @id @default(uuid())
-  name     String   @map("name")
-  location String   @map("location")
-  stock    Decimal  @default(0) @db.Decimal(10, 2) @map("stock")
-  unit     String   @map("unit")
-  type     ItemType @map("type")
+  id        String   @id @default(uuid())
+  name      String   @map("name")
+  location  String   @map("location")
+  stock     Decimal  @default(0) @map("stock") @db.Decimal(10, 2)
+  unit      String   @map("unit")
+  type      ItemType @map("type")
+  image_url String   @map("image_url")
 
   // Relations
-  disposal      Disposal?
-  kitDetails    KitDetail[] @relation("KitToComponent")
-  asComponentOf KitDetail[] @relation("ComponentToKit")
+  disposal        Disposal?
+  kitDetails      KitDetail[]      @relation("KitToComponent")
+  asComponentOf   KitDetail[]      @relation("ComponentToKit")
   movementDetails MovementDetail[]
 
   @@map("items")
@@ -26,7 +27,7 @@ model KitDetail {
   id          String  @id @default(uuid())
   kitId       String  @map("kit_id")
   componentId String  @map("item_id")
-  quantity    Decimal @db.Decimal(10, 2) @map("quantity")
+  quantity    Decimal @map("quantity") @db.Decimal(10, 2)
 
   kit       Item @relation("KitToComponent", fields: [kitId], references: [id])
   component Item @relation("ComponentToKit", fields: [componentId], references: [id])
