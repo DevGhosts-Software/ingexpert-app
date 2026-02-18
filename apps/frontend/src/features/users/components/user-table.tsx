@@ -1,24 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Search,
-  UserPlus,
-  MoreHorizontal,
-  ArrowUpDown,
-  ShieldCheck,
-  User,
-  Filter,
+  type ColumnDef,
+  type PaginationState,
+  type RowSelectionState,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import {
   ChevronDown,
-  Trash2,
+  Filter,
   KeyRound,
+  MoreHorizontal,
   Pencil,
+  Search,
+  ShieldCheck,
+  Trash2,
+  User,
+  UserPlus,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -27,31 +60,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export type UserRole = 'ADMIN' | 'USER';
 
@@ -68,6 +77,8 @@ interface UserTableProps {
   users: AppUser[];
   isLoading?: boolean;
 }
+
+type ActiveTab = 'all' | 'admin' | 'user';
 
 function RoleBadge({ role }: { role: UserRole }) {
   if (role === 'ADMIN') {
@@ -100,18 +111,6 @@ function UserAvatar({ name, email }: { name?: string; email: string }) {
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
       {initials}
     </div>
-  );
-}
-
-function TableRowSkeleton() {
-  return (
-    <TableRow>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <TableCell key={i}>
-          <Skeleton className="h-4 w-full" />
-        </TableCell>
-      ))}
-    </TableRow>
   );
 }
 
@@ -176,206 +175,210 @@ function InviteUserSheet({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
+const COLUMNS: ColumnDef<AppUser>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+        aria-label="Seleccionar todo"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(v) => row.toggleSelected(!!v)}
+        aria-label={`Seleccionar ${row.original.name ?? row.original.email}`}
+      />
+    ),
+    enableSorting: false,
+  },
+  {
+    id: 'name',
+    accessorFn: (row) => row.name ?? '',
+    header: 'Usuario',
+    cell: ({ row }) => (
+      <div className="flex items-center gap-3">
+        <UserAvatar name={row.original.name} email={row.original.email} />
+        <span className="font-medium">{row.original.name ?? '—'}</span>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'email',
+    header: 'Correo',
+    cell: ({ row }) => <span className="text-muted-foreground text-sm">{row.original.email}</span>,
+  },
+  {
+    accessorKey: 'role',
+    header: 'Rol',
+    cell: ({ row }) => <RoleBadge role={row.original.role} />,
+    enableSorting: false,
+  },
+  {
+    accessorKey: 'workArea',
+    header: 'Área',
+    cell: ({ row }) =>
+      row.original.workArea ? (
+        <span className="text-sm">{row.original.workArea}</span>
+      ) : (
+        <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+          Sin asignar
+        </Badge>
+      ),
+  },
+  {
+    id: 'actions',
+    header: () => <span className="sr-only">Acciones</span>,
+    cell: ({ row }) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Abrir menú</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem>
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar usuario
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <KeyRound className="h-4 w-4 mr-2" />
+            Restablecer contraseña
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>
+            {row.original.role === 'ADMIN' ? (
+              <>
+                <User className="h-4 w-4 mr-2" />
+                Cambiar a Usuario
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Promover a Admin
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar usuario
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+    enableSorting: false,
+  },
+];
+
 export function UserTable({ users, isLoading = false }: UserTableProps) {
-  const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [globalFilter, setGlobalFilter] = useState('');
   const [workAreaFilter, setWorkAreaFilter] = useState('all');
-  const [sortField, setSortField] = useState<keyof AppUser>('name');
-  const [sortAsc, setSortAsc] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const workAreas = Array.from(
-    new Set(users.map((u) => u.workArea).filter(Boolean)),
-  ).sort() as string[];
+  // Reset page on filter change
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [globalFilter, workAreaFilter, activeTab]);
 
-  const filterUsers = (roleFilter: UserRole | 'ALL') => {
-    return users
-      .filter((u) => {
-        const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
-        const matchesSearch =
-          search === '' ||
-          u.email.toLowerCase().includes(search.toLowerCase()) ||
-          u.name?.toLowerCase().includes(search.toLowerCase()) ||
-          u.workArea?.toLowerCase().includes(search.toLowerCase());
-        const matchesArea = workAreaFilter === 'all' || u.workArea === workAreaFilter;
-        return matchesRole && matchesSearch && matchesArea;
-      })
-      .sort((a, b) => {
-        const av = String(a[sortField] ?? '');
-        const bv = String(b[sortField] ?? '');
-        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-      });
-  };
+  const workAreas = useMemo(
+    () => Array.from(new Set(users.map((u) => u.workArea).filter(Boolean))).sort() as string[],
+    [users],
+  );
 
-  const toggleSort = (field: keyof AppUser) => {
-    if (sortField === field) setSortAsc((p) => !p);
-    else {
-      setSortField(field);
-      setSortAsc(true);
-    }
-  };
+  // ─────────────────────────────────────────────────────────────────
+  // SERVER-SIDE PLACEHOLDER
+  // When the API is ready, replace this entire useMemo block with:
+  //
+  // const { data, isLoading } = trpc.users.list.useQuery({
+  //   page: pagination.pageIndex,
+  //   pageSize: pagination.pageSize,
+  //   search: globalFilter,
+  //   role: activeTab === 'all' ? undefined : activeTab.toUpperCase() as UserRole,
+  //   workArea: workAreaFilter === 'all' ? undefined : workAreaFilter,
+  //   sortBy: sorting[0]?.id ?? 'name',
+  //   sortDir: sorting[0]?.desc ? 'desc' : 'asc',
+  // });
+  // const tableData = data?.data ?? [];
+  // const pageCount = data?.pageCount ?? 0;
+  //
+  // For tab counts: trpc.users.counts.useQuery({ search: globalFilter, workArea: ... })
+  // ─────────────────────────────────────────────────────────────────
+  const { tableData, pageCount, roleCounts } = useMemo(() => {
+    const roleMap: Record<ActiveTab, UserRole | undefined> = {
+      all: undefined,
+      admin: 'ADMIN',
+      user: 'USER',
+    };
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
+    const preRole = users.filter((u) => {
+      const matchesSearch =
+        globalFilter === '' ||
+        u.email.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        u.name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        u.workArea?.toLowerCase().includes(globalFilter.toLowerCase());
+      const matchesArea = workAreaFilter === 'all' || u.workArea === workAreaFilter;
+      return matchesSearch && matchesArea;
     });
-  };
 
-  const toggleSelectAll = (visible: AppUser[]) => {
-    const allSelected = visible.every((u) => selectedIds.has(u.id));
-    setSelectedIds(allSelected ? new Set() : new Set(visible.map((u) => u.id)));
-  };
+    const roleFilter = roleMap[activeTab];
+    const filtered = roleFilter ? preRole.filter((u) => u.role === roleFilter) : preRole;
 
-  const tabItems: Array<{ value: string; label: string; role: UserRole | 'ALL' }> = [
-    { value: 'all', label: 'Todos', role: 'ALL' },
-    { value: 'admin', label: 'Administradores', role: 'ADMIN' },
-    { value: 'user', label: 'Usuarios', role: 'USER' },
+    const sorted = [...filtered].sort((a, b) => {
+      const col = sorting[0];
+      if (!col) return 0;
+      const av = String(a[col.id as keyof AppUser] ?? '');
+      const bv = String(b[col.id as keyof AppUser] ?? '');
+      const cmp = av.localeCompare(bv);
+      return col.desc ? -cmp : cmp;
+    });
+
+    const { pageIndex, pageSize } = pagination;
+    const paged = sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+
+    return {
+      tableData: paged,
+      pageCount: Math.ceil(sorted.length / pagination.pageSize),
+      roleCounts: {
+        all: preRole.length,
+        admin: preRole.filter((u) => u.role === 'ADMIN').length,
+        user: preRole.filter((u) => u.role === 'USER').length,
+      },
+    };
+  }, [users, globalFilter, workAreaFilter, activeTab, sorting, pagination]);
+
+  const table = useReactTable({
+    data: tableData,
+    columns: COLUMNS,
+    pageCount,
+    state: { sorting, pagination, rowSelection },
+    getRowId: (row) => row.id,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    enableRowSelection: true,
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const selectedCount = Object.keys(rowSelection).length;
+
+  const tabItems: Array<{ value: ActiveTab; label: string }> = [
+    { value: 'all', label: 'Todos' },
+    { value: 'admin', label: 'Administradores' },
+    { value: 'user', label: 'Usuarios' },
   ];
-
-  const renderTable = (filtered: AppUser[]) => {
-    const allSelected = filtered.length > 0 && filtered.every((u) => selectedIds.has(u.id));
-    const someSelected = filtered.some((u) => selectedIds.has(u.id));
-
-    return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected}
-                  data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
-                  onCheckedChange={() => toggleSelectAll(filtered)}
-                  aria-label="Seleccionar todo"
-                />
-              </TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('name')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Usuario
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('email')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Correo
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('workArea')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Área
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead className="w-10">
-                <span className="sr-only">Acciones</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} />)
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No se encontraron usuarios.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((user) => (
-                <TableRow key={user.id} data-selected={selectedIds.has(user.id)}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(user.id)}
-                      onCheckedChange={() => toggleSelect(user.id)}
-                      aria-label={`Seleccionar ${user.name ?? user.email}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <UserAvatar name={user.name} email={user.email} />
-                      <span className="font-medium">{user.name ?? '—'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
-                  <TableCell>
-                    <RoleBadge role={user.role} />
-                  </TableCell>
-                  <TableCell>
-                    {user.workArea ? (
-                      <span className="text-sm">{user.workArea}</span>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="text-orange-600 border-orange-300 text-xs"
-                      >
-                        Sin asignar
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Abrir menú</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar usuario
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <KeyRound className="h-4 w-4 mr-2" />
-                          Restablecer contraseña
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          {user.role === 'ADMIN' ? (
-                            <>
-                              <User className="h-4 w-4 mr-2" />
-                              Cambiar a Usuario
-                            </>
-                          ) : (
-                            <>
-                              <ShieldCheck className="h-4 w-4 mr-2" />
-                              Promover a Admin
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Eliminar usuario
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  };
 
   return (
     <>
@@ -388,8 +391,8 @@ export function UserTable({ users, isLoading = false }: UserTableProps) {
               <Input
                 placeholder="Buscar por nombre, correo o área..."
                 className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
               />
             </div>
 
@@ -443,22 +446,15 @@ export function UserTable({ users, isLoading = false }: UserTableProps) {
         </div>
 
         {/* Batch controls */}
-        {selectedIds.size > 0 && (
+        {selectedCount > 0 && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-            <span className="text-sm font-medium">
-              {selectedIds.size} usuario(s) seleccionado(s)
-            </span>
+            <span className="text-sm font-medium">{selectedCount} usuario(s) seleccionado(s)</span>
             <div className="flex items-center gap-2 ml-auto">
               <Button variant="destructive" size="sm" className="h-7 gap-1.5">
                 <Trash2 className="h-3.5 w-3.5" />
                 Eliminar selección
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7"
-                onClick={() => setSelectedIds(new Set())}
-              >
+              <Button variant="ghost" size="sm" className="h-7" onClick={() => setRowSelection({})}>
                 Cancelar selección
               </Button>
             </div>
@@ -466,33 +462,81 @@ export function UserTable({ users, isLoading = false }: UserTableProps) {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="all">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)}>
           <TabsList>
-            {tabItems.map((tab) => {
-              const count = filterUsers(tab.role).length;
-              return (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
-                  {tab.label}
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
-                    {count}
-                  </Badge>
-                </TabsTrigger>
-              );
-            })}
+            {tabItems.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                {tab.label}
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
+                  {roleCounts[tab.value]}
+                </Badge>
+              </TabsTrigger>
+            ))}
           </TabsList>
-
-          {tabItems.map((tab) => (
-            <TabsContent key={tab.value} value={tab.value} className="mt-4">
-              {renderTable(filterUsers(tab.role))}
-            </TabsContent>
-          ))}
         </Tabs>
 
-        {!isLoading && (
-          <p className="text-xs text-muted-foreground px-1">
-            Mostrando {filterUsers('ALL').length} de {users.length} usuarios en total
-          </p>
-        )}
+        {/* Table */}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                        <button
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="flex items-center gap-1 hover:text-foreground font-medium"
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <span className="text-muted-foreground">
+                            {{ asc: '↑', desc: '↓' }[header.column.getIsSorted() as string] ?? '↕'}
+                          </span>
+                        </button>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: pagination.pageSize }).map((_, i) => (
+                  <TableRow key={i}>
+                    {COLUMNS.map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : table.getRowModel().rows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={COLUMNS.length}
+                    className="h-32 text-center text-muted-foreground"
+                  >
+                    No se encontraron usuarios.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <DataTablePagination table={table} totalSelected={selectedCount} />
       </div>
 
       <InviteUserSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />

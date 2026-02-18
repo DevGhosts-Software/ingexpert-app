@@ -1,26 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Search,
-  Filter,
-  Plus,
-  Trash2,
-  Download,
-  MoreHorizontal,
-  ArrowUpDown,
-  Package,
-  Wrench,
-  Hammer,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type PaginationState,
+  type RowSelectionState,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import {
   Boxes,
-  MapPin,
   ChevronDown,
+  Download,
+  Filter,
+  Hammer,
+  MapPin,
+  MoreHorizontal,
+  Package,
+  Plus,
+  Search,
+  Trash2,
+  Wrench,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -29,22 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export type ItemType = 'PRODUCT' | 'EQUIPMENT' | 'TOOL' | 'KIT';
 
@@ -58,12 +68,9 @@ export interface InventoryItem {
   imageUrl: string;
 }
 
-interface InventoryTableProps {
-  items: InventoryItem[];
-  isLoading?: boolean;
-}
+const LOW_STOCK_THRESHOLD = 10;
 
-const typeConfig: Record<
+const TYPE_CONFIG: Record<
   ItemType,
   { label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' }
 > = {
@@ -73,251 +80,277 @@ const typeConfig: Record<
   KIT: { label: 'Kit', icon: Boxes, variant: 'secondary' },
 };
 
-const LOW_STOCK_THRESHOLD = 10;
+const TAB_ITEMS: Array<{ value: string; label: string; type: ItemType | 'ALL' }> = [
+  { value: 'all', label: 'Todos', type: 'ALL' },
+  { value: 'product', label: 'Productos', type: 'PRODUCT' },
+  { value: 'equipment', label: 'Equipos', type: 'EQUIPMENT' },
+  { value: 'tool', label: 'Herramientas', type: 'TOOL' },
+  { value: 'kit', label: 'Kits', type: 'KIT' },
+];
 
 function StockBadge({ stock }: { stock: number }) {
-  if (stock === 0) {
-    return <Badge variant="destructive">Sin stock</Badge>;
-  }
-  if (stock < LOW_STOCK_THRESHOLD) {
+  if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
+  if (stock < LOW_STOCK_THRESHOLD)
     return (
       <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600">
         Stock bajo
       </Badge>
     );
-  }
   return <Badge variant="outline">En stock</Badge>;
 }
 
 function ItemTypeBadge({ type }: { type: ItemType }) {
-  const config = typeConfig[type];
-  const Icon = config.icon;
+  const { label, variant, icon: Icon } = TYPE_CONFIG[type];
   return (
-    <Badge variant={config.variant} className="gap-1 font-normal">
+    <Badge variant={variant} className="gap-1 font-normal">
       <Icon className="h-3 w-3" />
-      {config.label}
+      {label}
     </Badge>
   );
 }
 
-function TableRowSkeleton() {
+function ColHeader({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <TableRow>
-      {Array.from({ length: 7 }).map((_, i) => (
-        <TableCell key={i}>
-          <Skeleton className="h-4 w-full" />
-        </TableCell>
-      ))}
-    </TableRow>
+    <button onClick={onClick} className="flex items-center gap-1 hover:text-foreground font-medium">
+      {label}
+      <svg
+        className="h-3 w-3"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+      </svg>
+    </button>
   );
 }
 
+const COLUMNS: ColumnDef<InventoryItem>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        data-state={
+          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+            ? 'indeterminate'
+            : undefined
+        }
+        onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+        aria-label="Seleccionar todo"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(v) => row.toggleSelected(!!v)}
+        aria-label={`Seleccionar ${row.original.name}`}
+      />
+    ),
+    enableSorting: false,
+  },
+  {
+    accessorKey: 'name',
+    header: ({ column }) => (
+      <ColHeader
+        label="Nombre"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
+    ),
+    cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+  },
+  {
+    accessorKey: 'type',
+    header: 'Tipo',
+    cell: ({ row }) => <ItemTypeBadge type={row.getValue('type')} />,
+    enableSorting: false,
+  },
+  {
+    accessorKey: 'location',
+    header: ({ column }) => (
+      <ColHeader
+        label="Ubicacion"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
+    ),
+    cell: ({ row }) => (
+      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+        <MapPin className="h-3 w-3" />
+        {row.getValue('location')}
+      </span>
+    ),
+  },
+  {
+    accessorKey: 'stock',
+    header: ({ column }) => (
+      <ColHeader
+        label="Stock"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
+    ),
+    cell: ({ row }) => (
+      <span className="font-mono text-sm">
+        {row.getValue('stock')} {row.original.unit}
+      </span>
+    ),
+  },
+  {
+    id: 'status',
+    header: 'Estado',
+    cell: ({ row }) => <StockBadge stock={row.original.stock} />,
+    enableSorting: false,
+  },
+  {
+    id: 'actions',
+    header: () => <span className="sr-only">Acciones</span>,
+    cell: () => (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Abrir menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
+          <DropdownMenuItem>Editar item</DropdownMenuItem>
+          <DropdownMenuItem>Ajustar stock</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive">Marcar para baja</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+    enableSorting: false,
+  },
+];
+
+interface InventoryTableProps {
+  items: InventoryItem[];
+  isLoading?: boolean;
+}
+
 export function InventoryTable({ items, isLoading = false }: InventoryTableProps) {
-  const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [stockFilter, setStockFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<keyof InventoryItem>('name');
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
+  const [activeTab, setActiveTab] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
-  const locations = Array.from(new Set(items.map((i) => i.location))).sort();
+  const locations = useMemo(
+    () => Array.from(new Set(items.map((i) => i.location))).sort(),
+    [items],
+  );
 
-  const filterItems = (typeFilter: ItemType | 'ALL') => {
-    return items
-      .filter((item) => {
-        const matchesType = typeFilter === 'ALL' || item.type === typeFilter;
-        const matchesSearch =
-          search === '' ||
-          item.name.toLowerCase().includes(search.toLowerCase()) ||
-          item.location.toLowerCase().includes(search.toLowerCase());
-        const matchesLocation = locationFilter === 'all' || item.location === locationFilter;
-        const matchesStock =
-          stockFilter === 'all' ||
-          (stockFilter === 'low' && item.stock > 0 && item.stock < LOW_STOCK_THRESHOLD) ||
-          (stockFilter === 'out' && item.stock === 0) ||
-          (stockFilter === 'ok' && item.stock >= LOW_STOCK_THRESHOLD);
-        return matchesType && matchesSearch && matchesLocation && matchesStock;
-      })
-      .sort((a, b) => {
-        const av = a[sortField];
-        const bv = b[sortField];
-        const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
-        return sortAsc ? cmp : -cmp;
-      });
-  };
+  // SERVER-SIDE PLACEHOLDER
+  // Replace this useMemo with a tRPC query when the API is ready:
+  //
+  // const { data: result, isLoading } = trpc.inventory.list.useQuery({
+  //   page: pagination.pageIndex + 1,
+  //   pageSize: pagination.pageSize,
+  //   search: globalFilter,
+  //   type: (columnFilters.find(f => f.id === 'type')?.value as ItemType) ?? undefined,
+  //   location: locationFilter !== 'all' ? locationFilter : undefined,
+  //   stockLevel: stockLevelFilter !== 'all' ? stockLevelFilter : undefined,
+  //   orderBy: sorting[0]?.id,
+  //   orderDir: sorting[0]?.desc ? 'desc' : 'asc',
+  // });
+  // const tableData = result?.data ?? [];
+  // const total    = result?.total ?? 0;
+  // For tab counts: trpc.inventory.counts.useQuery({ search, location, stockLevel })
+  const { tableData, total, typeCounts } = useMemo(() => {
+    const typeFilter = columnFilters.find((f) => f.id === 'type')?.value as ItemType | undefined;
 
-  const toggleSort = (field: keyof InventoryItem) => {
-    if (sortField === field) {
-      setSortAsc((prev) => !prev);
-    } else {
-      setSortField(field);
-      setSortAsc(true);
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
+    const preType = items.filter((item) => {
+      if (locationFilter !== 'all' && item.location !== locationFilter) return false;
+      if (stockLevelFilter === 'low' && !(item.stock > 0 && item.stock < LOW_STOCK_THRESHOLD))
+        return false;
+      if (stockLevelFilter === 'out' && item.stock !== 0) return false;
+      if (stockLevelFilter === 'ok' && item.stock < LOW_STOCK_THRESHOLD) return false;
+      if (globalFilter) {
+        const q = globalFilter.toLowerCase();
+        return item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q);
       }
-      return next;
+      return true;
     });
-  };
 
-  const toggleSelectAll = (visibleItems: InventoryItem[]) => {
-    const allSelected = visibleItems.every((i) => selectedIds.has(i.id));
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(visibleItems.map((i) => i.id)));
+    const typeCounts = {
+      ALL: preType.length,
+      PRODUCT: preType.filter((i) => i.type === 'PRODUCT').length,
+      EQUIPMENT: preType.filter((i) => i.type === 'EQUIPMENT').length,
+      TOOL: preType.filter((i) => i.type === 'TOOL').length,
+      KIT: preType.filter((i) => i.type === 'KIT').length,
+    };
+
+    let filtered = typeFilter ? preType.filter((i) => i.type === typeFilter) : preType;
+
+    if (sorting.length > 0) {
+      const { id, desc } = sorting[0];
+      filtered = [...filtered].sort((a, b) => {
+        const av = String(a[id as keyof InventoryItem] ?? '');
+        const bv = String(b[id as keyof InventoryItem] ?? '');
+        const cmp = av.localeCompare(bv, undefined, { numeric: true });
+        return desc ? -cmp : cmp;
+      });
     }
-  };
 
-  const clearSelection = () => setSelectedIds(new Set());
+    const total = filtered.length;
+    const start = pagination.pageIndex * pagination.pageSize;
+    return { tableData: filtered.slice(start, start + pagination.pageSize), total, typeCounts };
+  }, [items, globalFilter, columnFilters, locationFilter, stockLevelFilter, sorting, pagination]);
 
-  const tabItems: Array<{ value: string; label: string; type: ItemType | 'ALL' }> = [
-    { value: 'all', label: 'Todos', type: 'ALL' },
-    { value: 'product', label: 'Productos', type: 'PRODUCT' },
-    { value: 'equipment', label: 'Equipos', type: 'EQUIPMENT' },
-    { value: 'tool', label: 'Herramientas', type: 'TOOL' },
-    { value: 'kit', label: 'Kits', type: 'KIT' },
-  ];
+  const table = useReactTable({
+    data: tableData,
+    columns: COLUMNS,
+    pageCount: Math.max(1, Math.ceil(total / pagination.pageSize)),
+    state: { sorting, columnFilters, globalFilter, rowSelection, pagination },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
 
-  const renderTable = (filteredItems: InventoryItem[]) => {
-    const allSelected =
-      filteredItems.length > 0 && filteredItems.every((i) => selectedIds.has(i.id));
-    const someSelected = filteredItems.some((i) => selectedIds.has(i.id));
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [globalFilter, columnFilters, locationFilter, stockLevelFilter]);
 
-    return (
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected}
-                  data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
-                  onCheckedChange={() => toggleSelectAll(filteredItems)}
-                  aria-label="Select all"
-                />
-              </TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('name')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Nombre
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('location')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Ubicación
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead>
-                <button
-                  onClick={() => toggleSort('stock')}
-                  className="flex items-center gap-1 hover:text-foreground font-medium"
-                >
-                  Stock
-                  <ArrowUpDown className="h-3 w-3" />
-                </button>
-              </TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-10">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} />)
-            ) : filteredItems.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                  No se encontraron ítems.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredItems.map((item) => (
-                <TableRow key={item.id} data-selected={selectedIds.has(item.id)}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(item.id)}
-                      onCheckedChange={() => toggleSelect(item.id)}
-                      aria-label={`Select ${item.name}`}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
-                    <ItemTypeBadge type={item.type} />
-                  </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      {item.location}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm">
-                      {item.stock} {item.unit}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <StockBadge stock={item.stock} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-                        <DropdownMenuItem>Editar ítem</DropdownMenuItem>
-                        <DropdownMenuItem>Ajustar stock</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          Marcar para baja
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    );
+  const totalSelected = Object.keys(rowSelection).length;
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const typeMap: Record<string, ItemType | undefined> = {
+      all: undefined,
+      product: 'PRODUCT',
+      equipment: 'EQUIPMENT',
+      tool: 'TOOL',
+      kit: 'KIT',
+    };
+    table.getColumn('type')?.setFilterValue(typeMap[value]);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
   };
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center gap-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar ítems, ubicaciones..."
+              placeholder="Buscar items, ubicaciones..."
               className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
             />
           </div>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -330,7 +363,7 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Ubicación
+                    Ubicacion
                   </p>
                   <Select value={locationFilter} onValueChange={setLocationFilter}>
                     <SelectTrigger className="h-8 text-sm">
@@ -350,7 +383,7 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Nivel de Stock
                   </p>
-                  <Select value={stockFilter} onValueChange={setStockFilter}>
+                  <Select value={stockLevelFilter} onValueChange={setStockLevelFilter}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todos los niveles" />
                     </SelectTrigger>
@@ -362,27 +395,23 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
                     </SelectContent>
                   </Select>
                 </div>
-                {(locationFilter !== 'all' || stockFilter !== 'all') && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full h-7 text-xs"
-                      onClick={() => {
-                        setLocationFilter('all');
-                        setStockFilter('all');
-                      }}
-                    >
-                      Limpiar filtros
-                    </Button>
-                  </>
+                {(locationFilter !== 'all' || stockLevelFilter !== 'all') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs"
+                    onClick={() => {
+                      setLocationFilter('all');
+                      setStockLevelFilter('all');
+                    }}
+                  >
+                    Limpiar filtros
+                  </Button>
                 )}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5">
             <Download className="h-4 w-4" />
@@ -390,60 +419,97 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
           </Button>
           <Button size="sm" className="gap-1.5">
             <Plus className="h-4 w-4" />
-            Agregar ítem
+            Agregar item
           </Button>
         </div>
       </div>
 
-      {/* Batch controls */}
-      {selectedIds.size > 0 && (
+      {totalSelected > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} ítem(s) seleccionado(s)</span>
+          <span className="text-sm font-medium">{totalSelected} item(s) seleccionado(s)</span>
           <div className="flex items-center gap-2 ml-auto">
             <Button variant="outline" size="sm" className="h-7 gap-1.5">
               <Download className="h-3.5 w-3.5" />
-              Exportar selección
+              Exportar seleccion
             </Button>
             <Button variant="destructive" size="sm" className="h-7 gap-1.5">
               <Trash2 className="h-3.5 w-3.5" />
               Dar de baja en lote
             </Button>
-            <Button variant="ghost" size="sm" className="h-7" onClick={clearSelection}>
-              Cancelar selección
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7"
+              onClick={() => table.resetRowSelection()}
+            >
+              Cancelar seleccion
             </Button>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="all">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
-          {tabItems.map((tab) => {
-            const count = filterItems(tab.type).length;
-            return (
-              <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
-                {tab.label}
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
-                  {count}
-                </Badge>
-              </TabsTrigger>
-            );
-          })}
+          {TAB_ITEMS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+              {tab.label}
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
+                {typeCounts[tab.type as keyof typeof typeCounts]}
+              </Badge>
+            </TabsTrigger>
+          ))}
         </TabsList>
-
-        {tabItems.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-4">
-            {renderTable(filterItems(tab.type))}
-          </TabsContent>
-        ))}
       </Tabs>
 
-      {/* Footer info */}
-      {!isLoading && (
-        <p className="text-xs text-muted-foreground px-1">
-          Mostrando {filterItems('ALL').length} de {items.length} ítems en total
-        </p>
-      )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => (
+                  <TableHead key={h.id}>
+                    {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {COLUMNS.map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={COLUMNS.length}
+                  className="h-32 text-center text-muted-foreground"
+                >
+                  No se encontraron items.
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <DataTablePagination table={table} totalSelected={totalSelected} />
     </div>
   );
 }
