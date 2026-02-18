@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { TRPCProvider } from '@/components/providers/trpc-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const metadata: Metadata = {
   title: 'Ingexpert - Stock Management',
@@ -22,8 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               enableSystem
               disableTransitionOnChange
             >
-              {children}
-              <Toaster />
+              <TooltipProvider>
+                {children}
+                <Toaster />
+              </TooltipProvider>
             </ThemeProvider>
           </TRPCProvider>
         </body>
