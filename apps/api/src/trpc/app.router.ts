@@ -3,6 +3,7 @@ import { TrpcService } from './trpc.service';
 import { UsersRouter } from '../users/users.router';
 import { AdminUsersRouter } from '../users/admin-users.router';
 import { AuthRouter } from '../auth/auth.router';
+import { ItemsRouter } from '../items/items.router';
 
 @Injectable()
 export class AppRouter {
@@ -11,7 +12,8 @@ export class AppRouter {
     private readonly usersRouter: UsersRouter,
     private readonly adminUsersRouter: AdminUsersRouter,
     private readonly authRouter: AuthRouter,
-  ) {}
+    private readonly itemsRouter: ItemsRouter,
+  ) { }
 
   public get appRouter() {
     return this.trpc.router({
@@ -27,6 +29,7 @@ export class AppRouter {
       auth: this.authRouter.router,
       users: this.usersRouter.router,
       adminUsers: this.adminUsersRouter.router,
+      items: this.itemsRouter.router,
     });
   }
 }

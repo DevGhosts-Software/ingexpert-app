@@ -14,7 +14,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "clean": "rm -rf dist coverage"
+    "clean": "rm -rf dist coverage",
+    "scripts:run": "ts-node src/scripts/api.ts"
   },
   "keywords": [
     "nestjs",

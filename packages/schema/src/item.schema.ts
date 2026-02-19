@@ -7,6 +7,7 @@ export const CreateItemSchema = z.object({
   stock: z.number().default(0),
   unit: z.string().min(1),
   type: z.nativeEnum(ItemType),
+  imageUrl: z.string().url().optional(),
 });
 
 export type CreateItemDto = z.infer<typeof CreateItemSchema>;
