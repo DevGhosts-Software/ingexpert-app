@@ -38,6 +38,7 @@
     "jwks-rsa": "^3.2.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "trpc-docs-generator": "^0.5.1",
     "zod": "^4.3.5"
   },
   "devDependencies": {
