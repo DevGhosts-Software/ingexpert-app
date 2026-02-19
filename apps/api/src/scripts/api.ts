@@ -34,6 +34,7 @@ async function main() {
     // 3) Probar items.create
     const created = await caller.items.create({
         name: 'Taladro desde script',
+        code: 'TALADRO-SCRIPT',
         location: 'Almacén principal',
         stock: 10,
         unit: 'UNIDAD',
@@ -46,6 +47,7 @@ async function main() {
     await caller.items.upsertManyByName([
         {
             name: 'Taladro desde script',
+            code: 'TALADRO-SCRIPT',
             location: 'Almacén secundario',
             stock: 20,
             unit: 'UNIDAD',
@@ -54,6 +56,7 @@ async function main() {
         },
         {
             name: 'Nuevo Ítem Script',
+            code: 'NUEVO-ITEM-SCRIPT',
             location: 'Depósito',
             stock: 5,
             unit: 'UNIDAD',

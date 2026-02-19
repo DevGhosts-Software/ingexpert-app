@@ -17,11 +17,12 @@ export class ItemsService {
         return this.prisma.item.create({
             data: {
                 name: createItemDto.name,
+                code: createItemDto.code,
                 location: createItemDto.location,
                 stock: new Prisma.Decimal(createItemDto.stock),
                 unit: createItemDto.unit,
                 type: createItemDto.type,
-                image_url: createItemDto.imageUrl ?? '',
+                imageUrl: createItemDto.imageUrl ?? '',
             },
         });
     }
@@ -31,6 +32,10 @@ export class ItemsService {
 
         if (updateItemDto.name !== undefined) {
             data.name = updateItemDto.name;
+        }
+
+        if (updateItemDto.code !== undefined) {
+            data.code = updateItemDto.code;
         }
 
         if (updateItemDto.location !== undefined) {
@@ -50,7 +55,7 @@ export class ItemsService {
         }
 
         if (updateItemDto.imageUrl !== undefined) {
-            data.image_url = updateItemDto.imageUrl;
+            data.imageUrl = updateItemDto.imageUrl;
         }
 
         return this.prisma.item.update({
@@ -69,11 +74,12 @@ export class ItemsService {
         await this.prisma.item.createMany({
             data: items.map((item) => ({
                 name: item.name,
+                code: item.code,
                 location: item.location,
                 stock: new Prisma.Decimal(item.stock),
                 unit: item.unit,
                 type: item.type,
-                image_url: item.imageUrl ?? '',
+                imageUrl: item.imageUrl ?? '',
             })),
         });
     }
@@ -88,11 +94,12 @@ export class ItemsService {
 
                 const data = {
                     name: item.name,
+                    code: item.code,
                     location: item.location,
                     stock: new Prisma.Decimal(item.stock),
                     unit: item.unit,
                     type: item.type,
-                    image_url: item.imageUrl ?? '',
+                    imageUrl: item.imageUrl ?? '',
                 };
 
                 if (existing) {

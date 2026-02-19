@@ -3,6 +3,7 @@ import { ItemType } from '@ingexpert/database';
 
 export const CreateItemSchema = z.object({
   name: z.string().min(1),
+  code: z.string().min(1),
   location: z.string().min(1),
   stock: z.number().default(0),
   unit: z.string().min(1),
