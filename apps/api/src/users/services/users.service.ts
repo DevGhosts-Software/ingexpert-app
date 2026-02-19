@@ -1,16 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateUserDto, UpdateUserDto } from '@ingexpert/schema';
 import { PrismaService } from '../../prisma/prisma.service';
-import { User, UserRole } from '@ingexpert/database';
-
-export interface CreateUserDto {
-  id?: string;
-  email: string;
-  role?: UserRole;
-  name?: string | null;
-  avatar?: string | null;
-}
-
-export type UpdateUserDto = Partial<Omit<CreateUserDto, 'id'>>;
+import { User } from '@ingexpert/database';
 
 @Injectable()
 export class UsersService {
