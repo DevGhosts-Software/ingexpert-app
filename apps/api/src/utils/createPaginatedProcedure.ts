@@ -1,5 +1,5 @@
 import { z, ZodObject, ZodRawShape } from "zod";
-import { basePaginationSchema } from "./pagination-types";
+import { basePaginationSchema} from "@ingexpert/schema";
 import { PrismaClient } from "@ingexpert/database";
 type PrismaDelegate = {
     findMany: (args: any) => Promise<any[]>;

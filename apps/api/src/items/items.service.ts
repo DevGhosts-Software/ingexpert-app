@@ -7,10 +7,58 @@ import { CreateItemDto, UpdateItemDto } from '@ingexpert/schema';
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<Item[]> {
-    return this.prisma.item.findMany({
-      orderBy: { name: 'asc' },
-    });
+  async findPaginated(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    filters?: Record<string, any>;
+  }) {
+    const { page, limit, search, filters } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      AND: [],
+    };
+
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          where.AND.push({ [key]: value });
+        }
+      });
+    }
+
+    if (search) {
+      where.AND.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { code: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.item.count({ where }),
+      this.prisma.item.findMany({
+        where,
+        take: limit,
+        skip,
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    return {
+      data: items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async create(createItemDto: CreateItemDto): Promise<Item> {
