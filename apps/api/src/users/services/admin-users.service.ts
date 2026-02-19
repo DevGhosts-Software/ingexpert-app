@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { User } from '@ingexpert/database';
-import { CreateUserDto, UpdateUserDto } from './users.service';
+import { CreateUserDto, UpdateUserDto } from '@ingexpert/schema';
 
 @Injectable()
 export class AdminUsersService {

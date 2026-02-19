@@ -22,6 +22,7 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "db:generate": "turbo run db:generate",
     "db:migrate": "pnpm --filter @ingexpert/database db:migrate",
+    "db:push": "pnpm --filter @ingexpert/database db:push",
     "db:seed": "pnpm --filter @ingexpert/database db:seed",
     "db:studio": "pnpm --filter @ingexpert/database db:studio",
     "db:reset": "pnpm --filter @ingexpert/database db:reset",
