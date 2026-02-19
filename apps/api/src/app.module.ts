@@ -36,4 +36,4 @@ import { ItemsModule } from './items/items.module';
     AppRouter,
   ],
 })
-export class AppModule { }
+export class AppModule {}

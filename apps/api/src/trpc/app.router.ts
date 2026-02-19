@@ -13,7 +13,7 @@ export class AppRouter {
     private readonly adminUsersRouter: AdminUsersRouter,
     private readonly authRouter: AuthRouter,
     private readonly itemsRouter: ItemsRouter,
-  ) { }
+  ) {}
 
   public get appRouter() {
     return this.trpc.router({

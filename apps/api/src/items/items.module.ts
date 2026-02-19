@@ -4,16 +4,9 @@ import { ItemsService } from './items.service';
 import { ItemsRouter } from './items.router';
 
 @Module({
-    imports: [
-        TrpcModule,
-    ],
-    controllers: [],
-    providers: [
-        ItemsService,
-        ItemsRouter,
-    ],
-    exports: [
-        ItemsRouter,
-    ],
+  imports: [TrpcModule],
+  controllers: [],
+  providers: [ItemsService, ItemsRouter],
+  exports: [ItemsRouter],
 })
-export class ItemsModule { }
+export class ItemsModule {}

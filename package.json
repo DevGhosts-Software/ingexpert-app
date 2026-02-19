@@ -42,9 +42,6 @@
   },
   "packageManager": "pnpm@10.28.0",
   "pnpm": {
-    "overrides": {
-      "@trpc/server": "10.45.4"
-    },
     "patchedDependencies": {
       "trpc-docs-generator": "patches/trpc-docs-generator.patch"
     }

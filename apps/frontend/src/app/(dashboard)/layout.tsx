@@ -17,20 +17,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const {
     data: user,
-    isLoading,
+    isPending,
     isError,
   } = trpc.users.me.useQuery(undefined, {
     retry: false,
     enabled: mounted,
   });
 
-  const logoutMutation = trpc.auth.logout.useMutation({
-    onSuccess: () => {
-      router.push('/login');
-      router.refresh();
-      toast.success('Logged out successfully');
-    },
-  });
+  const logoutMutation = trpc.auth.logout.useMutation();
 
   useEffect(() => {
     if (isError) {
@@ -39,7 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isError, router]);
 
-  if (!mounted || isLoading) {
+  if (!mounted || isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -53,7 +47,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        router.push('/login');
+        router.refresh();
+        toast.success('Logged out successfully');
+      },
+    });
   };
 
   return (
