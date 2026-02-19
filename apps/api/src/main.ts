@@ -28,22 +28,22 @@ async function bootstrap() {
     }),
   );
 
-  const routes = collectRoutes(appRouter.appRouter);
-
-  const html = generateDocsHtml(routes, {
-    title: 'IngExpert API',
-  });
-
-  const expressInstance = app.getHttpAdapter().getInstance();
-
-  expressInstance.get('/docs', (req: any, res: any) => {
-    res.send(html);
-  });
-
   const port = process.env.PORT || 3001;
   await app.listen(port);
-
   console.log(`🚀 API running on http://localhost:${port}/trpc`);
-  console.log(`🚀 API Docs running on http://localhost:${port}/docs`);
+
+  if (process.env.NODE_ENV !== 'production') {
+    const routes = collectRoutes(appRouter.appRouter);
+    const html = generateDocsHtml(routes, {
+      title: 'IngExpert API',
+    });
+
+    const expressInstance = app.getHttpAdapter().getInstance();
+    expressInstance.get('/docs', (req: any, res: any) => {
+      res.send(html);
+    });
+
+    console.log(`🚀 API Docs running on http://localhost:${port}/docs`);
+  }
 }
 bootstrap();
