@@ -28,39 +28,15 @@ export class ItemsService {
   }
 
   async update(id: string, updateItemDto: UpdateItemDto): Promise<Item> {
-    const data: Prisma.ItemUpdateInput = {};
-
-    if (updateItemDto.name !== undefined) {
-      data.name = updateItemDto.name;
-    }
-
-    if (updateItemDto.code !== undefined) {
-      data.code = updateItemDto.code;
-    }
-
-    if (updateItemDto.location !== undefined) {
-      data.location = updateItemDto.location;
-    }
-
-    if (updateItemDto.unit !== undefined) {
-      data.unit = updateItemDto.unit;
-    }
-
-    if (updateItemDto.type !== undefined) {
-      data.type = updateItemDto.type;
-    }
-
-    if (updateItemDto.stock !== undefined) {
-      data.stock = new Prisma.Decimal(updateItemDto.stock);
-    }
-
-    if (updateItemDto.imageUrl !== undefined) {
-      data.imageUrl = updateItemDto.imageUrl;
-    }
+    const { stock, ...rest } = updateItemDto;
 
     return this.prisma.item.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+
+        stock: stock !== undefined ? new Prisma.Decimal(stock) : undefined,
+      },
     });
   }
 
