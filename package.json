@@ -44,6 +44,9 @@
   "pnpm": {
     "patchedDependencies": {
       "trpc-docs-generator": "patches/trpc-docs-generator.patch"
+    },
+    "overrides": {
+      "@swc/helpers": "0.5.11"
     }
   },
   "engines": {
