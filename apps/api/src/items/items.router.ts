@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { ItemsService } from './items.service';
-import { CreateItemSchema, UpdateItemSchema } from '@ingexpert/schema';
+import { CreateItemSchema, ItemPaginationSchema, UpdateItemSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 
 @Injectable()
@@ -13,9 +13,8 @@ export class ItemsRouter {
 
   public get router() {
     return this.trpc.router({
-      // GET /items
-      list: this.trpc.protectedProcedure.query(async () => {
-        return this.itemsService.findAll();
+      list: this.trpc.protectedProcedure.input(ItemPaginationSchema).query(async ({ input }) => {
+        return this.itemsService.findPaginated(input);
       }),
 
       // POST /items

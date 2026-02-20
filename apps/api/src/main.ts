@@ -29,8 +29,6 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`🚀 API running on http://localhost:${port}/trpc`);
 
   if (process.env.NODE_ENV !== 'production') {
     const routes = collectRoutes(appRouter.appRouter);
@@ -45,5 +43,8 @@ async function bootstrap() {
 
     console.log(`🚀 API Docs running on http://localhost:${port}/docs`);
   }
+
+  await app.listen(port);
+  console.log(`🚀 API running on http://localhost:${port}/trpc`);
 }
 bootstrap();

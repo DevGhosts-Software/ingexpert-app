@@ -4,25 +4,39 @@ import { Context } from './trpc.context';
 import { ZodError } from 'zod';
 import { UserRole } from '@ingexpert/database';
 
+type RouteDocsMeta = {
+  docs?: {
+    name?: string;
+    description?: string;
+    tags?: string[];
+    deprecated?: boolean;
+    auth?: boolean;
+    roles?: string[];
+  };
+};
+
 @Injectable()
 export class TrpcService {
-  readonly t = initTRPC.context<Context>().create({
-    errorFormatter({ shape, error }) {
-      return {
-        ...shape,
-        data: {
-          ...shape.data,
-          zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
-        },
-      };
-    },
-  });
+  readonly t = initTRPC
+    .context<Context>()
+    .meta<RouteDocsMeta>()
+    .create({
+      errorFormatter({ shape, error }) {
+        return {
+          ...shape,
+          data: {
+            ...shape.data,
+            zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+          },
+        };
+      },
+    });
 
   readonly router = this.t.router;
   readonly procedure = this.t.procedure;
   readonly mergeRouters = this.t.mergeRouters;
 
-  readonly protectedProcedure = this.t.procedure.use(async ({ ctx, next }) => {
+  readonly protectedProcedure = this.t.procedure.meta({ docs: { auth: true } }).use(async ({ ctx, next }) => {
     if (!ctx.user) {
       console.warn('Unauthorized access attempt: No user in context');
       ctx.res.clearCookie('ingexpert_token', { path: '/' });
@@ -38,7 +52,7 @@ export class TrpcService {
     });
   });
 
-  readonly adminProcedure = this.protectedProcedure.use(async ({ ctx, next }) => {
+  readonly adminProcedure = this.protectedProcedure.meta({ docs: { auth: true, roles: ['admin'] } }).use(async ({ ctx, next }) => {
     if (ctx.user.role !== UserRole.ADMIN) {
       throw new TRPCError({ code: 'FORBIDDEN' });
     }
