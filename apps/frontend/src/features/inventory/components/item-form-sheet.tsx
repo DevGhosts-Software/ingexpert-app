@@ -253,6 +253,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                       <Input
                         type="number"
                         min={0}
+                        step="any"
                         placeholder="0"
                         disabled={isPending}
                         {...field}

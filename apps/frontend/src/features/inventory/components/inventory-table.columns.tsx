@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, MapPin, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Eye,
+  MapPin,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,19 +54,32 @@ function ItemTypeBadge({ type }: { type: ItemType }) {
   );
 }
 
-function ColHeader({ label, onClick }: { label: string; onClick: () => void }) {
+function ColHeader({
+  label,
+  sorted,
+  onClick,
+}: {
+  label: string;
+  sorted?: 'asc' | 'desc' | false;
+  onClick?: () => void;
+}) {
+  if (!onClick) {
+    return <span className="font-medium">{label}</span>;
+  }
+
   return (
-    <button onClick={onClick} className="flex items-center gap-1 hover:text-foreground font-medium">
+    <button
+      onClick={onClick}
+      className="group flex items-center gap-1 hover:text-foreground font-medium"
+    >
       {label}
-      <svg
-        className="h-3 w-3"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
-      </svg>
+      {sorted === 'asc' ? (
+        <ArrowUp className="h-3 w-3" />
+      ) : sorted === 'desc' ? (
+        <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+      )}
     </button>
   );
 }
@@ -109,6 +131,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     header: ({ column }) => (
       <ColHeader
         label="Nombre"
+        sorted={column.getIsSorted()}
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       />
     ),
@@ -119,6 +142,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     header: ({ column }) => (
       <ColHeader
         label="Código"
+        sorted={column.getIsSorted()}
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       />
     ),
@@ -135,6 +159,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     header: ({ column }) => (
       <ColHeader
         label="Ubicacion"
+        sorted={column.getIsSorted()}
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       />
     ),
@@ -150,14 +175,22 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     header: ({ column }) => (
       <ColHeader
         label="Stock"
+        sorted={column.getIsSorted()}
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       />
     ),
-    cell: ({ row }) => (
-      <span className="font-mono text-sm">
-        {row.getValue('stock')} {row.original.unit}
-      </span>
+    cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('stock')}</span>,
+  },
+  {
+    accessorKey: 'unit',
+    header: ({ column }) => (
+      <ColHeader
+        label="Unidad"
+        sorted={column.getIsSorted()}
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
     ),
+    cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('unit')}</span>,
   },
   {
     id: 'status',
