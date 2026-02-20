@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ItemType } from '@ingexpert/database';
+import { type Item, ItemType } from '@ingexpert/database';
 import { BasePaginationSchema } from './pagination.schema';
 
 export { ItemType } from '@ingexpert/database';
@@ -16,43 +16,30 @@ export const CreateItemSchema = z.object({
 
 /**
  * Represents an Item as returned by the API over the wire.
- * `stock` is always a plain `number` (Prisma Decimal is serialized in the service).
- * `imageUrl` is always a string (empty string when not set).
- * This is the shared contract between API and Frontend — never use raw Prisma types
- * or `any` as procedure return types.
+ * Structurally derived from the Prisma `Item` model — if the DB schema changes,
+ * TypeScript will error in `mapItem` until this contract is fulfilled.
+ * `stock` is overridden to `number` (Prisma Decimal is serialized in the service).
  */
-export const ItemEntitySchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  code: z.string(),
-  location: z.string(),
-  stock: z.number(),
-  unit: z.string(),
-  type: z.nativeEnum(ItemType),
-  imageUrl: z.string(),
-});
-export type ItemEntity = z.infer<typeof ItemEntitySchema>;
+export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
 
 /** Global unfiltered inventory statistics (for summary cards). */
-export const ItemStatsSchema = z.object({
-  total: z.number(),
-  products: z.number(),
-  equipment: z.number(),
-  tools: z.number(),
-  kits: z.number(),
-  lowStock: z.number(),
-});
-export type ItemStats = z.infer<typeof ItemStatsSchema>;
+export type ItemStats = {
+  total: number;
+  products: number;
+  equipment: number;
+  tools: number;
+  kits: number;
+  lowStock: number;
+};
 
 /** Per-type item counts, optionally filtered by search/location (for tab badges). */
-export const ItemCountsSchema = z.object({
-  ALL: z.number(),
-  PRODUCT: z.number(),
-  EQUIPMENT: z.number(),
-  TOOL: z.number(),
-  KIT: z.number(),
-});
-export type ItemCounts = z.infer<typeof ItemCountsSchema>;
+export type ItemCounts = {
+  ALL: number;
+  PRODUCT: number;
+  EQUIPMENT: number;
+  TOOL: number;
+  KIT: number;
+};
 
 export const ItemPaginationSchema = BasePaginationSchema.extend({
   filters: z
