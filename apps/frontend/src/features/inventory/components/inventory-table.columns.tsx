@@ -10,11 +10,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { type InventoryItem, type ItemType, LOW_STOCK_THRESHOLD, TYPE_CONFIG } from './inventory-table.types';
+import {
+  type InventoryItem,
+  type ItemType,
+  LOW_STOCK_THRESHOLD,
+  TYPE_CONFIG,
+} from './inventory-table.types';
 
 function StockBadge({ stock }: { stock: number }) {
   if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
@@ -41,7 +45,13 @@ function ColHeader({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex items-center gap-1 hover:text-foreground font-medium">
       {label}
-      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <svg
+        className="h-3 w-3"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
         <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
       </svg>
     </button>
@@ -75,7 +85,10 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => (
-      <ColHeader label="Nombre" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+      <ColHeader
+        label="Nombre"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
     ),
     cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
   },
@@ -88,7 +101,10 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
   {
     accessorKey: 'location',
     header: ({ column }) => (
-      <ColHeader label="Ubicacion" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+      <ColHeader
+        label="Ubicacion"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
     ),
     cell: ({ row }) => (
       <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -100,7 +116,10 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
   {
     accessorKey: 'stock',
     header: ({ column }) => (
-      <ColHeader label="Stock" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} />
+      <ColHeader
+        label="Stock"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
     ),
     cell: ({ row }) => (
       <span className="font-mono text-sm">
@@ -120,7 +139,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     cell: () => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="outline" size="icon" className="h-8 w-8">
             <MoreHorizontal className="h-4 w-4" />
             <span className="sr-only">Abrir menu</span>
           </Button>
@@ -128,9 +147,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
         <DropdownMenuContent align="end">
           <DropdownMenuItem>Ver detalles</DropdownMenuItem>
           <DropdownMenuItem>Editar item</DropdownMenuItem>
-          <DropdownMenuItem>Ajustar stock</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive">Marcar para baja</DropdownMenuItem>
+          <DropdownMenuItem>Eliminar item</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ),
