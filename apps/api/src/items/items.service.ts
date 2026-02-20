@@ -1,64 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Item, Prisma } from '@ingexpert/database';
-import { CreateItemDto, UpdateItemDto } from '@ingexpert/schema';
+import { CreateItemDto, itemPaginationDto, UpdateItemDto } from '@ingexpert/schema';
+import {paginatePrisma} from "../utils/paginatePrisma";
 
 @Injectable()
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findPaginated(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    filters?: Record<string, any>;
-  }) {
-    const { page, limit, search, filters } = params;
-    const skip = (page - 1) * limit;
-
-    const where: any = {
-      AND: [],
-    };
-
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          where.AND.push({ [key]: value });
-        }
-      });
-    }
-
-    if (search) {
-      where.AND.push({
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { code: { contains: search, mode: 'insensitive' } },
-          { location: { contains: search, mode: 'insensitive' } },
-        ],
-      });
-    }
-
-    const [total, items] = await this.prisma.$transaction([
-      this.prisma.item.count({ where }),
-      this.prisma.item.findMany({
-        where,
-        take: limit,
-        skip,
-        orderBy: { name: 'asc' },
-      }),
-    ]);
-
-    return {
-      data: items,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page * limit < total,
-        hasPreviousPage: page > 1,
-      },
-    };
+  async findPaginated(input: itemPaginationDto) {
+    return paginatePrisma(
+        this.prisma.item,
+        input,
+        ['name', 'code', 'location']
+    );
   }
 
   async create(createItemDto: CreateItemDto): Promise<Item> {

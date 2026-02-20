@@ -14,15 +14,12 @@ export class ItemsRouter {
 
   public get router() {
     return this.trpc.router({
+
         list: this.trpc.protectedProcedure
             .input(itemPaginationSchema)
             .query(async ({ input }) => {
                 return this.itemsService.findPaginated(input);
             }),
-      // GET /items
-     /* list: this.trpc.protectedProcedure.query(async () => {
-        return this.itemsService.findPaginated();
-      }),*/
 
       // POST /items
       create: this.trpc.protectedProcedure.input(CreateItemSchema).mutation(async ({ input }) => {
