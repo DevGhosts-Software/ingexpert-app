@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, Download, Filter, Plus, Search, Trash2 } from 'lucide-react';
 
-import { AddItemSheet } from './add-item-sheet';
+import { ItemFormSheet } from './item-form-sheet';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -142,7 +142,7 @@ export function InventoryTableToolbar({
         </div>
       </div>
 
-      <AddItemSheet open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+      <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
 
       {/* Bulk action bar */}
       {totalSelected > 0 && (

@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { MapPin, MoreHorizontal } from 'lucide-react';
+import { Eye, MapPin, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { ItemDeleteDialog } from './item-delete-dialog';
+import { ItemDetailsSheet } from './item-details-sheet';
+import { ItemFormSheet } from './item-form-sheet';
 import {
   type InventoryItem,
   type ItemType,
@@ -58,6 +63,47 @@ function ColHeader({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+type ActionView = 'details' | 'edit' | 'delete' | null;
+
+function RowActions({ item }: { item: InventoryItem }) {
+  const [open, setOpen] = useState<ActionView>(null);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Abrir menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setOpen('details')}>
+            <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
+            Ver detalles
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpen('edit')}>
+            <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
+            Editar ítem
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setOpen('delete')}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar ítem
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ItemDetailsSheet item={item} open={open === 'details'} onClose={() => setOpen(null)} />
+      <ItemFormSheet mode="edit" item={item} open={open === 'edit'} onClose={() => setOpen(null)} />
+      <ItemDeleteDialog item={item} open={open === 'delete'} onClose={() => setOpen(null)} />
+    </>
+  );
+}
+
 export const COLUMNS: ColumnDef<InventoryItem>[] = [
   {
     id: 'select',
@@ -91,6 +137,16 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
       />
     ),
     cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+  },
+  {
+    accessorKey: 'code',
+    header: ({ column }) => (
+      <ColHeader
+        label="Código"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      />
+    ),
+    cell: ({ row }) => <span className="font-medium">{row.getValue('code')}</span>,
   },
   {
     accessorKey: 'type',
@@ -136,21 +192,7 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
   {
     id: 'actions',
     header: () => <span className="sr-only">Acciones</span>,
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Abrir menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem>Ver detalles</DropdownMenuItem>
-          <DropdownMenuItem>Editar item</DropdownMenuItem>
-          <DropdownMenuItem>Eliminar item</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => <RowActions item={row.original} />,
     enableSorting: false,
   },
 ];

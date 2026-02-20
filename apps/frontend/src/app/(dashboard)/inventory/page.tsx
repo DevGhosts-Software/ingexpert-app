@@ -7,13 +7,11 @@ import {
   InventoryStats,
   type InventoryStats as InventoryStatsType,
 } from '@/features/inventory/components/inventory-stats';
-import {
-  InventoryTable,
-  type ItemType,
-} from '@/features/inventory/components/inventory-table';
+import { InventoryTable, type ItemType } from '@/features/inventory/components/inventory-table';
 
 interface RawApiItem {
   id: string;
+  code: string;
   name: string;
   location: string;
   stock: unknown;
@@ -73,6 +71,7 @@ export default function InventoryPage() {
 
   const items = ((listResult?.data ?? []) as RawApiItem[]).map((item) => ({
     id: item.id,
+    code: item.code,
     name: item.name,
     location: item.location,
     stock: Number(item.stock),

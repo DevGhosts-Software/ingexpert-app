@@ -6,11 +6,12 @@ export type ItemType = 'PRODUCT' | 'EQUIPMENT' | 'TOOL' | 'KIT';
 export interface InventoryItem {
   id: string;
   name: string;
+  code: string;
   location: string;
   stock: number;
   unit: string;
   type: ItemType;
-  imageUrl: string;
+  imageUrl?: string | null;
 }
 
 export type TypeCounts = {
