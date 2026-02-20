@@ -1,11 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
 import { Skeleton } from '@/components/ui/skeleton';
