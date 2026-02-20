@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   type ColumnDef,
-  type ColumnFiltersState,
+  type OnChangeFn,
   type PaginationState,
   type RowSelectionState,
   type SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import {
@@ -225,117 +226,82 @@ const COLUMNS: ColumnDef<InventoryItem>[] = [
   },
 ];
 
-interface InventoryTableProps {
+export interface InventoryTableProps {
   items: InventoryItem[];
   isLoading?: boolean;
+  pageCount: number;
+  pagination: PaginationState;
+  onPaginationChange: OnChangeFn<PaginationState>;
+  search: string;
+  onSearchChange: (value: string) => void;
+  typeFilter: ItemType | 'ALL';
+  onTypeFilterChange: (value: ItemType | 'ALL') => void;
+  locationFilter: string;
+  onLocationFilterChange: (value: string) => void;
+  typeCounts: { ALL: number; PRODUCT: number; EQUIPMENT: number; TOOL: number; KIT: number };
 }
 
-export function InventoryTable({ items, isLoading = false }: InventoryTableProps) {
+export function InventoryTable({
+  items,
+  isLoading = false,
+  pageCount,
+  pagination,
+  onPaginationChange,
+  search,
+  onSearchChange,
+  typeFilter,
+  onTypeFilterChange,
+  locationFilter,
+  onLocationFilterChange,
+  typeCounts,
+}: InventoryTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
-  const [activeTab, setActiveTab] = useState('all');
-  const [locationFilter, setLocationFilter] = useState('all');
   const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
+  // Client-side stock level filter (API does not support range queries)
+  const filteredItems = useMemo(() => {
+    if (stockLevelFilter === 'all') return items;
+    if (stockLevelFilter === 'low') return items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD);
+    if (stockLevelFilter === 'out') return items.filter((i) => i.stock === 0);
+    if (stockLevelFilter === 'ok') return items.filter((i) => i.stock >= LOW_STOCK_THRESHOLD);
+    return items;
+  }, [items, stockLevelFilter]);
+
+  // Distinct locations from current page for the filter dropdown
   const locations = useMemo(
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
     [items],
   );
 
-  // SERVER-SIDE PLACEHOLDER
-  // Replace this useMemo with a tRPC query when the API is ready:
-  //
-  // const { data: result, isLoading } = trpc.inventory.list.useQuery({
-  //   page: pagination.pageIndex + 1,
-  //   pageSize: pagination.pageSize,
-  //   search: globalFilter,
-  //   type: (columnFilters.find(f => f.id === 'type')?.value as ItemType) ?? undefined,
-  //   location: locationFilter !== 'all' ? locationFilter : undefined,
-  //   stockLevel: stockLevelFilter !== 'all' ? stockLevelFilter : undefined,
-  //   orderBy: sorting[0]?.id,
-  //   orderDir: sorting[0]?.desc ? 'desc' : 'asc',
-  // });
-  // const tableData = result?.data ?? [];
-  // const total    = result?.total ?? 0;
-  // For tab counts: trpc.inventory.counts.useQuery({ search, location, stockLevel })
-  const { tableData, total, typeCounts } = useMemo(() => {
-    const typeFilter = columnFilters.find((f) => f.id === 'type')?.value as ItemType | undefined;
-
-    const preType = items.filter((item) => {
-      if (locationFilter !== 'all' && item.location !== locationFilter) return false;
-      if (stockLevelFilter === 'low' && !(item.stock > 0 && item.stock < LOW_STOCK_THRESHOLD))
-        return false;
-      if (stockLevelFilter === 'out' && item.stock !== 0) return false;
-      if (stockLevelFilter === 'ok' && item.stock < LOW_STOCK_THRESHOLD) return false;
-      if (globalFilter) {
-        const q = globalFilter.toLowerCase();
-        return item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q);
-      }
-      return true;
-    });
-
-    const typeCounts = {
-      ALL: preType.length,
-      PRODUCT: preType.filter((i) => i.type === 'PRODUCT').length,
-      EQUIPMENT: preType.filter((i) => i.type === 'EQUIPMENT').length,
-      TOOL: preType.filter((i) => i.type === 'TOOL').length,
-      KIT: preType.filter((i) => i.type === 'KIT').length,
-    };
-
-    let filtered = typeFilter ? preType.filter((i) => i.type === typeFilter) : preType;
-
-    if (sorting.length > 0) {
-      const { id, desc } = sorting[0];
-      filtered = [...filtered].sort((a, b) => {
-        const av = String(a[id as keyof InventoryItem] ?? '');
-        const bv = String(b[id as keyof InventoryItem] ?? '');
-        const cmp = av.localeCompare(bv, undefined, { numeric: true });
-        return desc ? -cmp : cmp;
-      });
-    }
-
-    const total = filtered.length;
-    const start = pagination.pageIndex * pagination.pageSize;
-    return { tableData: filtered.slice(start, start + pagination.pageSize), total, typeCounts };
-  }, [items, globalFilter, columnFilters, locationFilter, stockLevelFilter, sorting, pagination]);
+  const activeTab = typeFilter === 'ALL' ? 'all' : typeFilter.toLowerCase();
 
   const table = useReactTable({
-    data: tableData,
+    data: filteredItems,
     columns: COLUMNS,
-    pageCount: Math.max(1, Math.ceil(total / pagination.pageSize)),
-    state: { sorting, columnFilters, globalFilter, rowSelection, pagination },
+    pageCount,
+    state: { sorting, rowSelection, pagination },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
+    onPaginationChange,
     manualPagination: true,
-    manualSorting: true,
     manualFiltering: true,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.id,
   });
-
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [globalFilter, columnFilters, locationFilter, stockLevelFilter]);
 
   const totalSelected = Object.keys(rowSelection).length;
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const typeMap: Record<string, ItemType | undefined> = {
-      all: undefined,
+    const typeMap: Record<string, ItemType | 'ALL'> = {
+      all: 'ALL',
       product: 'PRODUCT',
       equipment: 'EQUIPMENT',
       tool: 'TOOL',
       kit: 'KIT',
     };
-    table.getColumn('type')?.setFilterValue(typeMap[value]);
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
+    onTypeFilterChange(typeMap[value] ?? 'ALL');
   };
 
   return (
@@ -347,8 +313,8 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
             <Input
               placeholder="Buscar items, ubicaciones..."
               className="pl-9"
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
             />
           </div>
           <DropdownMenu>
@@ -365,7 +331,7 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Ubicacion
                   </p>
-                  <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <Select value={locationFilter} onValueChange={onLocationFilterChange}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todas las ubicaciones" />
                     </SelectTrigger>
@@ -401,7 +367,7 @@ export function InventoryTable({ items, isLoading = false }: InventoryTableProps
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={() => {
-                      setLocationFilter('all');
+                      onLocationFilterChange('all');
                       setStockLevelFilter('all');
                     }}
                   >
