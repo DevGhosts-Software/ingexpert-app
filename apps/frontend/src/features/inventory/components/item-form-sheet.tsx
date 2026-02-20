@@ -147,7 +147,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       void deleteFile(originalImageUrl.current);
     }
 
-    const submitValues = { ...values, imageUrl: finalImageUrl };
+    const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
     if (isEdit && item) {
       updateMutation.mutate({ id: item.id, ...submitValues });
     } else {

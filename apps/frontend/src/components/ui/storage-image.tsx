@@ -21,9 +21,11 @@ interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 
 export function StorageImage({ src, alt, className, ...props }: StorageImageProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
     setSignedUrl(null);
+    setImgLoaded(false);
     const path = extractPath(src);
     if (!path) {
       setSignedUrl(src);
@@ -45,14 +47,25 @@ export function StorageImage({ src, alt, className, ...props }: StorageImageProp
     };
   }, [src]);
 
-  if (!signedUrl) {
-    return (
-      <div className={`flex items-center justify-center bg-muted/50 ${className ?? ''}`}>
-        <ImageIcon className="h-8 w-8 text-muted-foreground/30 animate-pulse" />
-      </div>
-    );
-  }
+  const showPlaceholder = !signedUrl || !imgLoaded;
 
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={signedUrl} alt={alt} className={className} {...props} />;
+  return (
+    <>
+      {showPlaceholder && (
+        <div className={`flex items-center justify-center bg-muted/50 ${className ?? ''}`}>
+          <ImageIcon className="h-8 w-8 text-muted-foreground/30 animate-pulse" />
+        </div>
+      )}
+      {signedUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={signedUrl}
+          alt={alt}
+          className={`${className ?? ''} ${!imgLoaded ? 'hidden' : ''}`}
+          onLoad={() => setImgLoaded(true)}
+          {...props}
+        />
+      )}
+    </>
+  );
 }
