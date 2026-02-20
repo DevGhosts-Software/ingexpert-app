@@ -56,4 +56,21 @@ export class AuthService {
       user: data.user,
     };
   }
+
+  async refresh(refreshToken: string) {
+    const { data, error } = await this.supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session) {
+      throw new UnauthorizedException(error?.message ?? 'Failed to refresh session');
+    }
+
+    return {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_at: data.session.expires_at,
+      user: data.user,
+    };
+  }
 }
