@@ -13,7 +13,7 @@ import { paginatePrisma } from '../utils/paginatePrisma';
 
 @Injectable()
 export class ItemsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /** Maps a raw Prisma Item to the serializable ItemEntity (Decimal → number). */
   private mapItem(item: Item): ItemEntity {

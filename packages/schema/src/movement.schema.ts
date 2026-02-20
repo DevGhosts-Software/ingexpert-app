@@ -19,7 +19,29 @@ export const CreateMovementSchema = z.object({
   projectId: z.string().uuid().optional(),
   details: z.array(MovementDetailSchema).min(1),
 });
+
+
+/*
+export const MovementDetailEntitySchema = z.object({
+  id: z.string().uuid(),
+  itemId: z.string().uuid(),
+  quantity: z.number().positive(),
+  movementId: z.string().uuid(),
+});
+
+export const MovementEntitySchema = z.object({
+  id: z.string().uuid(),
+  type: z.nativeEnum(MovementType),
+  personalName: z.string(),
+  destination: z.string().optional(),
+  responsibleDeliveryId: z.string().uuid().optional(),
+  responsibleReceiptId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  details: z.array(MovementDetailEntitySchema),
+});
 export type CreateMovementDto = z.infer<typeof CreateMovementSchema>;
+*/
+
 
 // ─── Entities (Prisma-derived — changes to the DB schema surface here) ────────
 
