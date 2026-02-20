@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const BUCKET = 'app-data';
@@ -18,10 +19,11 @@ interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;
 }
 
-export function StorageImage({ src, alt, ...props }: StorageImageProps) {
+export function StorageImage({ src, alt, className, ...props }: StorageImageProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    setSignedUrl(null);
     const path = extractPath(src);
     if (!path) {
       setSignedUrl(src);
@@ -43,8 +45,14 @@ export function StorageImage({ src, alt, ...props }: StorageImageProps) {
     };
   }, [src]);
 
-  if (!signedUrl) return null;
+  if (!signedUrl) {
+    return (
+      <div className={`flex items-center justify-center bg-muted/50 ${className ?? ''}`}>
+        <ImageIcon className="h-8 w-8 text-muted-foreground/30 animate-pulse" />
+      </div>
+    );
+  }
 
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={signedUrl} alt={alt} {...props} />;
+  return <img src={signedUrl} alt={alt} className={className} {...props} />;
 }

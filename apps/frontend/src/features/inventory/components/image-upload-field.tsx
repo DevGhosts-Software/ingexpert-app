@@ -26,12 +26,14 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
     const [dragging, setDragging] = useState(false);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [removed, setRemoved] = useState(false);
 
     useImperativeHandle(ref, () => ({
       getPendingFile: () => pendingFile,
       reset: () => {
         setPendingFile(null);
         setPreviewUrl(null);
+        setRemoved(false);
       },
     }));
 
@@ -45,8 +47,13 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
       return () => URL.revokeObjectURL(url);
     }, [pendingFile]);
 
+    // Reset `removed` when the parent provides a fresh URL (e.g. form reset to a different item)
+    useEffect(() => {
+      if (value) setRemoved(false);
+    }, [value]);
+
     const isDisabled = disabled || isUploading;
-    const showPreview = pendingFile !== null || !!value;
+    const showPreview = pendingFile !== null || (!!value && !removed);
 
     function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
       const file = e.target.files?.[0];
@@ -76,6 +83,8 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
       if (pendingFile) {
         setPendingFile(null);
       } else {
+        // Immediately hide locally; signal parent to clear form value
+        setRemoved(true);
         onChange(undefined);
       }
     }
