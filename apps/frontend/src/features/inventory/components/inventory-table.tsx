@@ -480,7 +480,11 @@ export function InventoryTable({
         </Table>
       </div>
 
-      <DataTablePagination table={table} totalSelected={totalSelected} />
+      <DataTablePagination
+        table={table}
+        totalSelected={totalSelected}
+        onPageSizeChange={(size) => onPaginationChange({ ...pagination, pageSize: size, pageIndex: 0 })}
+      />
     </div>
   );
 }

@@ -12,14 +12,25 @@ import {
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
   totalSelected?: number;
+  onPageSizeChange?: (size: number) => void;
 }
 
 export function DataTablePagination<TData>({
   table,
   totalSelected = 0,
+  onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
   const { pageIndex, pageSize } = table.getState().pagination;
   const pageCount = table.getPageCount();
+
+  const handlePageSizeChange = (v: string) => {
+    const newSize = Number(v);
+    if (onPageSizeChange) {
+      onPageSizeChange(newSize);
+    } else {
+      table.setPageSize(newSize);
+    }
+  };
 
   return (
     <div className="flex items-center justify-between px-1">
@@ -32,8 +43,8 @@ export function DataTablePagination<TData>({
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <p className="text-xs font-medium">Filas por página</p>
-          <Select value={`${pageSize}`} onValueChange={(v) => table.setPageSize(Number(v))}>
-            <SelectTrigger className="h-8 w-[70px] text-xs">
+          <Select value={`${pageSize}`} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="h-8 w-17.5 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent side="top">
