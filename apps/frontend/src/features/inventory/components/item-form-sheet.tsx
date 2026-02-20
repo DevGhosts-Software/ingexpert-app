@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { z } from 'zod';
 
+import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
+import { z } from 'zod';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,16 +38,14 @@ import {
 import { ImageUploadField } from './image-upload-field';
 import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
 
-const ItemFormSchema = z.object({
+const ItemFormSchema = CreateItemSchema.extend({
   name: z.string().min(1, 'Nombre requerido'),
   code: z.string().min(1, 'Código requerido'),
   location: z.string().min(1, 'Ubicación requerida'),
   stock: z.number().min(0, 'Stock mínimo es 0'),
   unit: z.string().min(1, 'Unidad requerida'),
-  type: z.enum(['PRODUCT', 'EQUIPMENT', 'TOOL', 'KIT']),
-  imageUrl: z.string().optional(),
 });
-type FormValues = z.infer<typeof ItemFormSchema>;
+type FormValues = CreateItemDto;
 
 interface ItemFormSheetProps {
   mode: 'create' | 'edit';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { ItemCounts, ItemStats, ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
@@ -57,10 +57,14 @@ export default function InventoryPage() {
   });
 
   // stock is already a plain number — the service calls .toNumber() before serializing
-  const items = (listResult?.data ?? []).map((item) => ({
-    ...item,
-    stock: Number(item.stock), // guard: Decimal serializes as string over JSON
-  }));
+  const items = useMemo(
+    () =>
+      (listResult?.data ?? []).map((item) => ({
+        ...item,
+        stock: Number(item.stock), // guard: Decimal serializes as string over JSON
+      })),
+    [listResult?.data],
+  );
 
   const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
     setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));

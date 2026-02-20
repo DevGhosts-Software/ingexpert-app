@@ -4,7 +4,6 @@ import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
 
 // Re-export shared entity types so callers within this feature only need one import
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
-export type { ItemCounts as TypeCounts } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
 
 export const LOW_STOCK_THRESHOLD = 10;

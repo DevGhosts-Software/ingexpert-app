@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { TAB_ITEMS, type TypeCounts } from './inventory-table.types';
+import type { ItemCounts } from '@ingexpert/schema';
+import { TAB_ITEMS } from './inventory-table.types';
 
 interface InventoryTableToolbarProps {
   search: string;
@@ -34,7 +35,7 @@ interface InventoryTableToolbarProps {
   onStockLevelFilterChange: (value: string) => void;
   activeTab: string;
   onTabChange: (value: string) => void;
-  typeCounts: TypeCounts;
+  typeCounts: ItemCounts;
   totalSelected: number;
   onClearSelection: () => void;
 }
@@ -171,7 +172,7 @@ export function InventoryTableToolbar({
             <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
               {tab.label}
               <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
-                {typeCounts[tab.type as keyof TypeCounts]}
+                {typeCounts[tab.type as keyof ItemCounts]}
               </Badge>
             </TabsTrigger>
           ))}
