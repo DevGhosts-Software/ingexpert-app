@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { ChevronDown, Download, Filter, Plus, Search, Trash2 } from 'lucide-react';
+
+import { AddItemSheet } from './add-item-sheet';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +53,8 @@ export function InventoryTableToolbar({
   totalSelected,
   onClearSelection,
 }: InventoryTableToolbarProps) {
+  const [addItemOpen, setAddItemOpen] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* Search + filter + actions row */}
@@ -130,12 +135,14 @@ export function InventoryTableToolbar({
             <Download className="h-4 w-4" />
             Exportar
           </Button>
-          <Button size="sm" className="gap-1.5">
+          <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
             <Plus className="h-4 w-4" />
             Agregar item
           </Button>
         </div>
       </div>
+
+      <AddItemSheet open={addItemOpen} onClose={() => setAddItemOpen(false)} />
 
       {/* Bulk action bar */}
       {totalSelected > 0 && (
