@@ -46,11 +46,7 @@ export function ImageUploadField({ value, onChange, disabled }: ImageUploadField
     return (
       <div className="relative group w-full rounded-lg border overflow-hidden bg-muted/30">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={value}
-          alt="Vista previa"
-          className="w-full h-40 object-contain"
-        />
+        <img src={value} alt="Vista previa" className="w-full h-40 object-contain" />
         {!disabled && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
@@ -61,12 +57,7 @@ export function ImageUploadField({ value, onChange, disabled }: ImageUploadField
             >
               Cambiar
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              onClick={handleRemove}
-            >
+            <Button type="button" size="sm" variant="destructive" onClick={handleRemove}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -89,7 +80,10 @@ export function ImageUploadField({ value, onChange, disabled }: ImageUploadField
       tabIndex={disabled ? -1 : 0}
       onClick={() => !disabled && inputRef.current?.click()}
       onKeyDown={(e) => e.key === 'Enter' && !disabled && inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className={cn(

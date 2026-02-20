@@ -22,10 +22,7 @@ import {
 
 import { COLUMNS } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
-import {
-  LOW_STOCK_THRESHOLD,
-  type InventoryTableProps,
-} from './inventory-table.types';
+import { LOW_STOCK_THRESHOLD, type InventoryTableProps } from './inventory-table.types';
 
 export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-table.types';
 
@@ -51,7 +48,8 @@ export function InventoryTable({
 
   const filteredItems = useMemo(() => {
     if (stockLevelFilter === 'all') return items;
-    if (stockLevelFilter === 'low') return items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD);
+    if (stockLevelFilter === 'low')
+      return items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD);
     if (stockLevelFilter === 'out') return items.filter((i) => i.stock === 0);
     if (stockLevelFilter === 'ok') return items.filter((i) => i.stock >= LOW_STOCK_THRESHOLD);
     return items;
@@ -140,7 +138,10 @@ export function InventoryTable({
               ))
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMNS.length} className="h-32 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={COLUMNS.length}
+                  className="h-32 text-center text-muted-foreground"
+                >
                   No se encontraron items.
                 </TableCell>
               </TableRow>
@@ -165,9 +166,10 @@ export function InventoryTable({
         pageIndex={pagination.pageIndex}
         pageSize={pagination.pageSize}
         pageCount={pageCount}
-        onPageSizeChange={(size) => onPaginationChange({ ...pagination, pageSize: size, pageIndex: 0 })}
+        onPageSizeChange={(size) =>
+          onPaginationChange({ ...pagination, pageSize: size, pageIndex: 0 })
+        }
       />
     </div>
   );
 }
-

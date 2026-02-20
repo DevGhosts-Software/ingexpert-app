@@ -36,30 +36,34 @@ export class TrpcService {
   readonly procedure = this.t.procedure;
   readonly mergeRouters = this.t.mergeRouters;
 
-  readonly protectedProcedure = this.t.procedure.meta({ docs: { auth: true } }).use(async ({ ctx, next }) => {
-    if (!ctx.user) {
-      console.warn('Unauthorized access attempt: No user in context');
-      ctx.res.clearCookie('ingexpert_token', { path: '/' });
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'No active session or invalid token',
+  readonly protectedProcedure = this.t.procedure
+    .meta({ docs: { auth: true } })
+    .use(async ({ ctx, next }) => {
+      if (!ctx.user) {
+        console.warn('Unauthorized access attempt: No user in context');
+        ctx.res.clearCookie('ingexpert_token', { path: '/' });
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'No active session or invalid token',
+        });
+      }
+      return next({
+        ctx: {
+          user: ctx.user,
+        },
       });
-    }
-    return next({
-      ctx: {
-        user: ctx.user,
-      },
     });
-  });
 
-  readonly adminProcedure = this.protectedProcedure.meta({ docs: { auth: true, roles: ['admin'] } }).use(async ({ ctx, next }) => {
-    if (ctx.user.role !== UserRole.ADMIN) {
-      throw new TRPCError({ code: 'FORBIDDEN' });
-    }
-    return next({
-      ctx: {
-        user: ctx.user,
-      },
+  readonly adminProcedure = this.protectedProcedure
+    .meta({ docs: { auth: true, roles: ['admin'] } })
+    .use(async ({ ctx, next }) => {
+      if (ctx.user.role !== UserRole.ADMIN) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      return next({
+        ctx: {
+          user: ctx.user,
+        },
+      });
     });
-  });
 }

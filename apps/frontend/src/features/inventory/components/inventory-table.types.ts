@@ -51,4 +51,3 @@ export interface InventoryTableProps {
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
 }
-

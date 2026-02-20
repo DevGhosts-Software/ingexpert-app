@@ -30,7 +30,11 @@ export class ItemsService {
   }
 
   async findPaginated(input: ItemPaginationDto) {
-    const result = await paginatePrisma<Item>(this.prisma.item, input, ['name', 'code', 'location']);
+    const result = await paginatePrisma<Item>(this.prisma.item, input, [
+      'name',
+      'code',
+      'location',
+    ]);
     return {
       data: result.data.map((item) => this.mapItem(item)),
       meta: result.meta,
