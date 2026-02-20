@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { ItemCounts, ItemStats, ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
+import { useDebounce } from '@/hooks/use-debounce';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
 import { InventoryTable } from '@/features/inventory/components/inventory-table';
 
@@ -27,6 +28,7 @@ const DEFAULT_COUNTS: ItemCounts = {
 export default function InventoryPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [typeFilter, setTypeFilter] = useState<ItemType | 'ALL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -39,7 +41,7 @@ export default function InventoryPage() {
 
   // Per-type counts filtered by search + location (for tab badges)
   const { data: countsData } = trpc.items.getCounts.useQuery({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     location: locationFilter !== 'all' ? locationFilter : undefined,
   });
 
@@ -47,7 +49,7 @@ export default function InventoryPage() {
   const { data: listResult, isLoading } = trpc.items.list.useQuery({
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     orderBy: sorting[0]?.id,
     orderDir: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     filters: {
