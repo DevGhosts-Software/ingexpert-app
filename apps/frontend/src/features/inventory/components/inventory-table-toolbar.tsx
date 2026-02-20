@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { type ItemType, type TypeCounts, TAB_ITEMS } from './inventory-table.types';
+import { TAB_ITEMS, type TypeCounts } from './inventory-table.types';
 
 interface InventoryTableToolbarProps {
   search: string;
@@ -63,7 +63,7 @@ export function InventoryTableToolbar({
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar items, ubicaciones..."
+              placeholder="Buscar items, codigos, ubicaciones..."
               className="pl-9"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}

@@ -2,10 +2,27 @@
 
 import { useCallback, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import type { ItemStats } from '@ingexpert/schema';
+import type { ItemCounts, ItemStats, ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
-import { InventoryTable, type ItemType } from '@/features/inventory/components/inventory-table';
+import { InventoryTable } from '@/features/inventory/components/inventory-table';
+
+const DEFAULT_STATS: ItemStats = {
+  total: 0,
+  products: 0,
+  equipment: 0,
+  tools: 0,
+  kits: 0,
+  lowStock: 0,
+};
+
+const DEFAULT_COUNTS: ItemCounts = {
+  ALL: 0,
+  PRODUCT: 0,
+  EQUIPMENT: 0,
+  TOOL: 0,
+  KIT: 0,
+};
 
 export default function InventoryPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
@@ -38,23 +55,6 @@ export default function InventoryPage() {
       location: locationFilter !== 'all' ? locationFilter : undefined,
     },
   });
-
-  const stats: ItemStats = {
-    total: statsData?.total ?? 0,
-    products: statsData?.products ?? 0,
-    equipment: statsData?.equipment ?? 0,
-    tools: statsData?.tools ?? 0,
-    kits: statsData?.kits ?? 0,
-    lowStock: statsData?.lowStock ?? 0,
-  };
-
-  const typeCounts = {
-    ALL: countsData?.ALL ?? 0,
-    PRODUCT: countsData?.PRODUCT ?? 0,
-    EQUIPMENT: countsData?.EQUIPMENT ?? 0,
-    TOOL: countsData?.TOOL ?? 0,
-    KIT: countsData?.KIT ?? 0,
-  };
 
   // stock is already a plain number — the service calls .toNumber() before serializing
   const items = (listResult?.data ?? []).map((item) => ({
@@ -95,7 +95,7 @@ export default function InventoryPage() {
         </p>
       </div>
 
-      <InventoryStats stats={stats} />
+      <InventoryStats stats={statsData ?? DEFAULT_STATS} />
       <InventoryTable
         items={items}
         isLoading={isLoading}
@@ -108,7 +108,7 @@ export default function InventoryPage() {
         onTypeFilterChange={handleTypeFilterChange}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
-        typeCounts={typeCounts}
+        typeCounts={countsData ?? DEFAULT_COUNTS}
         allLocations={allLocations ?? []}
         sorting={sorting}
         onSortingChange={handleSortingChange}

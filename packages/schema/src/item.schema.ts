@@ -4,6 +4,8 @@ import { BasePaginationSchema } from './pagination.schema';
 
 export { ItemType } from '@ingexpert/database';
 
+// ─── DTOs (Zod-validated tRPC inputs) ────────────────────────────────────────
+
 export const CreateItemSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
@@ -13,12 +15,29 @@ export const CreateItemSchema = z.object({
   type: z.nativeEnum(ItemType),
   imageUrl: z.string().optional(),
 });
+export type CreateItemDto = z.infer<typeof CreateItemSchema>;
+
+export const UpdateItemSchema = CreateItemSchema.partial();
+export type UpdateItemDto = z.infer<typeof UpdateItemSchema>;
+
+export const ItemPaginationSchema = BasePaginationSchema.extend({
+  filters: z
+    .object({
+      type: z.string().optional(),
+      unit: z.string().optional(),
+      location: z.string().optional(),
+    })
+    .optional(),
+});
+export type ItemPaginationDto = z.infer<typeof ItemPaginationSchema>;
+
+// ─── Entities (Prisma-derived — changes to the DB schema surface here) ────────
 
 /**
- * Represents an Item as returned by the API over the wire.
- * Structurally derived from the Prisma `Item` model — if the DB schema changes,
- * TypeScript will error in `mapItem` until this contract is fulfilled.
- * `stock` is overridden to `number` (Prisma Decimal is serialized in the service).
+ * Wire representation of an Item returned by the API.
+ * Derived from the Prisma `Item` model: adding a new DB column will cause a
+ * type error in `ItemsService.mapItem()` until the mapping is updated.
+ * `stock` is overridden from `Decimal` → `number` (serialized by the service).
  */
 export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
 
@@ -40,20 +59,3 @@ export type ItemCounts = {
   TOOL: number;
   KIT: number;
 };
-
-export const ItemPaginationSchema = BasePaginationSchema.extend({
-  filters: z
-    .object({
-      type: z.string().optional(),
-      unit: z.string().optional(),
-      location: z.string().optional(),
-    })
-    .optional(),
-});
-
-export type ItemPaginationDto = z.infer<typeof ItemPaginationSchema>;
-
-export type CreateItemDto = z.infer<typeof CreateItemSchema>;
-
-export const UpdateItemSchema = CreateItemSchema.partial();
-export type UpdateItemDto = z.infer<typeof UpdateItemSchema>;

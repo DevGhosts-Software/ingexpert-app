@@ -64,14 +64,29 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
   - Classes: `PascalCase`.
   - Variables/Functions: `camelCase`.
 
-## 5. Shared Entities
+## 5. Shared Types in `packages/schema`
 
-**Pattern:** All data returned by tRPC procedures MUST be typed with a Zod schema in `packages/schema`. Never use raw Prisma types or `any` as procedure return types.
+Each `[domain].schema.ts` file is divided into two explicit sections:
 
-- **Entity Schemas:** Named `[Domain]EntitySchema` (e.g., `ItemEntitySchema`) in `packages/schema/src/[domain].schema.ts`. Export both the schema and the inferred TypeScript type (`ItemEntity`).
-- **Mapping:** API services map Prisma models → Entity using a private `mapXxx()` method, converting Prisma-specific types (e.g., `Decimal` → `number`) before JSON serialization.
+### Section 1 — DTOs (Zod schemas for tRPC input validation)
+
+- **Named:** `[Action][Domain]Schema` (e.g., `CreateItemSchema`, `ItemPaginationSchema`)
+- **Used as:** tRPC `.input(SomeSchema)` — Zod parses and coerces the payload at the API boundary.
+- **Type exported as:** `type CreateItemDto = z.infer<typeof CreateItemSchema>`
+- **Rule:** Only inputs need Zod. Never wrap API _response_ types in Zod — they are never `.parse()`-d.
+
+### Section 2 — Entities (Prisma-derived TypeScript types)
+
+- **Named:** `[Domain]Entity` (e.g., `ItemEntity`, `MovementEntity`)
+- **Derived from:** The Prisma-generated model type from `@ingexpert/database`.
+- **Pattern:**
+  - No overrides needed → `export type ProjectEntity = Project`
+  - Decimal fields → `export type ItemEntity = Omit<Item, 'stock'> & { stock: number }`
+  - Date fields (JSON serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
+- **Safety guarantee:** If a new column is added to the Prisma schema, TypeScript will error in the service's `mapXxx()` method until the mapping is updated. This is intentional — the DB schema is the source of truth.
+- **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
 - **Frontend:** Import entity types from `@ingexpert/schema` — never declare local interfaces that duplicate the shape of API data.
-- **tRPC type inference:** When the service method return type is `Promise<ItemEntity>`, tRPC automatically infers the client-side call type. This is the primary benefit of the entity pattern.
+- **tRPC inference:** When a service method returns `Promise<ItemEntity>`, tRPC infers the client-side type automatically.
 
 ## 4. Commands Reference
 
