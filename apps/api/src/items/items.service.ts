@@ -1,19 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Item, Prisma } from '@ingexpert/database';
-import { CreateItemDto, itemPaginationDto, UpdateItemDto } from '@ingexpert/schema';
-import {paginatePrisma} from "../utils/paginatePrisma";
+import { CreateItemDto, ItemPaginationDto, UpdateItemDto } from '@ingexpert/schema';
+import { paginatePrisma } from '../utils/paginatePrisma';
 
 @Injectable()
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findPaginated(input: itemPaginationDto) {
-    return paginatePrisma(
-        this.prisma.item,
-        input,
-        ['name', 'code', 'location']
-    );
+  async findPaginated(input: ItemPaginationDto) {
+    return paginatePrisma(this.prisma.item, input, ['name', 'code', 'location']);
   }
 
   async create(createItemDto: CreateItemDto): Promise<Item> {
