@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import {
-  type OnChangeFn,
-  type RowSelectionState,
   flexRender,
   getCoreRowModel,
+  type RowSelectionState,
   useReactTable,
 } from '@tanstack/react-table';
 
@@ -22,7 +21,7 @@ import {
 
 import { COLUMNS } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
-import { LOW_STOCK_THRESHOLD, type InventoryTableProps } from './inventory-table.types';
+import { type InventoryTableProps, LOW_STOCK_THRESHOLD } from './inventory-table.types';
 
 export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-table.types';
 
@@ -90,11 +89,6 @@ export function InventoryTable({
     };
     onTypeFilterChange(typeMap[value] ?? 'ALL');
   };
-
-  const handlePaginationChange: OnChangeFn<typeof pagination> = (updater) => {
-    onPaginationChange(updater);
-  };
-
   return (
     <div className="space-y-4">
       <InventoryTableToolbar
