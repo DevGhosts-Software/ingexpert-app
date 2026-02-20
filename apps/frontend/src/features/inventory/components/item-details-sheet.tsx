@@ -5,6 +5,7 @@ import { ImageIcon, MapPin, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { StorageImage } from '@/components/ui/storage-image';
 
 import { type InventoryItem, LOW_STOCK_THRESHOLD, TYPE_CONFIG } from './inventory-table.types';
 
@@ -49,8 +50,7 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
           {/* Image */}
           {item.imageUrl ? (
             <div className="w-full rounded-lg border overflow-hidden bg-muted/30">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={item.imageUrl} alt={item.name} className="w-full h-48 object-contain" />
+              <StorageImage src={item.imageUrl} alt={item.name} className="w-full h-48 object-contain" />
             </div>
           ) : (
             <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">

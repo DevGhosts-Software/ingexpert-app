@@ -5,6 +5,7 @@ import { ImageIcon, Loader2, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { StorageImage } from '@/components/ui/storage-image';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { cn } from '@/lib/utils';
 
@@ -56,8 +57,7 @@ export function ImageUploadField({ value, onChange, disabled }: ImageUploadField
   if (value) {
     return (
       <div className="relative group w-full rounded-lg border overflow-hidden bg-muted/30">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={value} alt="Vista previa" className="w-full h-40 object-contain" />
+        <StorageImage src={value} alt="Vista previa" className="w-full h-40 object-contain" />
         {!isDisabled && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
