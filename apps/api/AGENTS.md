@@ -54,27 +54,57 @@ apps/api/src/
 
 ## 5. Shared Entity Pattern
 
-All data returned by tRPC procedures must be typed as a shared entity from `@ingexpert/schema`:
+All data returned by tRPC procedures must be typed as a shared entity from `@ingexpert/schema`. The pattern has two parts:
 
-1. **Define** `[Domain]EntitySchema` in `packages/schema/src/[domain].schema.ts` and export the inferred type.
-2. **Map** Prisma models to the entity in the service using a private `mapXxx()` method (handles `Decimal → number`, etc).
-3. **Return** the entity type from all service methods so tRPC infers it on the client.
-4. **Companion schemas:** Add `[Domain]StatsSchema` and `[Domain]CountsSchema` alongside the entity for aggregate endpoints.
+### 5.1 Entity Type Definition (in `packages/schema`)
 
-### Example
+Entity types are **Prisma-derived TypeScript types**, not Zod schemas. The DB schema is the source of truth.
 
 ```typescript
-// packages/schema — entity definition
-export const ItemEntitySchema = z.object({ id: z.string(), stock: z.number(), ... });
-export type ItemEntity = z.infer<typeof ItemEntitySchema>;
+// packages/schema/src/item.schema.ts
 
-// apps/api — service mapper
+// ─── Entities (Prisma-derived) ────────────────────────────────────────────────
+import { type Item } from '@ingexpert/database';
+
+// No serialization issues → direct alias
+export type ProjectEntity = Project;
+
+// Decimal field → override to number
+export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
+
+// Date field → override to string (ISO serialized over JSON)
+export type MovementEntity = Omit<Movement, 'date'> & { date: string };
+```
+
+**Safety guarantee:** Adding a new column to the Prisma schema causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. Schema drift is caught at compile time.
+
+### 5.2 Service Mapper (in `apps/api`)
+
+```typescript
+// apps/api — service mapper bridges Prisma model → wire Entity
 private mapItem(item: Item): ItemEntity {
-  return { ...item, stock: item.stock.toNumber() };
+  return {
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    location: item.location,
+    stock: item.stock.toNumber(), // Decimal → number
+    unit: item.unit,
+    type: item.type,
+    imageUrl: item.imageUrl,
+  };
 }
-async findPaginated(input): Promise<{ data: ItemEntity[]; meta: ... }> { ... }
 
-// apps/frontend — types file re-exports entity
+async findPaginated(input: ItemPaginationDto): Promise<{ data: ItemEntity[]; meta: PaginationMeta }> {
+  const result = await paginatePrisma(this.prisma.item, input, ['name', 'code', 'location']);
+  return { data: result.data.map((item) => this.mapItem(item)), meta: result.meta };
+}
+```
+
+### 5.3 Frontend Usage
+
+```typescript
+// apps/frontend — import types from @ingexpert/schema, never redeclare locally
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 ```
 

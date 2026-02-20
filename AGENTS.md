@@ -1,4 +1,4 @@
-# Ingexpert - Gemini Agent Context
+# Ingexpert - Agent Context
 
 This file serves as the **primary source of truth** for the Ingexpert project context, architecture, and development standards for AI Agents.
 
@@ -31,13 +31,13 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 ### Packages
 
 - **`packages/schema` (`@ingexpert/schema`)**
-  - **Tech:** Zod.
-  - **Purpose:** Centralized Zod schemas and DTOs shared between API and Frontend.
+  - **Tech:** Zod + TypeScript.
+  - **Purpose:** Two-track shared type system — Zod schemas for DTO input validation, Prisma-derived TypeScript types for API response entities.
 
 - **`packages/database` (`@ingexpert/database`)**
   - **Tech:** Prisma ORM, PostgreSQL.
   - **Purpose:** Centralized database schema and client generation.
-  - **Exports:** Prisma Client instance.
+  - **Exports:** Prisma Client instance and all generated model types (used as entity bases in `@ingexpert/schema`).
 
 - **`packages/config` (`@ingexpert/config`)**
   - **Purpose:** Shared configuration (ESLint, Prettier).
@@ -46,47 +46,23 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 
 ### Architectural Rules
 
-1.  **API Flow:**
-    - Define/Update Schema in `packages/database`.
-    - Generate Prisma Client (`pnpm db:generate` / `pnpm build`).
-    - Define **Zod Schemas** in tRPC Routers.
-    - Implement Logic in NestJS Services.
-    - Expose via tRPC Procedures.
-2.  **Database Access:** Only `apps/api` should perform write operations. `apps/frontend` should consume the API via the tRPC client.
-3.  **UI Components:** Use `shadcn/ui` components located in `apps/frontend/src/components/ui`. Customize via `apps/frontend/src/app/globals.css` (Tailwind v4).
+1.  **Feature Flow (full cycle for a new domain):**
+    - Define/Update Prisma schema in `packages/database/prisma/schema/`.
+    - Run `pnpm db:generate` to regenerate the Prisma Client.
+    - In `packages/schema/src/[domain].schema.ts`, add DTOs (Zod) and Entity types (Prisma-derived). See Section 5.
+    - In `apps/api`, implement the NestJS Service and tRPC Router. Import Zod schemas from `@ingexpert/schema` — never define them inside routers.
+    - In `apps/frontend`, the page (Container) fetches data via tRPC hooks. Feature components (Presenters) render and mutate.
+2.  **Database Access:** Only `apps/api` performs write operations. `apps/frontend` consumes exclusively via tRPC.
+3.  **UI Components:** Use `shadcn/ui` from `apps/frontend/src/components/ui`. Customize via `apps/frontend/src/app/globals.css` (Tailwind v4).
 
 ### Coding Style
 
-- **Strict Typing:** `noImplicitAny` is enforced.
+- **Strict Typing:** `noImplicitAny` is enforced. No `any`.
 - **Linting:** Respect existing `.eslintrc.js` and `prettier` configs.
 - **Naming:**
   - Files: `kebab-case.ts` (e.g., `user-profile.component.tsx`, `auth.service.ts`).
   - Classes: `PascalCase`.
   - Variables/Functions: `camelCase`.
-
-## 5. Shared Types in `packages/schema`
-
-Each `[domain].schema.ts` file is divided into two explicit sections:
-
-### Section 1 — DTOs (Zod schemas for tRPC input validation)
-
-- **Named:** `[Action][Domain]Schema` (e.g., `CreateItemSchema`, `ItemPaginationSchema`)
-- **Used as:** tRPC `.input(SomeSchema)` — Zod parses and coerces the payload at the API boundary.
-- **Type exported as:** `type CreateItemDto = z.infer<typeof CreateItemSchema>`
-- **Rule:** Only inputs need Zod. Never wrap API _response_ types in Zod — they are never `.parse()`-d.
-
-### Section 2 — Entities (Prisma-derived TypeScript types)
-
-- **Named:** `[Domain]Entity` (e.g., `ItemEntity`, `MovementEntity`)
-- **Derived from:** The Prisma-generated model type from `@ingexpert/database`.
-- **Pattern:**
-  - No overrides needed → `export type ProjectEntity = Project`
-  - Decimal fields → `export type ItemEntity = Omit<Item, 'stock'> & { stock: number }`
-  - Date fields (JSON serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
-- **Safety guarantee:** If a new column is added to the Prisma schema, TypeScript will error in the service's `mapXxx()` method until the mapping is updated. This is intentional — the DB schema is the source of truth.
-- **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
-- **Frontend:** Import entity types from `@ingexpert/schema` — never declare local interfaces that duplicate the shape of API data.
-- **tRPC inference:** When a service method returns `Promise<ItemEntity>`, tRPC infers the client-side type automatically.
 
 ## 4. Commands Reference
 
@@ -94,3 +70,29 @@ Each `[domain].schema.ts` file is divided into two explicit sections:
 - `pnpm build` - Build production artifacts.
 - `pnpm db:migrate` - Apply schema changes.
 - `pnpm db:studio` - View database content.
+
+## 5. Shared Types in `packages/schema`
+
+Each `[domain].schema.ts` file is divided into two explicit sections.
+
+### Section 1 — DTOs (Zod schemas for tRPC input validation)
+
+- **Named:** `[Action][Domain]Schema` (e.g., `CreateItemSchema`, `ItemPaginationSchema`)
+- **Used as:** tRPC `.input(SomeSchema)` — Zod validates and coerces the payload at the API boundary at runtime.
+- **Type exported as:** `type CreateItemDto = z.infer<typeof CreateItemSchema>`
+- **Rule:** Only inputs need Zod. Never wrap API *response* types in Zod — response types are never `.parse()`-d.
+- **Forms:** The frontend extends the shared schema for UI-specific messages: `const FormSchema = CreateItemSchema.extend({ name: z.string().min(1, 'Required') })`. Type is still `CreateItemDto`.
+
+### Section 2 — Entities (Prisma-derived TypeScript types)
+
+- **Named:** `[Domain]Entity` (e.g., `ItemEntity`, `MovementEntity`)
+- **Derived from:** The Prisma-generated model type from `@ingexpert/database` — the DB schema is the source of truth.
+- **Patterns:**
+  - No serialization overrides → `export type ProjectEntity = Project`
+  - `Decimal` fields → `export type ItemEntity = Omit<Item, 'stock'> & { stock: number }`
+  - `Date` fields (JSON-serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
+- **Safety guarantee:** Adding a new column to the Prisma schema causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. This is intentional — schema drift surfaces at compile time.
+- **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
+- **Frontend rule:** Always import entity types from `@ingexpert/schema`. Never declare local interfaces that duplicate the shape of API data.
+- **tRPC inference:** When a service method returns `Promise<ItemEntity>`, tRPC infers the client-side call type automatically — no manual type annotation needed on the frontend.
+

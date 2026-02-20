@@ -32,6 +32,6 @@ This document defines the architectural and coding standards for **Ingexpert**, 
 
 ## 4. Code Quality & Performance
 
-- **TypeScript Strictness:** No `any` types. Leverage interfaces for all database entities and API responses.
+- **TypeScript Strictness:** No `any` types. All API response shapes must use Prisma-derived entity types from `@ingexpert/schema` (e.g., `ItemEntity`, `ProjectEntity`). All API inputs must use Zod-validated DTO types (e.g., `CreateItemDto`). Never use raw Prisma types or locally-declared interfaces as tRPC procedure return types.
 - **Error Handling:** Use centralized exception filters in NestJS. Never return raw database errors to the client.
-- **Performance:** Optimize database queries for dashboards. Use indexing on `sku` and `userId`.
+- **Performance:** Optimize database queries for dashboards. Use indexing on frequently-filtered fields.

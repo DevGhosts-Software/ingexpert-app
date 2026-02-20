@@ -207,32 +207,34 @@ import { Label } from "@/components/ui/label"
 
 ### 5.5 Form Component (React Hook Form Integration)
 
-**Purpose:** High-level form handling for adding/editing products
+**Purpose:** High-level form handling for adding/editing items. Always use shared schemas from `@ingexpert/schema`.
 
 ```typescript
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { CreateItemSchema, type CreateItemDto } from "@ingexpert/schema"
 
-const productSchema = z.object({
-  name: z.string().min(2, "Name required"),
-  sku: z.string().min(3, "SKU required"),
-  minStock: z.number().min(0),
+// Extend the shared schema only to add UI-specific error messages
+const FormSchema = CreateItemSchema.extend({
+  name: z.string().min(1, "Nombre requerido"),
+  code: z.string().min(1, "Código requerido"),
 })
 
-type ProductFormValues = z.infer<typeof productSchema>
+// Type stays as the shared DTO — never redefine locally
+type FormValues = CreateItemDto
 
-export function ProductCreationForm() {
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    defaultValues: { name: "", sku: "", minStock: 0 },
+export function ItemCreationForm() {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: { name: "", code: "", stock: 0, unit: "", location: "", type: "PRODUCT" },
   })
 
-  function onSubmit(values: ProductFormValues) {
-    console.log(values)
+  function onSubmit(values: FormValues) {
+    // call trpc mutation
   }
 
   return (
@@ -243,13 +245,13 @@ export function ProductCreationForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Product Name</FormLabel>
+              <FormLabel>Nombre</FormLabel>
               <FormControl><Input {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit">Create Product</Button>
+        <Button type="submit">Agregar ítem</Button>
       </form>
     </Form>
   )
@@ -295,10 +297,11 @@ import { Badge } from "@/components/ui/badge"
 1. **Use `@/components/ui` imports** (never relative paths).
 2. **Import from TypeScript source**.
 3. **Use `"use client"` for interactive components**.
-4. **Always add proper types** (TypeScript first).
-5. **Use Zod for all form validation** (import schemas from `@ingexpert/schema`).
-6. **Prefer semantic HTML**.
-7. **Tailwind utility classes only** (no inline styles).
+4. **Always add proper types** (TypeScript first, no `any`).
+5. **Use Zod for all form validation** — import the shared schema from `@ingexpert/schema` and extend it for UI messages. Never define a local schema that duplicates a shared one.
+6. **Use entity types for props** — import `ItemEntity`, `ProjectEntity`, etc. from `@ingexpert/schema`. Never use `any` or local interfaces for API data shapes.
+7. **Prefer semantic HTML**.
+8. **Tailwind utility classes only** (no inline styles).
 
 ---
 
@@ -313,8 +316,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import type { ItemEntity } from "@ingexpert/schema"
 
-export function StockAdjustmentDialog({ product }: { product: any }) {
+export function StockAdjustmentDialog({ item }: { item: ItemEntity }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -322,7 +326,7 @@ export function StockAdjustmentDialog({ product }: { product: any }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Adjust Stock: {product.name}</DialogTitle>
+          <DialogTitle>Adjust Stock: {item.name}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid items-center gap-4">
@@ -343,8 +347,13 @@ export function StockAdjustmentDialog({ product }: { product: any }) {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle } from "lucide-react"
+import type { ItemStats } from "@ingexpert/schema"
 
-export function InventoryStatCard({ label, value, alertCount }: any) {
+export function InventoryStatCard({ label, value, alertCount }: {
+  label: string;
+  value: number;
+  alertCount?: number;
+}) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
