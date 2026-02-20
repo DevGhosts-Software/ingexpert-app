@@ -13,12 +13,6 @@ export function useStorageUpload() {
 
     setIsUploading(true);
     try {
-      const { data: authData } = await supabase.auth.getSession();
-      console.log('CURRENT SESSION:', authData.session);
-      if (!authData.session) {
-        console.error("CRITICAL: No active session. Request will be sent as 'anon'.");
-      }
-
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
         cacheControl: '3600',
         upsert: false,
