@@ -1,6 +1,6 @@
 export async function paginatePrisma<T>(
     modelDelegate: any,
-    params: { page?: number; limit?: number; search?: string; filters?: any },
+    params: { page?: number; limit?: number; search?: string; filters?: any; orderBy?: string; orderDir?: 'asc' | 'desc' },
     searchFields: string[]
 ) {
     const page = params.page || 1;
@@ -30,6 +30,10 @@ export async function paginatePrisma<T>(
         delete where.AND;
     }
 
+    const orderBy = params.orderBy
+        ? { [params.orderBy]: params.orderDir ?? 'asc' }
+        : { id: 'desc' };
+
     // 3. Ejecutar transacción paralela
     const [total, data] = await Promise.all([
         modelDelegate.count({ where }),
@@ -37,8 +41,7 @@ export async function paginatePrisma<T>(
             where,
             take: limit,
             skip,
-            // Aquí puedes poner un orden por defecto si quieres
-            orderBy: { id: 'desc' },
+            orderBy,
         }),
     ]);
 

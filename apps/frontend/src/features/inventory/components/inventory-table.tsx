@@ -9,7 +9,6 @@ import {
   type SortingState,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import {
@@ -240,6 +239,8 @@ export interface InventoryTableProps {
   onLocationFilterChange: (value: string) => void;
   typeCounts: { ALL: number; PRODUCT: number; EQUIPMENT: number; TOOL: number; KIT: number };
   allLocations?: string[];
+  sorting: SortingState;
+  onSortingChange: OnChangeFn<SortingState>;
 }
 
 export function InventoryTable({
@@ -256,8 +257,9 @@ export function InventoryTable({
   onLocationFilterChange,
   typeCounts,
   allLocations,
+  sorting,
+  onSortingChange,
 }: InventoryTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
@@ -286,13 +288,13 @@ export function InventoryTable({
     columns: COLUMNS,
     pageCount,
     state: { sorting, rowSelection, pagination },
-    onSortingChange: setSorting,
+    onSortingChange,
     onRowSelectionChange: setRowSelection,
     onPaginationChange,
     manualPagination: true,
+    manualSorting: true,
     manualFiltering: true,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.id,
   });
 

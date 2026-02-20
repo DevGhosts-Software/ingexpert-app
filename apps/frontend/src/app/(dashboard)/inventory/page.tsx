@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { OnChangeFn, PaginationState } from '@tanstack/react-table';
+import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { trpc } from '@/lib/trpc';
 import {
   InventoryStats,
@@ -27,6 +27,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ItemType | 'ALL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   // Global unfiltered stats for the summary cards
   const { data: statsData } = trpc.items.getStats.useQuery();
@@ -45,6 +46,8 @@ export default function InventoryPage() {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: search || undefined,
+    orderBy: sorting[0]?.id,
+    orderDir: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
     filters: {
       type: typeFilter !== 'ALL' ? typeFilter : undefined,
       location: locationFilter !== 'all' ? locationFilter : undefined,
@@ -88,6 +91,11 @@ export default function InventoryPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
   }, []);
 
+  const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
+    setSorting((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
   const handleTypeFilterChange = useCallback((value: ItemType | 'ALL') => {
     setTypeFilter(value);
     setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -122,6 +130,8 @@ export default function InventoryPage() {
         onLocationFilterChange={handleLocationFilterChange}
         typeCounts={typeCounts}
         allLocations={allLocations ?? []}
+        sorting={sorting}
+        onSortingChange={handleSortingChange}
       />
     </div>
   );
