@@ -3,20 +3,24 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { Context } from './trpc.context';
 import { ZodError } from 'zod';
 import { UserRole } from '@ingexpert/database';
+import { RouteMeta } from 'trpc-docs-generator';
 
 @Injectable()
 export class TrpcService {
-  readonly t = initTRPC.context<Context>().create({
-    errorFormatter({ shape, error }) {
-      return {
-        ...shape,
-        data: {
-          ...shape.data,
-          zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
-        },
-      };
-    },
-  });
+  readonly t = initTRPC
+    .context<Context>()
+    .meta<RouteMeta>()
+    .create({
+      errorFormatter({ shape, error }) {
+        return {
+          ...shape,
+          data: {
+            ...shape.data,
+            zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+          },
+        };
+      },
+    });
 
   readonly router = this.t.router;
   readonly procedure = this.t.procedure;
