@@ -483,6 +483,9 @@ export function InventoryTable({
       <DataTablePagination
         table={table}
         totalSelected={totalSelected}
+        pageIndex={pagination.pageIndex}
+        pageSize={pagination.pageSize}
+        pageCount={pageCount}
         onPageSizeChange={(size) => onPaginationChange({ ...pagination, pageSize: size, pageIndex: 0 })}
       />
     </div>

@@ -12,16 +12,27 @@ import {
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
   totalSelected?: number;
+  /** Controlled page index (0-based). When provided, used instead of table.getState(). */
+  pageIndex?: number;
+  /** Controlled page size. When provided, used instead of table.getState(). */
+  pageSize?: number;
+  /** Total page count. When provided, used instead of table.getPageCount(). */
+  pageCount?: number;
   onPageSizeChange?: (size: number) => void;
 }
 
 export function DataTablePagination<TData>({
   table,
   totalSelected = 0,
+  pageIndex: pageIndexProp,
+  pageSize: pageSizeProp,
+  pageCount: pageCountProp,
   onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
-  const { pageIndex, pageSize } = table.getState().pagination;
-  const pageCount = table.getPageCount();
+  const tableState = table.getState().pagination;
+  const pageIndex = pageIndexProp ?? tableState.pageIndex;
+  const pageSize = pageSizeProp ?? tableState.pageSize;
+  const pageCount = pageCountProp ?? table.getPageCount();
 
   const handlePageSizeChange = (v: string) => {
     const newSize = Number(v);
@@ -63,7 +74,7 @@ export function DataTablePagination<TData>({
             size="icon"
             className="h-8 w-8"
             onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
+            disabled={pageIndex === 0}
           >
             <ChevronsLeft className="h-4 w-4" />
             <span className="sr-only">Primera página</span>
@@ -73,7 +84,7 @@ export function DataTablePagination<TData>({
             size="icon"
             className="h-8 w-8"
             onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            disabled={pageIndex === 0}
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Página anterior</span>
@@ -83,7 +94,7 @@ export function DataTablePagination<TData>({
             size="icon"
             className="h-8 w-8"
             onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            disabled={pageIndex >= pageCount - 1}
           >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Siguiente página</span>
@@ -92,8 +103,8 @@ export function DataTablePagination<TData>({
             variant="outline"
             size="icon"
             className="h-8 w-8"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={pageIndex >= pageCount - 1}
           >
             <ChevronsRight className="h-4 w-4" />
             <span className="sr-only">Última página</span>
