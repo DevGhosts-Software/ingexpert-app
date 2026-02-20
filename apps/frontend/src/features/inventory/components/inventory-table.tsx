@@ -239,6 +239,7 @@ export interface InventoryTableProps {
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
   typeCounts: { ALL: number; PRODUCT: number; EQUIPMENT: number; TOOL: number; KIT: number };
+  allLocations?: string[];
 }
 
 export function InventoryTable({
@@ -254,6 +255,7 @@ export function InventoryTable({
   locationFilter,
   onLocationFilterChange,
   typeCounts,
+  allLocations,
 }: InventoryTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -273,6 +275,9 @@ export function InventoryTable({
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
     [items],
   );
+
+  // Prefer server-provided full location list; fall back to current page locations
+  const locationOptions = allLocations && allLocations.length > 0 ? allLocations : locations;
 
   const activeTab = typeFilter === 'ALL' ? 'all' : typeFilter.toLowerCase();
 
@@ -337,7 +342,7 @@ export function InventoryTable({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas las ubicaciones</SelectItem>
-                      {locations.map((loc) => (
+                      {locationOptions.map((loc) => (
                         <SelectItem key={loc} value={loc}>
                           {loc}
                         </SelectItem>

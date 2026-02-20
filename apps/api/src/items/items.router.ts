@@ -53,6 +53,25 @@ export class ItemsRouter {
           await this.itemsService.upsertManyByName(input);
           return { success: true };
         }),
+
+      getStats: this.trpc.protectedProcedure.query(async () => {
+        return this.itemsService.getStats();
+      }),
+
+      getCounts: this.trpc.protectedProcedure
+        .input(
+          z.object({
+            search: z.string().optional(),
+            location: z.string().optional(),
+          }),
+        )
+        .query(async ({ input }) => {
+          return this.itemsService.getCounts(input.search, input.location);
+        }),
+
+      getLocations: this.trpc.protectedProcedure.query(async () => {
+        return this.itemsService.getLocations();
+      }),
     });
   }
 }

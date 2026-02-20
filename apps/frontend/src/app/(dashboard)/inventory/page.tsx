@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { PaginationState } from '@tanstack/react-table';
+import type { OnChangeFn, PaginationState } from '@tanstack/react-table';
 import { trpc } from '@/lib/trpc';
 import {
   InventoryStats,
@@ -28,43 +28,44 @@ export default function InventoryPage() {
   const [typeFilter, setTypeFilter] = useState<ItemType | 'ALL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('all');
 
-  const queryFilters = {
-    location: locationFilter !== 'all' ? locationFilter : undefined,
-  };
+  // Global unfiltered stats for the summary cards
+  const { data: statsData } = trpc.items.getStats.useQuery();
 
+  // All distinct locations for the filter dropdown
+  const { data: allLocations } = trpc.items.getLocations.useQuery();
+
+  // Per-type counts filtered by search + location (for tab badges)
+  const { data: countsData } = trpc.items.getCounts.useQuery({
+    search: search || undefined,
+    location: locationFilter !== 'all' ? locationFilter : undefined,
+  });
+
+  // Paginated table data
   const { data: listResult, isLoading } = trpc.items.list.useQuery({
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: search || undefined,
     filters: {
-      ...queryFilters,
       type: typeFilter !== 'ALL' ? typeFilter : undefined,
+      location: locationFilter !== 'all' ? locationFilter : undefined,
     },
   });
 
-  // Parallel count queries for stats cards and tab badges
-  const countBase = { page: 1, limit: 1, search: search || undefined, filters: queryFilters };
-  const { data: allCount } = trpc.items.list.useQuery(countBase);
-  const { data: productCount } = trpc.items.list.useQuery({ ...countBase, filters: { ...queryFilters, type: 'PRODUCT' } });
-  const { data: equipmentCount } = trpc.items.list.useQuery({ ...countBase, filters: { ...queryFilters, type: 'EQUIPMENT' } });
-  const { data: toolCount } = trpc.items.list.useQuery({ ...countBase, filters: { ...queryFilters, type: 'TOOL' } });
-  const { data: kitCount } = trpc.items.list.useQuery({ ...countBase, filters: { ...queryFilters, type: 'KIT' } });
-
-  const typeCounts = {
-    ALL: allCount?.meta.total ?? 0,
-    PRODUCT: productCount?.meta.total ?? 0,
-    EQUIPMENT: equipmentCount?.meta.total ?? 0,
-    TOOL: toolCount?.meta.total ?? 0,
-    KIT: kitCount?.meta.total ?? 0,
+  const stats: InventoryStatsType = {
+    total: statsData?.total ?? 0,
+    products: statsData?.products ?? 0,
+    equipment: statsData?.equipment ?? 0,
+    tools: statsData?.tools ?? 0,
+    kits: statsData?.kits ?? 0,
+    lowStock: statsData?.lowStock ?? 0,
   };
 
-  const stats: InventoryStatsType = {
-    total: typeCounts.ALL,
-    products: typeCounts.PRODUCT,
-    equipment: typeCounts.EQUIPMENT,
-    tools: typeCounts.TOOL,
-    kits: typeCounts.KIT,
-    lowStock: 0,
+  const typeCounts = {
+    ALL: countsData?.ALL ?? 0,
+    PRODUCT: countsData?.PRODUCT ?? 0,
+    EQUIPMENT: countsData?.EQUIPMENT ?? 0,
+    TOOL: countsData?.TOOL ?? 0,
+    KIT: countsData?.KIT ?? 0,
   };
 
   const items = ((listResult?.data ?? []) as RawApiItem[]).map((item) => ({
@@ -76,6 +77,11 @@ export default function InventoryPage() {
     type: item.type as ItemType,
     imageUrl: item.imageUrl ?? '',
   }));
+
+  // Explicit handler so TanStack Table's updater functions are handled correctly
+  const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
+    setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -107,7 +113,7 @@ export default function InventoryPage() {
         isLoading={isLoading}
         pageCount={listResult?.meta.totalPages ?? 1}
         pagination={pagination}
-        onPaginationChange={setPagination}
+        onPaginationChange={handlePaginationChange}
         search={search}
         onSearchChange={handleSearchChange}
         typeFilter={typeFilter}
@@ -115,6 +121,7 @@ export default function InventoryPage() {
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
         typeCounts={typeCounts}
+        allLocations={allLocations ?? []}
       />
     </div>
   );
