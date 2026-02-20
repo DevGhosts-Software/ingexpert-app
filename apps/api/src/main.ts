@@ -4,6 +4,7 @@ import * as trpcExpress from '@trpc/server/adapters/express';
 import { AppRouter } from './trpc/app.router';
 import { TrpcContextService } from './trpc/trpc.context';
 import cookieParser from 'cookie-parser';
+import { collectRoutes, generateDocsHtml } from 'trpc-docs-generator';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -28,8 +29,22 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
 
-  console.log(`🚀 API running on http://localhost:${port}`);
+  if (process.env.NODE_ENV !== 'production') {
+    const routes = collectRoutes(appRouter.appRouter);
+    const html = generateDocsHtml(routes, {
+      title: 'IngExpert API',
+    });
+
+    const expressInstance = app.getHttpAdapter().getInstance();
+    expressInstance.get('/docs', (req: any, res: any) => {
+      res.send(html);
+    });
+
+    console.log(`🚀 API Docs running on http://localhost:${port}/docs`);
+  }
+
+  await app.listen(port);
+  console.log(`🚀 API running on http://localhost:${port}/trpc`);
 }
 bootstrap();

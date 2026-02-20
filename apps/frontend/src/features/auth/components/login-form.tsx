@@ -28,19 +28,19 @@ export function LoginForm() {
     },
   });
 
-  const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: () => {
-      toast.success('Logged in successfully');
-      router.push('/');
-      router.refresh();
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to login');
-    },
-  });
+  const loginMutation = trpc.auth.login.useMutation();
 
   function onSubmit(values: LoginDto) {
-    loginMutation.mutate(values);
+    loginMutation.mutate(values, {
+      onSuccess: () => {
+        toast.success('Logged in successfully');
+        router.push('/');
+        router.refresh();
+      },
+      onError: (error) => {
+        toast.error(error.message || 'Failed to login');
+      },
+    });
   }
 
   return (
