@@ -2,10 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 
-// Load environment variables from .env file
 dotenv.config();
 
 const prisma = new PrismaClient();
+
+const ADMIN_EMAIL = 'admin@ingexpert.com';
+const ADMIN_PASSWORD = '123456789';
+
+const adminUpsertData = {
+  role: 'ADMIN' as const,
+  name: 'Super Admin',
+};
 
 async function main() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -17,16 +24,10 @@ async function main() {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const email = 'admin@ingexpert.com';
-  const password = '123456789';
-
-  console.log(`Checking if Super Admin (${email}) exists...`);
+  console.log(`Checking if Super Admin (${ADMIN_EMAIL}) exists...`);
 
   const { data: users, error: listError } = await supabase.auth.admin.listUsers();
 
@@ -35,18 +36,16 @@ async function main() {
     throw listError;
   }
 
-  const existingUser = users.users.find((u) => u.email === email);
+  const existingUser = users.users.find((u) => u.email === ADMIN_EMAIL);
+  let userId: string;
 
   if (!existingUser) {
     console.log('Creating Super Admin in Supabase Auth...');
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
       email_confirm: true,
-      user_metadata: {
-        nombre: 'Super Admin',
-        rol: 'ADMIN',
-      },
+      user_metadata: { nombre: adminUpsertData.name, rol: adminUpsertData.role },
     });
 
     if (authError) {
@@ -54,41 +53,20 @@ async function main() {
       throw authError;
     }
 
-    const userId = authUser.user.id;
+    userId = authUser.user.id;
     console.log('Super Admin created in Supabase Auth with ID:', userId);
-
-    // Manual sync to Prisma as a safety measure (Red de Seguridad)
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {
-        role: 'ADMIN',
-      },
-      create: {
-        id: userId,
-        email: email,
-        role: 'ADMIN',
-        name: 'Super Admin',
-      },
-    });
-    console.log('Super Admin synced to local database');
   } else {
     console.log('Super Admin already exists in Supabase Auth.');
-
-    // Ensure it exists in Prisma too
-    await prisma.user.upsert({
-      where: { id: existingUser.id },
-      update: {
-        role: 'ADMIN',
-      },
-      create: {
-        id: existingUser.id,
-        email: existingUser.email!,
-        role: 'ADMIN',
-        name: 'Super Admin',
-      },
-    });
-    console.log('Ensured Super Admin consistency in local database.');
+    userId = existingUser.id;
   }
+
+  // Upsert into Prisma (safety net — normally handled by the DB trigger)
+  await prisma.user.upsert({
+    where: { id: userId },
+    update: { role: adminUpsertData.role },
+    create: { id: userId, email: ADMIN_EMAIL, ...adminUpsertData },
+  });
+  console.log('Ensured Super Admin consistency in local database.');
 }
 
 main()
