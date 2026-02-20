@@ -2,11 +2,9 @@
 
 import { useCallback, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
+import type { ItemStats } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
-import {
-  InventoryStats,
-  type InventoryStats as InventoryStatsType,
-} from '@/features/inventory/components/inventory-stats';
+import { InventoryStats } from '@/features/inventory/components/inventory-stats';
 import { InventoryTable, type ItemType } from '@/features/inventory/components/inventory-table';
 
 export default function InventoryPage() {
@@ -41,7 +39,7 @@ export default function InventoryPage() {
     },
   });
 
-  const stats: InventoryStatsType = {
+  const stats: ItemStats = {
     total: statsData?.total ?? 0,
     products: statsData?.products ?? 0,
     equipment: statsData?.equipment ?? 0,

@@ -1,18 +1,11 @@
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { Boxes, Hammer, Package, Wrench } from 'lucide-react';
-import type { ItemEntity, ItemType } from '@ingexpert/schema';
+import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
 
 // Re-export shared entity types so callers within this feature only need one import
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
+export type { ItemCounts as TypeCounts } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
-
-export type TypeCounts = {
-  ALL: number;
-  PRODUCT: number;
-  EQUIPMENT: number;
-  TOOL: number;
-  KIT: number;
-};
 
 export const LOW_STOCK_THRESHOLD = 10;
 
@@ -46,7 +39,7 @@ export interface InventoryTableProps {
   onTypeFilterChange: (value: ItemType | 'ALL') => void;
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
-  typeCounts: TypeCounts;
+  typeCounts: ItemCounts;
   allLocations?: string[];
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;

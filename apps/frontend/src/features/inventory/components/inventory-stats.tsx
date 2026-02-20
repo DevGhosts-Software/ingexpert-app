@@ -1,44 +1,44 @@
-import { Package, Wrench, Hammer, Boxes, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Boxes, Hammer, Package, Wrench } from 'lucide-react';
+import type { ItemStats } from '@ingexpert/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-export interface InventoryStats {
-  total: number;
-  products: number;
-  equipment: number;
-  tools: number;
-  kits: number;
-  lowStock: number;
-}
+export type { ItemStats } from '@ingexpert/schema';
 
 interface InventoryStatsProps {
-  stats: InventoryStats;
+  stats: ItemStats;
 }
 
-const statCards = [
+const statCards: Array<{
+  key: keyof ItemStats;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  colorClass: string;
+}> = [
   {
-    key: 'total' as keyof InventoryStats,
+    key: 'total',
     label: 'Total de Ítems',
     icon: Boxes,
     description: 'En todas las categorías',
     colorClass: 'text-blue-500',
   },
   {
-    key: 'products' as keyof InventoryStats,
+    key: 'products',
     label: 'Productos',
     icon: Package,
     description: 'Bienes de consumo',
     colorClass: 'text-green-500',
   },
   {
-    key: 'equipment' as keyof InventoryStats,
+    key: 'equipment',
     label: 'Equipos',
     icon: Wrench,
     description: 'Activos fijos y maquinaria',
     colorClass: 'text-purple-500',
   },
   {
-    key: 'tools' as keyof InventoryStats,
+    key: 'tools',
     label: 'Herramientas',
     icon: Hammer,
     description: 'Herramientas manuales y eléctricas',
