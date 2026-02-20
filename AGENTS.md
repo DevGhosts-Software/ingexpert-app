@@ -64,6 +64,15 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
   - Classes: `PascalCase`.
   - Variables/Functions: `camelCase`.
 
+## 5. Shared Entities
+
+**Pattern:** All data returned by tRPC procedures MUST be typed with a Zod schema in `packages/schema`. Never use raw Prisma types or `any` as procedure return types.
+
+- **Entity Schemas:** Named `[Domain]EntitySchema` (e.g., `ItemEntitySchema`) in `packages/schema/src/[domain].schema.ts`. Export both the schema and the inferred TypeScript type (`ItemEntity`).
+- **Mapping:** API services map Prisma models → Entity using a private `mapXxx()` method, converting Prisma-specific types (e.g., `Decimal` → `number`) before JSON serialization.
+- **Frontend:** Import entity types from `@ingexpert/schema` — never declare local interfaces that duplicate the shape of API data.
+- **tRPC type inference:** When the service method return type is `Promise<ItemEntity>`, tRPC automatically infers the client-side call type. This is the primary benefit of the entity pattern.
+
 ## 4. Commands Reference
 
 - `pnpm dev` - Start dev servers.

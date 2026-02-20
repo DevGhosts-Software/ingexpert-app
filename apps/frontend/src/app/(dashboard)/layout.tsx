@@ -1,13 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { DashboardNavbar } from '@/components/dashboard-navbar';
+
+const pageTitles: Record<string, string> = {
+  '/': 'Panel Principal',
+  '/inventory': 'Inventario',
+  '/movements': 'Movimientos',
+  '/admin/users': 'Gestión de Usuarios',
+  '/settings': 'Configuración',
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -46,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
+  const pageTitle = pageTitles[pathname] ?? 'Ingexpert';
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
@@ -57,19 +69,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-background px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Ingexpert Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {user.email} ({user.role})
-          </span>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <DashboardNavbar
+          title={pageTitle}
+          userEmail={user.email}
+          userRole={user.role}
+          onLogout={() => logoutMutation.mutate()}
+        />
+        <main className="flex-1 p-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
