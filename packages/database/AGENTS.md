@@ -43,4 +43,3 @@ This package manages the persistence layer for the Ingexpert application using P
 - **`prisma`:** Singleton `PrismaClient` instance.
 - **Prisma model types:** `User`, `Staff`, `Item`, `Movement`, `MovementDetail`, `Project`, `Disposal` — used as bases for entity types in `@ingexpert/schema`.
 - **Enums:** `UserRole`, `ItemType`, `MovementType` (re-exported from `@prisma/client`).
-

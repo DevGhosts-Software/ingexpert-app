@@ -127,17 +127,16 @@ const createMutation = trpc.items.create.useMutation({
 
 ## 8. Implementation Mapping for AI Agents
 
-| Resource Type  | File Name (Kebab-Case)      | Code Identifier                      |
-| :------------- | :-------------------------- | :----------------------------------- |
-| **Container**  | `page.tsx`                  | `export default function Page()`     |
-| **Presenter**  | `[feature]-table.tsx`       | `export function FeatureTable()`     |
-| **Types file** | `[feature]-table.types.ts`  | Re-exports from `@ingexpert/schema`  |
-| **tRPC Query** | `page.tsx`                  | `trpc.items.list.useQuery()`         |
-| **tRPC Mutation** | `[component].tsx`        | `trpc.items.create.useMutation()`    |
+| Resource Type     | File Name (Kebab-Case)     | Code Identifier                     |
+| :---------------- | :------------------------- | :---------------------------------- |
+| **Container**     | `page.tsx`                 | `export default function Page()`    |
+| **Presenter**     | `[feature]-table.tsx`      | `export function FeatureTable()`    |
+| **Types file**    | `[feature]-table.types.ts` | Re-exports from `@ingexpert/schema` |
+| **tRPC Query**    | `page.tsx`                 | `trpc.items.list.useQuery()`        |
+| **tRPC Mutation** | `[component].tsx`          | `trpc.items.create.useMutation()`   |
 
 ## 9. Conventions & Best Practices
 
 - **Styling:** Use Tailwind Utility classes.
 - **Forms:** Use `react-hook-form`. Resolver: `zodResolver(CreateXxxSchema.extend({ ... }))`. Type: `CreateXxxDto` from `@ingexpert/schema`.
 - **Components:** Import from `@/components/ui`.
-

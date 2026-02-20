@@ -8,12 +8,12 @@ This package serves as the **shared type contract** between the API and Frontend
 
 Used exclusively for tRPC `.input()` validation at the API boundary. Zod parses and coerces the payload before it reaches service methods.
 
-- **When to use Zod:** Only for data coming *into* the API (create, update, filter inputs).
+- **When to use Zod:** Only for data coming _into_ the API (create, update, filter inputs).
 - **Never use Zod for:** API response types. Responses are typed at compile time via entities — they are never `.parse()`-d at runtime.
 
 ### Track 2 — Entities (Prisma-derived TypeScript types)
 
-Used for all data returned *from* the API. Structurally derived from Prisma-generated model types so the database schema is the source of truth.
+Used for all data returned _from_ the API. Structurally derived from Prisma-generated model types so the database schema is the source of truth.
 
 - **Safety guarantee:** Adding a column to a Prisma model causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. Schema drift is caught at compile time.
 
@@ -44,14 +44,14 @@ export type MovementEntity = Omit<Movement, 'date'> & { date: string };
 
 ## 3. Modules
 
-| File | DTOs | Entities |
-|---|---|---|
-| `auth.schema.ts` | `LoginSchema` / `LoginDto` | — |
-| `user.schema.ts` | `CreateUserSchema`, `UpdateUserSchema` | `UserEntity` |
-| `item.schema.ts` | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema` | `ItemEntity`, `ItemStats`, `ItemCounts` |
-| `project.schema.ts` | `CreateProjectSchema`, `UpdateProjectSchema` | `ProjectEntity` |
-| `movement.schema.ts` | `CreateMovementSchema` | `MovementEntity`, `MovementDetailEntity` |
-| `pagination.schema.ts` | `BasePaginationSchema` | — |
+| File                   | DTOs                                                           | Entities                                 |
+| ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
+| `auth.schema.ts`       | `LoginSchema` / `LoginDto`                                     | —                                        |
+| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`                         | `UserEntity`                             |
+| `item.schema.ts`       | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema` | `ItemEntity`, `ItemStats`, `ItemCounts`  |
+| `project.schema.ts`    | `CreateProjectSchema`, `UpdateProjectSchema`                   | `ProjectEntity`                          |
+| `movement.schema.ts`   | `CreateMovementSchema`                                         | `MovementEntity`, `MovementDetailEntity` |
+| `pagination.schema.ts` | `BasePaginationSchema`                                         | —                                        |
 
 ## 4. Naming Conventions
 
@@ -95,4 +95,3 @@ import type { ItemEntity } from '@ingexpert/schema';
 // ❌ wrong — duplicates the shape and loses the DB-schema link
 interface Item { id: string; name: string; stock: number; ... }
 ```
-

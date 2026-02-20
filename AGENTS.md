@@ -80,7 +80,7 @@ Each `[domain].schema.ts` file is divided into two explicit sections.
 - **Named:** `[Action][Domain]Schema` (e.g., `CreateItemSchema`, `ItemPaginationSchema`)
 - **Used as:** tRPC `.input(SomeSchema)` — Zod validates and coerces the payload at the API boundary at runtime.
 - **Type exported as:** `type CreateItemDto = z.infer<typeof CreateItemSchema>`
-- **Rule:** Only inputs need Zod. Never wrap API *response* types in Zod — response types are never `.parse()`-d.
+- **Rule:** Only inputs need Zod. Never wrap API _response_ types in Zod — response types are never `.parse()`-d.
 - **Forms:** The frontend extends the shared schema for UI-specific messages: `const FormSchema = CreateItemSchema.extend({ name: z.string().min(1, 'Required') })`. Type is still `CreateItemDto`.
 
 ### Section 2 — Entities (Prisma-derived TypeScript types)
@@ -95,4 +95,3 @@ Each `[domain].schema.ts` file is divided into two explicit sections.
 - **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
 - **Frontend rule:** Always import entity types from `@ingexpert/schema`. Never declare local interfaces that duplicate the shape of API data.
 - **tRPC inference:** When a service method returns `Promise<ItemEntity>`, tRPC infers the client-side call type automatically — no manual type annotation needed on the frontend.
-
