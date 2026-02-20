@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PackagePlus, Pencil } from 'lucide-react';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
 import { z } from 'zod';
 import { trpc } from '@/lib/trpc';
+import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -35,7 +36,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
-import { ImageUploadField } from './image-upload-field';
+import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
 import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
 
 const ItemFormSchema = CreateItemSchema.extend({
@@ -57,6 +58,9 @@ interface ItemFormSheetProps {
 export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps) {
   const utils = trpc.useUtils();
   const isEdit = mode === 'edit';
+  const imageFieldRef = useRef<ImageUploadFieldHandle>(null);
+  const originalImageUrl = useRef<string | undefined>(undefined);
+  const { uploadFile, deleteFile, isUploading } = useStorageUpload();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(ItemFormSchema),
@@ -73,7 +77,9 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
   // Prefill form when editing
   useEffect(() => {
+    imageFieldRef.current?.reset();
     if (isEdit && item && open) {
+      originalImageUrl.current = item.imageUrl ?? undefined;
       form.reset({
         name: item.name,
         code: item.code,
@@ -84,6 +90,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         imageUrl: item.imageUrl ?? undefined,
       });
     } else if (!isEdit && open) {
+      originalImageUrl.current = undefined;
       form.reset({
         name: '',
         code: '',
@@ -123,15 +130,32 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     ]);
   }
 
-  function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues) {
+    const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
+
+    let finalImageUrl = values.imageUrl;
+    if (pendingFile) {
+      try {
+        finalImageUrl = await uploadFile(pendingFile);
+      } catch {
+        return; // uploadFile already toasts the error
+      }
+    }
+
+    // Delete old image if it was replaced or removed
+    if (originalImageUrl.current && originalImageUrl.current !== finalImageUrl) {
+      void deleteFile(originalImageUrl.current);
+    }
+
+    const submitValues = { ...values, imageUrl: finalImageUrl };
     if (isEdit && item) {
-      updateMutation.mutate({ id: item.id, ...values });
+      updateMutation.mutate({ id: item.id, ...submitValues });
     } else {
-      createMutation.mutate(values);
+      createMutation.mutate(submitValues);
     }
   }
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending || isUploading;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -161,9 +185,11 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                   </FormLabel>
                   <FormControl>
                     <ImageUploadField
+                      ref={imageFieldRef}
                       value={field.value}
                       onChange={field.onChange}
                       disabled={isPending}
+                      isUploading={isUploading}
                     />
                   </FormControl>
                   <FormMessage />
