@@ -1,19 +1,44 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Item, ItemType, Prisma } from '@ingexpert/database';
-import { CreateItemDto, ItemPaginationDto, UpdateItemDto } from '@ingexpert/schema';
+import {
+  CreateItemDto,
+  ItemCounts,
+  ItemEntity,
+  ItemPaginationDto,
+  ItemStats,
+  UpdateItemDto,
+} from '@ingexpert/schema';
 import { paginatePrisma } from '../utils/paginatePrisma';
 
 @Injectable()
 export class ItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findPaginated(input: ItemPaginationDto) {
-    return paginatePrisma(this.prisma.item, input, ['name', 'code', 'location']);
+  /** Maps a raw Prisma Item to the serializable ItemEntity (Decimal → number). */
+  private mapItem(item: Item): ItemEntity {
+    return {
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      location: item.location,
+      stock: item.stock.toNumber(),
+      unit: item.unit,
+      type: item.type,
+      imageUrl: item.imageUrl,
+    };
   }
 
-  async create(createItemDto: CreateItemDto): Promise<Item> {
-    return this.prisma.item.create({
+  async findPaginated(input: ItemPaginationDto) {
+    const result = await paginatePrisma<Item>(this.prisma.item, input, ['name', 'code', 'location']);
+    return {
+      data: result.data.map((item) => this.mapItem(item)),
+      meta: result.meta,
+    };
+  }
+
+  async create(createItemDto: CreateItemDto): Promise<ItemEntity> {
+    const item = await this.prisma.item.create({
       data: {
         name: createItemDto.name,
         code: createItemDto.code,
@@ -24,25 +49,24 @@ export class ItemsService {
         imageUrl: createItemDto.imageUrl ?? '',
       },
     });
+    return this.mapItem(item);
   }
 
-  async update(id: string, updateItemDto: UpdateItemDto): Promise<Item> {
+  async update(id: string, updateItemDto: UpdateItemDto): Promise<ItemEntity> {
     const { stock, ...rest } = updateItemDto;
-
-    return this.prisma.item.update({
+    const item = await this.prisma.item.update({
       where: { id },
       data: {
         ...rest,
-
         stock: stock !== undefined ? new Prisma.Decimal(stock) : undefined,
       },
     });
+    return this.mapItem(item);
   }
 
-  async remove(id: string): Promise<Item> {
-    return this.prisma.item.delete({
-      where: { id },
-    });
+  async remove(id: string): Promise<ItemEntity> {
+    const item = await this.prisma.item.delete({ where: { id } });
+    return this.mapItem(item);
   }
 
   async createBatch(items: CreateItemDto[]): Promise<void> {
@@ -62,10 +86,7 @@ export class ItemsService {
   async upsertManyByName(items: CreateItemDto[]): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       for (const item of items) {
-        const existing = await tx.item.findFirst({
-          where: { name: item.name },
-        });
-
+        const existing = await tx.item.findFirst({ where: { name: item.name } });
         const data = {
           name: item.name,
           code: item.code,
@@ -75,12 +96,8 @@ export class ItemsService {
           type: item.type,
           imageUrl: item.imageUrl ?? '',
         };
-
         if (existing) {
-          await tx.item.update({
-            where: { id: existing.id },
-            data,
-          });
+          await tx.item.update({ where: { id: existing.id }, data });
         } else {
           await tx.item.create({ data });
         }
@@ -88,7 +105,7 @@ export class ItemsService {
     });
   }
 
-  async getStats() {
+  async getStats(): Promise<ItemStats> {
     const LOW_STOCK_THRESHOLD = 10;
     const [total, products, equipment, tools, kits, lowStock] = await Promise.all([
       this.prisma.item.count(),
@@ -103,7 +120,7 @@ export class ItemsService {
     return { total, products, equipment, tools, kits, lowStock };
   }
 
-  async getCounts(search?: string, location?: string) {
+  async getCounts(search?: string, location?: string): Promise<ItemCounts> {
     const conditions: Prisma.ItemWhereInput[] = [];
     if (location) conditions.push({ location });
     if (search) {

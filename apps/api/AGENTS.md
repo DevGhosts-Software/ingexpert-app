@@ -52,6 +52,32 @@ apps/api/src/
 - **Validation:** Zod schemas are imported from `@ingexpert/schema`.
 - **Authorization:** Role-based access control (RBAC) via tRPC middleware. Only `ADMIN` can manage users via `AdminUsersService` (using Supabase Admin API).
 
+## 5. Shared Entity Pattern
+
+All data returned by tRPC procedures must be typed as a shared entity from `@ingexpert/schema`:
+
+1. **Define** `[Domain]EntitySchema` in `packages/schema/src/[domain].schema.ts` and export the inferred type.
+2. **Map** Prisma models to the entity in the service using a private `mapXxx()` method (handles `Decimal → number`, etc).
+3. **Return** the entity type from all service methods so tRPC infers it on the client.
+4. **Companion schemas:** Add `[Domain]StatsSchema` and `[Domain]CountsSchema` alongside the entity for aggregate endpoints.
+
+### Example
+
+```typescript
+// packages/schema — entity definition
+export const ItemEntitySchema = z.object({ id: z.string(), stock: z.number(), ... });
+export type ItemEntity = z.infer<typeof ItemEntitySchema>;
+
+// apps/api — service mapper
+private mapItem(item: Item): ItemEntity {
+  return { ...item, stock: item.stock.toNumber() };
+}
+async findPaginated(input): Promise<{ data: ItemEntity[]; meta: ... }> { ... }
+
+// apps/frontend — types file re-exports entity
+export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
+```
+
 ## 4. Conventions & Best Practices
 
 ### Database Interaction

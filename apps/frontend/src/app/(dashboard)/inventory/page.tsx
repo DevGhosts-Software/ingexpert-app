@@ -9,17 +9,6 @@ import {
 } from '@/features/inventory/components/inventory-stats';
 import { InventoryTable, type ItemType } from '@/features/inventory/components/inventory-table';
 
-interface RawApiItem {
-  id: string;
-  code: string;
-  name: string;
-  location: string;
-  stock: unknown;
-  unit: string;
-  type: string;
-  imageUrl: string;
-}
-
 export default function InventoryPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [search, setSearch] = useState('');
@@ -39,7 +28,7 @@ export default function InventoryPage() {
     location: locationFilter !== 'all' ? locationFilter : undefined,
   });
 
-  // Paginated table data
+  // Paginated table data — tRPC infers ItemEntity[] from service return type
   const { data: listResult, isLoading } = trpc.items.list.useQuery({
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
@@ -69,18 +58,12 @@ export default function InventoryPage() {
     KIT: countsData?.KIT ?? 0,
   };
 
-  const items = ((listResult?.data ?? []) as RawApiItem[]).map((item) => ({
-    id: item.id,
-    code: item.code,
-    name: item.name,
-    location: item.location,
-    stock: Number(item.stock),
-    unit: item.unit,
-    type: item.type as ItemType,
-    imageUrl: item.imageUrl ?? '',
+  // stock is already a plain number — the service calls .toNumber() before serializing
+  const items = (listResult?.data ?? []).map((item) => ({
+    ...item,
+    stock: Number(item.stock), // guard: Decimal serializes as string over JSON
   }));
 
-  // Explicit handler so TanStack Table's updater functions are handled correctly
   const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
     setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
@@ -135,3 +118,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+
