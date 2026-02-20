@@ -6,7 +6,6 @@ import { Eye, MapPin, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,29 +104,6 @@ function RowActions({ item }: { item: InventoryItem }) {
 }
 
 export const COLUMNS: ColumnDef<InventoryItem>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        data-state={
-          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
-            ? 'indeterminate'
-            : undefined
-        }
-        onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-        aria-label="Seleccionar todo"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(v) => row.toggleSelected(!!v)}
-        aria-label={`Seleccionar ${row.original.name}`}
-      />
-    ),
-    enableSorting: false,
-  },
   {
     accessorKey: 'name',
     header: ({ column }) => (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Download, Filter, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, Download, Filter, Plus, Search } from 'lucide-react';
 
 import { ItemFormSheet } from './item-form-sheet';
 
@@ -36,8 +36,6 @@ interface InventoryTableToolbarProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
-  totalSelected: number;
-  onClearSelection: () => void;
 }
 
 export function InventoryTableToolbar({
@@ -51,8 +49,6 @@ export function InventoryTableToolbar({
   activeTab,
   onTabChange,
   typeCounts,
-  totalSelected,
-  onClearSelection,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
 
@@ -144,26 +140,6 @@ export function InventoryTableToolbar({
       </div>
 
       <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
-
-      {/* Bulk action bar */}
-      {totalSelected > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-          <span className="text-sm font-medium">{totalSelected} item(s) seleccionado(s)</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <Button variant="outline" size="sm" className="h-7 gap-1.5">
-              <Download className="h-3.5 w-3.5" />
-              Exportar seleccion
-            </Button>
-            <Button variant="destructive" size="sm" className="h-7 gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" />
-              Dar de baja en lote
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7" onClick={onClearSelection}>
-              Cancelar seleccion
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Type tabs */}
       <Tabs value={activeTab} onValueChange={onTabChange}>

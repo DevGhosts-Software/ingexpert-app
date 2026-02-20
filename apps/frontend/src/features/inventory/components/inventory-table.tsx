@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import {
   flexRender,
   getCoreRowModel,
-  type RowSelectionState,
   useReactTable,
 } from '@tanstack/react-table';
 
@@ -42,7 +41,6 @@ export function InventoryTable({
   sorting,
   onSortingChange,
 }: InventoryTableProps) {
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
   const filteredItems = useMemo(() => {
@@ -64,9 +62,8 @@ export function InventoryTable({
     data: filteredItems,
     columns: COLUMNS,
     pageCount,
-    state: { sorting, rowSelection, pagination },
+    state: { sorting, pagination },
     onSortingChange,
-    onRowSelectionChange: setRowSelection,
     onPaginationChange,
     manualPagination: true,
     manualSorting: true,
@@ -74,8 +71,6 @@ export function InventoryTable({
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   });
-
-  const totalSelected = Object.keys(rowSelection).length;
 
   const activeTab = typeFilter === 'ALL' ? 'all' : typeFilter.toLowerCase();
 
@@ -102,8 +97,6 @@ export function InventoryTable({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         typeCounts={typeCounts}
-        totalSelected={totalSelected}
-        onClearSelection={() => table.resetRowSelection()}
       />
 
       <div className="rounded-md border">
@@ -156,7 +149,6 @@ export function InventoryTable({
 
       <DataTablePagination
         table={table}
-        totalSelected={totalSelected}
         pageIndex={pagination.pageIndex}
         pageSize={pagination.pageSize}
         pageCount={pageCount}
