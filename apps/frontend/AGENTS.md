@@ -140,3 +140,30 @@ const createMutation = trpc.items.create.useMutation({
 - **Styling:** Use Tailwind Utility classes.
 - **Forms:** Use `react-hook-form`. Resolver: `zodResolver(CreateXxxSchema.extend({ ... }))`. Type: `CreateXxxDto` from `@ingexpert/schema`.
 - **Components:** Import from `@/components/ui`.
+
+## 10. Debouncing User Input
+
+Any input that triggers a **tRPC query or API call** (search boxes, filter inputs, etc.) **MUST** be debounced using the shared `useDebounce` hook before being passed to the query.
+
+```typescript
+import { useDebounce } from '@/hooks/use-debounce';
+
+// ✅ correct — raw state drives the UI, debounced value drives the API
+const [search, setSearch] = useState('');
+const debouncedSearch = useDebounce(search); // default 400 ms
+
+const { data } = trpc.items.list.useQuery({
+  search: debouncedSearch || undefined,
+});
+
+// ❌ wrong — fires a network request on every keystroke
+const { data } = trpc.items.list.useQuery({ search: search || undefined });
+```
+
+**Rules:**
+
+- The Container owns **both** the raw state (for instant UI feedback) and the debounced value (for API calls).
+- Pass the **raw** value to the Presenter's input so the user sees their keystrokes without delay.
+- Pass the **debounced** value to every `useQuery` that uses it.
+- Default delay is **400 ms** — do not lower it without a strong reason.
+- `useDebounce` is generic (`useDebounce<T>`) and works with any value type.
