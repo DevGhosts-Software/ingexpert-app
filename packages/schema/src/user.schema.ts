@@ -25,6 +25,6 @@ export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 
 /**
  * Wire representation of a User returned by the API.
- * Derived from the Prisma `User` model (scalar fields only — no relations).
+ * Extends the Prisma `User` model with `workArea` flattened from the Staff relation.
  */
-export type UserEntity = User;
+export type UserEntity = User & { workArea: string | null };

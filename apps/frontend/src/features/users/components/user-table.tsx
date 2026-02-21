@@ -23,7 +23,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-import { type UserRole } from '@ingexpert/schema';
+import { type UserEntity, type UserRole } from '@ingexpert/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -63,19 +63,13 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export type { UserRole } from '@ingexpert/schema';
+export type { UserRole, UserEntity } from '@ingexpert/schema';
 
-export interface AppUser {
-  id: string;
-  email: string;
-  name?: string;
-  role: UserRole;
-  workArea?: string;
-  avatar?: string;
-}
+/** @deprecated Use UserEntity from @ingexpert/schema instead */
+export type AppUser = UserEntity;
 
 interface UserTableProps {
-  users: AppUser[];
+  users: UserEntity[];
   isLoading?: boolean;
 }
 
@@ -176,7 +170,7 @@ function InviteUserSheet({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
-const COLUMNS: ColumnDef<AppUser>[] = [
+const COLUMNS: ColumnDef<UserEntity>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -292,7 +286,8 @@ export function UserTable({ users, isLoading = false }: UserTableProps) {
   }, [globalFilter, workAreaFilter, activeTab]);
 
   const workAreas = useMemo(
-    () => Array.from(new Set(users.map((u) => u.workArea).filter(Boolean))).sort() as string[],
+    () =>
+      Array.from(new Set(users.map((u) => u.workArea).filter((w): w is string => w !== null))).sort(),
     [users],
   );
 
@@ -337,8 +332,8 @@ export function UserTable({ users, isLoading = false }: UserTableProps) {
     const sorted = [...filtered].sort((a, b) => {
       const col = sorting[0];
       if (!col) return 0;
-      const av = String(a[col.id as keyof AppUser] ?? '');
-      const bv = String(b[col.id as keyof AppUser] ?? '');
+      const av = String(a[col.id as keyof UserEntity] ?? '');
+      const bv = String(b[col.id as keyof UserEntity] ?? '');
       const cmp = av.localeCompare(bv);
       return col.desc ? -cmp : cmp;
     });

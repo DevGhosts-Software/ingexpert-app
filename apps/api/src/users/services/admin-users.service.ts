@@ -2,8 +2,8 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../../prisma/prisma.service';
-import { User } from '@ingexpert/database';
-import { CreateUserDto, UpdateUserDto } from '@ingexpert/schema';
+import { type User, type Staff } from '@ingexpert/database';
+import { CreateUserDto, UpdateUserDto, type UserEntity } from '@ingexpert/schema';
 
 @Injectable()
 export class AdminUsersService {
@@ -48,44 +48,52 @@ export class AdminUsersService {
     return data.user;
   }
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany({
+  async findAll(): Promise<UserEntity[]> {
+    const users = await this.prisma.user.findMany({
       orderBy: { email: 'asc' },
+      include: { staff: true },
     });
+    return users.map(this.mapUser);
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string): Promise<UserEntity> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      include: { staff: true },
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return user;
+    return this.mapUser(user);
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  private mapUser(user: User & { staff: Staff | null }): UserEntity {
+    const { staff, ...rest } = user;
+    return { ...rest, workArea: staff?.workArea ?? null };
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
     await this.findOne(id);
 
     // Update Prisma local data
     const user = await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: { name: updateUserDto.name, avatar: updateUserDto.avatar },
+      include: { staff: true },
     });
 
-    // Optionally update Supabase metadata if role or name changed
-    if (updateUserDto.role || updateUserDto.name) {
+    // Optionally update Supabase metadata if name changed
+    if (updateUserDto.name) {
       await this.supabaseAdmin.auth.admin.updateUserById(id, {
         user_metadata: {
           nombre: updateUserDto.name,
-          rol: updateUserDto.role,
         },
       });
     }
 
-    return user;
+    return this.mapUser(user);
   }
 
   async remove(id: string): Promise<{ success: boolean }> {
