@@ -29,3 +29,11 @@ export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
  * Extends the Prisma `User` model with `workArea` flattened from the Staff relation.
  */
 export type UserEntity = User & { workArea: string | null };
+
+/** Global unfiltered user statistics (for summary cards). */
+export type UserStats = {
+  total: number;
+  admins: number;
+  active: number;   // users with a work area assigned
+  inactive: number; // users without a work area
+};

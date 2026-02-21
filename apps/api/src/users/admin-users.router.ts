@@ -21,6 +21,14 @@ export class AdminUsersRouter {
         return await this.adminUsersService.findAll();
       }),
 
+      getStats: this.trpc.adminProcedure.query(async () => {
+        return await this.adminUsersService.getStats();
+      }),
+
+      getWorkAreas: this.trpc.adminProcedure.query(async () => {
+        return await this.adminUsersService.getWorkAreas();
+      }),
+
       get: this.trpc.adminProcedure.input(z.uuid()).query(async ({ input }) => {
         return await this.adminUsersService.findOne(input);
       }),

@@ -4,18 +4,12 @@ import { useCallback, useMemo, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
-import { UserStats, type UserStats as UserStatsType } from '@/features/users/components/user-stats';
+import { UserStats } from '@/features/users/components/user-stats';
 import { UserTable } from '@/features/users/components/user-table';
 import type { ActiveTab, RoleCounts, UserEntity } from '@/features/users/components/user-table.types';
+import type { UserStats as UserStatsType } from '@ingexpert/schema';
 
-function computeStats(users: UserEntity[]): UserStatsType {
-  return {
-    total: users.length,
-    admins: users.filter((u) => u.role === 'ADMIN').length,
-    active: users.filter((u) => u.workArea !== null).length,
-    inactive: users.filter((u) => u.workArea === null).length,
-  };
-}
+const DEFAULT_STATS: UserStatsType = { total: 0, admins: 0, active: 0, inactive: 0 };
 
 export default function UsersPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -26,18 +20,11 @@ export default function UsersPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
 
   const { data: allUsers = [], isLoading } = trpc.adminUsers.list.useQuery();
+  const { data: stats = DEFAULT_STATS } = trpc.adminUsers.getStats.useQuery();
+  const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
 
-  // Derive work areas from the full dataset for the filter dropdown
-  const workAreas = useMemo(
-    () =>
-      Array.from(
-        new Set(allUsers.map((u) => u.workArea).filter((w): w is string => w !== null)),
-      ).sort(),
-    [allUsers],
-  );
-
-  // Client-side filtering + pagination
-  const { tableData, pageCount, roleCounts, stats } = useMemo(() => {
+  // Client-side filtering + pagination over the already-fetched list
+  const { tableData, pageCount, roleCounts } = useMemo(() => {
     const roleMap: Record<ActiveTab, 'ADMIN' | 'USER' | undefined> = {
       all: undefined,
       admin: 'ADMIN',
@@ -76,7 +63,6 @@ export default function UsersPage() {
         admin: preRole.filter((u) => u.role === 'ADMIN').length,
         user: preRole.filter((u) => u.role === 'USER').length,
       } satisfies RoleCounts,
-      stats: computeStats(allUsers),
     };
   }, [allUsers, debouncedSearch, workAreaFilter, activeTab, sorting, pagination]);
 

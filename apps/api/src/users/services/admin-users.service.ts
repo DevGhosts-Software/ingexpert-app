@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PrismaService } from '../../prisma/prisma.service';
 import { type User, type Staff } from '@ingexpert/database';
-import { CreateUserDto, UpdateUserDto, type UserEntity } from '@ingexpert/schema';
+import { CreateUserDto, UpdateUserDto, type UserEntity, type UserStats } from '@ingexpert/schema';
 
 @Injectable()
 export class AdminUsersService {
@@ -80,6 +80,30 @@ export class AdminUsersService {
     });
 
     return this.mapUser(user);
+  }
+
+  async getStats(): Promise<UserStats> {
+    const [total, admins, staffWithArea] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { role: 'ADMIN' } }),
+      this.prisma.staff.count({ where: { workArea: { not: null } } }),
+    ]);
+    return {
+      total,
+      admins,
+      active: staffWithArea,
+      inactive: total - staffWithArea,
+    };
+  }
+
+  async getWorkAreas(): Promise<string[]> {
+    const rows = await this.prisma.staff.findMany({
+      where: { workArea: { not: null } },
+      select: { workArea: true },
+      distinct: ['workArea'],
+      orderBy: { workArea: 'asc' },
+    });
+    return rows.map((r) => r.workArea!);
   }
 
   async findAll(): Promise<UserEntity[]> {

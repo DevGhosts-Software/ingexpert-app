@@ -1,7 +1,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { KeyRound, MoreHorizontal, Pencil, ShieldCheck, Trash2, User } from 'lucide-react';
+import { Briefcase, KeyRound, MoreHorizontal, Pencil, ShieldCheck, Trash2, User } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,7 +123,10 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       header: 'Área',
       cell: ({ row }) =>
         row.original.workArea ? (
-          <span className="text-sm">{row.original.workArea}</span>
+          <Badge variant="secondary" className="gap-1 font-normal">
+            <Briefcase className="h-3 w-3" />
+            {row.original.workArea}
+          </Badge>
         ) : (
           <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
             Sin asignar
