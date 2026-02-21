@@ -28,14 +28,14 @@ export class AdminUsersService {
     });
   }
 
-  async create(createUserDto: CreateUserDto): Promise<any> {
+  async create(createUserDto: CreateUserDto): Promise<UserEntity> {
     const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
       email: createUserDto.email,
       password: createUserDto.password,
       email_confirm: true,
       user_metadata: {
-        nombre: createUserDto.name || 'Nuevo Usuario',
-        rol: createUserDto.role || 'USER',
+        nombre: createUserDto.name ?? 'Nuevo Usuario',
+        rol: createUserDto.role ?? 'USER',
       },
     });
 
@@ -43,9 +43,43 @@ export class AdminUsersService {
       throw new InternalServerErrorException(`Error creating user in Supabase: ${error.message}`);
     }
 
-    // Note: We don't write to Prisma here. The SQL Trigger handles it.
-    // However, we return the Supabase user data.
-    return data.user;
+    const userId = data.user.id;
+
+    // Upsert User and optionally create Staff in one transaction.
+    // We use upsert because a DB trigger may have already inserted the user row.
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.upsert({
+        where: { id: userId },
+        create: {
+          id: userId,
+          email: createUserDto.email,
+          name: createUserDto.name ?? null,
+          role: createUserDto.role ?? 'USER',
+          avatar: createUserDto.avatar ?? null,
+        },
+        update: {
+          name: createUserDto.name ?? null,
+          role: createUserDto.role ?? 'USER',
+        },
+        include: { staff: true },
+      });
+
+      if (createUserDto.workArea) {
+        await tx.staff.upsert({
+          where: { id: userId },
+          create: { id: userId, workArea: createUserDto.workArea },
+          update: { workArea: createUserDto.workArea },
+        });
+        return tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          include: { staff: true },
+        });
+      }
+
+      return created;
+    });
+
+    return this.mapUser(user);
   }
 
   async findAll(): Promise<UserEntity[]> {

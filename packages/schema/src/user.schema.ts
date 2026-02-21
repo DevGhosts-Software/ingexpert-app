@@ -11,6 +11,7 @@ export const CreateUserSchema = z.object({
   name: z.string().max(100).optional().nullable(),
   avatar: z.string().url().max(500).optional().nullable(),
   password: z.string().min(8),
+  workArea: z.string().max(100).optional().nullable(),
 });
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 

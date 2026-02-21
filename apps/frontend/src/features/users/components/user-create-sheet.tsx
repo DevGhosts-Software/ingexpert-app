@@ -42,6 +42,7 @@ const CreateUserFormSchema = CreateUserSchema.extend({
   role: z.nativeEnum(UserRole),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
   confirmPassword: z.string(),
+  workArea: z.string().max(100).optional().nullable(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Las contraseñas no coinciden',
   path: ['confirmPassword'],
@@ -98,6 +99,7 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
       email: '',
       name: '',
       role: 'USER',
+      workArea: '',
       password: '',
       confirmPassword: '',
     },
@@ -109,6 +111,7 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
         email: '',
         name: '',
         role: 'USER',
+        workArea: '',
         password: '',
         confirmPassword: '',
       });
@@ -125,8 +128,12 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
   });
 
   const onSubmit = useCallback(
-    ({ confirmPassword: _, ...dto }: FormValues) => {
-      createMutation.mutate(dto);
+    ({ confirmPassword: _, name, workArea, ...rest }: FormValues) => {
+      createMutation.mutate({
+        ...rest,
+        name: name || null,
+        workArea: workArea || null,
+      });
     },
     [createMutation],
   );
@@ -219,6 +226,28 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                       <SelectItem value="ADMIN">Administrador</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="workArea"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Área de trabajo{' '}
+                    <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ej: Taller A, Laboratorio"
+                      disabled={isPending}
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
