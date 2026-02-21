@@ -127,13 +127,24 @@ const createMutation = trpc.items.create.useMutation({
 
 ## 8. Implementation Mapping for AI Agents
 
-| Resource Type     | File Name (Kebab-Case)     | Code Identifier                     |
-| :---------------- | :------------------------- | :---------------------------------- |
-| **Container**     | `page.tsx`                 | `export default function Page()`    |
-| **Presenter**     | `[feature]-table.tsx`      | `export function FeatureTable()`    |
-| **Types file**    | `[feature]-table.types.ts` | Re-exports from `@ingexpert/schema` |
-| **tRPC Query**    | `page.tsx`                 | `trpc.items.list.useQuery()`        |
-| **tRPC Mutation** | `[component].tsx`          | `trpc.items.create.useMutation()`   |
+| Resource Type     | File Name (Kebab-Case)          | Code Identifier                     |
+| :---------------- | :------------------------------ | :---------------------------------- |
+| **Container**     | `page.tsx`                      | `export default function Page()`    |
+| **Presenter**     | `[feature]-table.tsx`           | `export function FeatureTable()`    |
+| **Columns**       | `[feature]-table.columns.tsx`   | `export function getColumns()`      |
+| **Types file**    | `[feature]-table.types.ts`      | Re-exports from `@ingexpert/schema` |
+| **Toolbar**       | `[feature]-table-toolbar.tsx`   | `export function FeatureTableToolbar()` |
+| **tRPC Query**    | `page.tsx`                      | `trpc.items.list.useQuery()`        |
+| **tRPC Mutation** | `[component].tsx`               | `trpc.items.create.useMutation()`   |
+
+### Feature Table Modularization
+
+Each feature table is split into dedicated files (see `src/features/inventory/components/` and `src/features/users/components/`):
+
+- `[feature]-table.types.ts` — re-exports entity/role types from `@ingexpert/schema`, defines table-specific interfaces (`TableProps`, `ActiveTab`, etc.)
+- `[feature]-table.columns.tsx` — column definitions (`getColumns()`), row-level action components, dialog components (confirm, reset password, etc.)
+- `[feature]-table-toolbar.tsx` — search, filter tabs, create button
+- `[feature]-table.tsx` — assembles TanStack Table, renders toolbar + table + pagination
 
 ## 9. Conventions & Best Practices
 
@@ -199,3 +210,75 @@ const handleExport = async () => {
   // ... generate file
 };
 ```
+
+## 13. Row-Level Actions Pattern (`RowActions`)
+
+Row action menus (`DropdownMenu`) in column definitions may call `trpc.users.me.useQuery()` **directly** — this is an explicit exception to the "Presenters never call useQuery" rule. `users.me` is already fetched and cached by the dashboard layout; calling it again in a row action component costs zero network requests.
+
+```typescript
+// ✅ allowed — cached by layout, no extra network request
+function RowActions({ user }: { user: UserEntity }) {
+  const { data: me } = trpc.users.me.useQuery();
+  const canEdit = me?.id === user.id || user.role !== 'ADMIN';
+  // ...
+}
+```
+
+Only `trpc.users.me` (or equivalently cached queries with `staleTime: Infinity`) may be called this way. All other queries must come via props from the Container.
+
+## 14. Free-Form Autocomplete Input Pattern
+
+**Do NOT use `@base-ui/react` `Combobox` for free-form text fields.** Base UI Combobox does not allow free-form input — after selection it clears the input value and controlling both `value` + `inputValue` causes conflicts.
+
+For autocomplete fields that accept both typed-in values and suggestions (e.g. `workArea`), implement a custom `WorkAreaCombobox` sub-component:
+
+```typescript
+// Must be a named sub-component (hooks cannot be used in render prop callbacks)
+function WorkAreaCombobox({ field, workAreas, disabled }) {
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const inputValue = field.value ?? '';
+  const filtered = workAreas.filter((a) => a.toLowerCase().includes(inputValue.toLowerCase()));
+
+  return (
+    <div className="relative">
+      <Input
+        value={inputValue}
+        onChange={(e) => { field.onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={/* arrow/enter/escape navigation */}
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+          {filtered.map((area, i) => (
+            <li
+              key={area}
+              onMouseDown={(e) => e.preventDefault()} // prevent blur before click
+              onClick={() => { field.onChange(area); setOpen(false); }}
+              className={cn('px-3 py-2 text-sm cursor-pointer', i === highlighted && 'bg-accent')}
+            >
+              {area}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+Key rules:
+- `onMouseDown={e.preventDefault()}` on list items is **required** — prevents the input blur from firing before the click registers.
+- `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
+- The component must be a named function (not inline) to use `useState`.
+
+## 15. Navbar & User Profile
+
+`DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
+
+`UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** way for any user to edit their own name, avatar URL, and password. It uses:
+- `trpc.users.updateMe` — for name and avatar.
+- `trpc.users.updateMyPassword` — for password change (protectedProcedure, self only).
+
+The logout button lives inside `UserProfileSheet` (passed as `onLogout` prop from layout → navbar → sheet).

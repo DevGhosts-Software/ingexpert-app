@@ -125,6 +125,29 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
   - Use `trpc.adminProcedure` for admin-only endpoints.
 - **User Management:** Public `/register` is disabled. Admins create users via `AdminUsersService`.
 
+### Users Module — Two-Router Architecture
+
+The users domain has **two separate routers** in `apps/api/src/users/`:
+
+| Router | Procedure | Purpose |
+|---|---|---|
+| `UsersRouter` | `protectedProcedure` | Self-service: `me`, `updateMe`, `updateMyPassword` |
+| `AdminUsersRouter` | `adminProcedure` | Admin CRUD: `create`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
+
+Key rules:
+- `updateMyPassword` (self-service) → `protectedProcedure` in `UsersRouter`, delegates to `AdminUsersService.changePassword(ctx.user.id, ...)`. `AdminUsersService` is injected into `UsersRouter` to reuse its Supabase Admin client.
+- `updatePassword` (admin reset any user) → `adminProcedure` in `AdminUsersRouter`.
+- **Never add a `protectedProcedure` to `AdminUsersRouter`** — the procedure type must match the router's intent.
+
+### Permission Rules (Users domain)
+
+These rules are enforced both in the API (procedure type) and the frontend (disabled UI):
+
+- **Edit user**: allowed on yourself and on non-admin users. Admins cannot edit other admins.
+- **Delete user**: allowed on non-admin users only. Cannot delete yourself. Cannot delete other admins.
+- **Reset password**: allowed on yourself and on non-admin users. Cannot reset another admin's password.
+- **Change own password**: always allowed (any authenticated user via `updateMyPassword`).
+
 ## 5. Development Workflow
 
 1.  **New Feature:**
