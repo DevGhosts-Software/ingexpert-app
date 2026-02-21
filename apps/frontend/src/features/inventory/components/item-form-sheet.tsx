@@ -161,6 +161,13 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
   const isPending = createMutation.isPending || updateMutation.isPending || isUploading;
 
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      void form.handleSubmit(onSubmit)(e);
+    },
+    [form, onSubmit],
+  );
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto p-4">
@@ -177,7 +184,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         </SheetHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-6">
+          <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
             {/* Image upload */}
             <FormField
               control={form.control}

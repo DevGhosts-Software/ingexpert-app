@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { ImageIcon, Loader2, UploadCloud, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +23,7 @@ interface ImageUploadFieldProps {
 export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFieldProps>(
   ({ value, onChange, disabled, isUploading = false }, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
+    const previewUrlRef = useRef<string | null>(null);
     const [dragging, setDragging] = useState(false);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -31,21 +32,23 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
     useImperativeHandle(ref, () => ({
       getPendingFile: () => pendingFile,
       reset: () => {
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+          previewUrlRef.current = null;
+        }
         setPendingFile(null);
         setPreviewUrl(null);
         setRemoved(false);
       },
     }));
 
-    useEffect(() => {
-      if (!pendingFile) return;
-      const url = URL.createObjectURL(pendingFile);
+    function applyFile(file: File) {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      const url = URL.createObjectURL(file);
+      previewUrlRef.current = url;
+      setPendingFile(file);
       setPreviewUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-        setPreviewUrl(null); // cleanup when pendingFile clears or changes
-      };
-    }, [pendingFile]);
+    }
 
     const isDisabled = disabled || isUploading;
     const showPreview = pendingFile !== null || (!!value && !removed);
@@ -57,7 +60,7 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
         toast.error('El archivo debe ser una imagen');
         return;
       }
-      setPendingFile(file);
+      applyFile(file);
       e.target.value = '';
     }
 
@@ -70,13 +73,18 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
         toast.error('El archivo debe ser una imagen');
         return;
       }
-      setPendingFile(file);
+      applyFile(file);
     }
 
     function handleRemove(e: React.MouseEvent) {
       e.stopPropagation();
       if (pendingFile) {
+        if (previewUrlRef.current) {
+          URL.revokeObjectURL(previewUrlRef.current);
+          previewUrlRef.current = null;
+        }
         setPendingFile(null);
+        setPreviewUrl(null);
       } else {
         // Immediately hide locally; signal parent to clear form value
         setRemoved(true);
