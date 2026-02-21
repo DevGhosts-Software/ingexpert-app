@@ -108,4 +108,19 @@ export class AdminUsersService {
 
     return { success: true };
   }
+
+
+
+  async changePassword(id: string, newPassword: string) {
+    const { data, error } = await this.supabaseAdmin.auth.admin.updateUserById(
+        id ,
+        {password: newPassword}
+    );
+
+    if (error) {
+      throw new Error(`Error de Supabase: ${error.message}`);
+    }
+
+    return data.user;
+  }
 }

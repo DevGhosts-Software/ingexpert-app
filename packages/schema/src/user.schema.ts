@@ -14,10 +14,12 @@ export const CreateUserSchema = z.object({
 });
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 
-export const UpdateUserSchema = CreateUserSchema.partial().omit({ id: true });
+export const UpdateUserSchema =z.object({
+  name: z.string().max(100).optional().nullable(),
+  password: z.string().max(100).optional().nullable(),
+  avatar: z.string().url().max(500).optional().nullable(),
+});
 export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
-
-export const AdminUserUpdateSchema = CreateUserSchema.partial().omit({ id: true });
 
 // ─── Entities (Prisma-derived — changes to the DB schema surface here) ────────
 
