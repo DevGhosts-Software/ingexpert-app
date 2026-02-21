@@ -6,10 +6,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import type { ControllerRenderProps } from 'react-hook-form';
 
 import { CreateUserSchema, UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
 import {
   Form,
   FormControl,
@@ -90,8 +99,60 @@ function PasswordInput({
   );
 }
 
+function WorkAreaCombobox({
+  field,
+  workAreas,
+  disabled,
+}: {
+  field: ControllerRenderProps<FormValues, 'workArea'>;
+  workAreas: string[];
+  disabled: boolean;
+}) {
+  const [inputText, setInputText] = useState(field.value ?? '');
+
+  // Sync when the form resets (e.g. sheet reopens)
+  useEffect(() => {
+    setInputText(field.value ?? '');
+  }, [field.value]);
+
+  return (
+    <Combobox
+      items={workAreas}
+      value={field.value ?? ''}
+      onValueChange={(v) => {
+        const val = v ?? '';
+        field.onChange(val);
+        setInputText(val);
+      }}
+      inputValue={inputText}
+      onInputValueChange={(v) => setInputText(v)}
+      disabled={disabled}
+    >
+      <ComboboxInput
+        placeholder="Ej: Taller A, Laboratorio"
+        showClear={!!field.value}
+        onBlur={() => {
+          field.onBlur();
+          field.onChange(inputText || null);
+        }}
+      />
+      <ComboboxContent>
+        <ComboboxEmpty>Sin áreas existentes. Se creará una nueva.</ComboboxEmpty>
+        <ComboboxList>
+          {(area) => (
+            <ComboboxItem key={area} value={area}>
+              {area}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
+
 export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
   const utils = trpc.useUtils();
+  const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(CreateUserFormSchema),
@@ -122,6 +183,8 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
     onSuccess: () => {
       toast.success('Usuario creado correctamente');
       void utils.adminUsers.list.invalidate();
+      void utils.adminUsers.getStats.invalidate();
+      void utils.adminUsers.getWorkAreas.invalidate();
       onClose();
     },
     onError: (error) => toast.error(error.message ?? 'Error al crear el usuario'),
@@ -241,11 +304,10 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                     <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Ej: Taller A, Laboratorio"
+                    <WorkAreaCombobox
+                      field={field}
+                      workAreas={workAreas}
                       disabled={isPending}
-                      {...field}
-                      value={field.value ?? ''}
                     />
                   </FormControl>
                   <FormMessage />

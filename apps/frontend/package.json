@@ -20,6 +20,7 @@
     "stock-management"
   ],
   "dependencies": {
+    "@base-ui/react": "^1.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@ingexpert/api": "workspace:*",
     "@ingexpert/database": "workspace:*",
