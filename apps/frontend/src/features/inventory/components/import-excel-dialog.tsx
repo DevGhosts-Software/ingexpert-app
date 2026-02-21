@@ -161,7 +161,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" hideClose={isImporting}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileUp className="h-5 w-5" />
@@ -221,12 +221,16 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                 </span>
               </div>
               <Progress value={progress} />
-              <div className="flex gap-2 rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 px-3 py-2.5 text-xs text-blue-800 dark:text-blue-300">
+              <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <p>
-                  La importacion se procesa en el servidor. Puedes cerrar esta ventana sin
-                  interrumpirla: los items seguiran guardandose en segundo plano.
-                </p>
+                <div className="space-y-1">
+                  <p className="font-semibold">No cierres esta ventana.</p>
+                  <p>
+                    La importacion ocurre por lotes desde tu navegador. Si cierras ahora, solo se
+                    guardaran los <span className="font-semibold">{importedCount}</span> items ya
+                    procesados — los restantes se perderan. Espera a que el progreso llegue al 100%.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -249,3 +253,4 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
     </Dialog>
   );
 }
+
