@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, Download, Filter, Plus, Search } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
+import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+import { toast } from 'sonner';
 
 import { ItemFormSheet } from './item-form-sheet';
+import { ImportExcelDialog } from './import-excel-dialog';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trpc } from '@/lib/trpc';
 
 import type { ItemCounts } from '@ingexpert/schema';
 import { TAB_ITEMS } from './inventory-table.types';
@@ -36,6 +40,7 @@ interface InventoryTableToolbarProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
+  isAdmin: boolean;
 }
 
 export function InventoryTableToolbar({
@@ -49,8 +54,36 @@ export function InventoryTableToolbar({
   activeTab,
   onTabChange,
   typeCounts,
+  isAdmin,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const utils = trpc.useUtils();
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const items = await utils.items.getAll.fetch();
+      const rows = items.map((item) => ({
+        CODIGO: item.code,
+        NOMBRE: item.name,
+        UBICACION: item.location,
+        STOCK: item.stock,
+        UNIDAD: item.unit,
+        OBSERVACION: item.observations ?? '',
+      }));
+      const ws = xlsxUtils.json_to_sheet(rows);
+      const wb = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
+      const date = new Date().toISOString().slice(0, 10);
+      xlsxWriteFile(wb, `inventario_${date}.xlsx`);
+    } catch {
+      toast.error('Error al exportar el inventario');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [utils]);
 
   return (
     <div className="space-y-4">
@@ -128,18 +161,42 @@ export function InventoryTableToolbar({
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Agregar item
-          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void handleExport()}
+                disabled={isExporting}
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exportando...' : 'Exportar'}
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Agregar item
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+      {isAdmin && (
+        <>
+          <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+          <ImportExcelDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        </>
+      )}
 
       {/* Type tabs */}
       <Tabs value={activeTab} onValueChange={onTabChange}>

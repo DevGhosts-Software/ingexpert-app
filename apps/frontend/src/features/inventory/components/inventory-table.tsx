@@ -1,11 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { COLUMNS } from './inventory-table.columns';
+import { getColumns } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
 import { type InventoryTableProps, LOW_STOCK_THRESHOLD } from './inventory-table.types';
 
@@ -27,6 +23,7 @@ export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-t
 export function InventoryTable({
   items,
   isLoading = false,
+  isAdmin,
   pageCount,
   pagination,
   onPaginationChange,
@@ -40,6 +37,7 @@ export function InventoryTable({
   allLocations,
   sorting,
   onSortingChange,
+  onRowClick,
 }: InventoryTableProps) {
   const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
@@ -58,9 +56,11 @@ export function InventoryTable({
   );
   const locationOptions = allLocations && allLocations.length > 0 ? allLocations : pageLocations;
 
+  const columns = useMemo(() => getColumns(isAdmin), [isAdmin]);
+
   const table = useReactTable({
     data: filteredItems,
-    columns: COLUMNS,
+    columns,
     pageCount,
     state: { sorting, pagination },
     onSortingChange,
@@ -97,6 +97,7 @@ export function InventoryTable({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         typeCounts={typeCounts}
+        isAdmin={isAdmin}
       />
 
       <div className="rounded-md border">
@@ -116,7 +117,7 @@ export function InventoryTable({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {COLUMNS.map((_, j) => (
+                  {columns.map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -126,7 +127,7 @@ export function InventoryTable({
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={COLUMNS.length}
+                  colSpan={columns.length}
                   className="h-32 text-center text-muted-foreground"
                 >
                   No se encontraron items.
@@ -134,7 +135,12 @@ export function InventoryTable({
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="cursor-pointer"
+                  onClick={() => onRowClick(row.original)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

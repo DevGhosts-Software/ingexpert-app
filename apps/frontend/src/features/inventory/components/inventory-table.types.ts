@@ -29,6 +29,7 @@ export const TAB_ITEMS: Array<{ value: string; label: string; type: ItemType | '
 export interface InventoryTableProps {
   items: ItemEntity[];
   isLoading?: boolean;
+  isAdmin: boolean;
   pageCount: number;
   pagination: PaginationState;
   onPaginationChange: OnChangeFn<PaginationState>;
@@ -42,4 +43,5 @@ export interface InventoryTableProps {
   allLocations?: string[];
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
+  onRowClick: (item: ItemEntity) => void;
 }

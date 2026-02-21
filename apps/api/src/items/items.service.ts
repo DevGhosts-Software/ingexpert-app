@@ -26,6 +26,7 @@ export class ItemsService {
       unit: item.unit,
       type: item.type,
       imageUrl: item.imageUrl,
+      observations: item.observations ?? null,
     };
   }
 
@@ -51,6 +52,7 @@ export class ItemsService {
         unit: createItemDto.unit,
         type: createItemDto.type,
         imageUrl: createItemDto.imageUrl ?? '',
+        observations: createItemDto.observations ?? null,
       },
     });
     return this.mapItem(item);
@@ -83,30 +85,51 @@ export class ItemsService {
         unit: item.unit,
         type: item.type,
         imageUrl: item.imageUrl ?? '',
+        observations: item.observations ?? null,
       })),
     });
   }
 
   async upsertManyByName(items: CreateItemDto[]): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      for (const item of items) {
-        const existing = await tx.item.findFirst({ where: { name: item.name } });
-        const data = {
-          name: item.name,
-          code: item.code,
-          location: item.location,
-          stock: new Prisma.Decimal(item.stock),
-          unit: item.unit,
-          type: item.type,
-          imageUrl: item.imageUrl ?? '',
-        };
-        if (existing) {
-          await tx.item.update({ where: { id: existing.id }, data });
-        } else {
-          await tx.item.create({ data });
-        }
-      }
+    const names = items.map((i) => i.name);
+
+    // Single query to find all items that already exist by name
+    const existing = await this.prisma.item.findMany({
+      where: { name: { in: names } },
+      select: { id: true, name: true },
     });
+    const existingMap = new Map(existing.map((e) => [e.name, e.id]));
+
+    const mapData = (item: CreateItemDto) => ({
+      name: item.name,
+      code: item.code,
+      location: item.location,
+      stock: new Prisma.Decimal(item.stock),
+      unit: item.unit,
+      type: item.type,
+      imageUrl: item.imageUrl ?? '',
+      observations: item.observations ?? null,
+    });
+
+    const toCreate = items.filter((i) => !existingMap.has(i.name));
+    const toUpdate = items.filter((i) => existingMap.has(i.name));
+
+    // Batch-insert all new items in one query
+    if (toCreate.length > 0) {
+      await this.prisma.item.createMany({ data: toCreate.map(mapData) });
+    }
+
+    // Update existing items in parallel
+    if (toUpdate.length > 0) {
+      await Promise.all(
+        toUpdate.map((item) =>
+          this.prisma.item.update({
+            where: { id: existingMap.get(item.name)! },
+            data: mapData(item),
+          }),
+        ),
+      );
+    }
   }
 
   async getStats(): Promise<ItemStats> {
@@ -155,5 +178,12 @@ export class ItemsService {
       orderBy: { location: 'asc' },
     });
     return result.map((r) => r.location);
+  }
+
+  async findAll(): Promise<ItemEntity[]> {
+    const items = await this.prisma.item.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return items.map((item) => this.mapItem(item));
   }
 }

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginSchema, type LoginDto } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,11 @@ export function LoginForm() {
 
   function onSubmit(values: LoginDto) {
     loginMutation.mutate(values, {
-      onSuccess: () => {
+      onSuccess: async (data) => {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
         toast.success('Logged in successfully');
         router.push('/');
         router.refresh();
