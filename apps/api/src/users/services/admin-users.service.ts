@@ -175,6 +175,9 @@ export class AdminUsersService {
   }
 
   async remove(id: string): Promise<{ success: boolean }> {
+    // 0. Fetch avatar URL before deletion so we can clean up storage
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { avatar: true } });
+
     // 1. Delete from Supabase Auth
     const { error } = await this.supabaseAdmin.auth.admin.deleteUser(id);
 
@@ -190,6 +193,17 @@ export class AdminUsersService {
       });
     } catch (e) {
       // Might already be deleted by cascade
+    }
+
+    // 3. Delete avatar from storage if present
+    if (user?.avatar) {
+      const BUCKET = 'app-data';
+      const marker = `/${BUCKET}/`;
+      const idx = user.avatar.indexOf(marker);
+      if (idx !== -1) {
+        const path = user.avatar.slice(idx + marker.length);
+        await this.supabaseAdmin.storage.from(BUCKET).remove([path]);
+      }
     }
 
     return { success: true };
