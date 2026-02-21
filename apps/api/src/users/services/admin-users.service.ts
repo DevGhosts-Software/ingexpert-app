@@ -28,10 +28,10 @@ export class AdminUsersService {
     });
   }
 
-  async create(createUserDto: CreateUserDto & { password?: string }): Promise<any> {
+  async create(createUserDto: CreateUserDto): Promise<any> {
     const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
       email: createUserDto.email,
-      password: createUserDto.password || 'Ingexpert2026!',
+      password: createUserDto.password,
       email_confirm: true,
       user_metadata: {
         nombre: createUserDto.name || 'Nuevo Usuario',

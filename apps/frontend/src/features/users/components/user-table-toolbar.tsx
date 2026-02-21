@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -19,16 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+import { UserCreateSheet } from './user-create-sheet';
 import { type ActiveTab, type RoleCounts, TAB_ITEMS } from './user-table.types';
 
 interface UserTableToolbarProps {
@@ -40,67 +32,6 @@ interface UserTableToolbarProps {
   activeTab: ActiveTab;
   onActiveTabChange: (value: ActiveTab) => void;
   roleCounts: RoleCounts;
-}
-
-function CreateUserSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Crear Nuevo Usuario
-          </SheetTitle>
-          <SheetDescription>
-            Solo los administradores pueden crear cuentas. El usuario recibirá sus credenciales por
-            correo.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="space-y-5 mt-6">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-email">Correo electrónico</Label>
-            <Input id="new-email" type="email" placeholder="usuario@empresa.com" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="new-name">Nombre completo</Label>
-            <Input id="new-name" type="text" placeholder="Ej: Juan Pérez" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="new-role">Rol</Label>
-            <Select defaultValue="USER">
-              <SelectTrigger id="new-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USER">Usuario</SelectItem>
-                <SelectItem value="ADMIN">Administrador</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="new-area">Área de trabajo</Label>
-            <Input id="new-area" type="text" placeholder="Ej: Taller A, Laboratorio" />
-          </div>
-
-          <Separator />
-
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Crear usuario
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
 }
 
 export function UserTableToolbar({
@@ -193,7 +124,8 @@ export function UserTableToolbar({
         </TabsList>
       </Tabs>
 
-      <CreateUserSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+      <UserCreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }
+

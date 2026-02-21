@@ -6,11 +6,11 @@ export { UserRole } from '@ingexpert/database';
 // ─── DTOs (Zod-validated tRPC inputs) ────────────────────────────────────────
 
 export const CreateUserSchema = z.object({
-  id: z.uuid(),
   email: z.string().email(),
   role: z.nativeEnum(UserRole).optional(),
   name: z.string().max(100).optional().nullable(),
   avatar: z.string().url().max(500).optional().nullable(),
+  password: z.string().min(8),
 });
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 
