@@ -4,6 +4,7 @@ import { UsersRouter } from '../users/users.router';
 import { AdminUsersRouter } from '../users/admin-users.router';
 import { AuthRouter } from '../auth/auth.router';
 import { ItemsRouter } from '../items/items.router';
+import {KitsRouter} from "../kits/kits.router";
 
 @Injectable()
 export class AppRouter {
@@ -13,6 +14,7 @@ export class AppRouter {
     private readonly adminUsersRouter: AdminUsersRouter,
     private readonly authRouter: AuthRouter,
     private readonly itemsRouter: ItemsRouter,
+    private readonly kitsRouter: KitsRouter,
   ) {}
 
   public get appRouter() {
@@ -30,6 +32,7 @@ export class AppRouter {
       users: this.usersRouter.router,
       adminUsers: this.adminUsersRouter.router,
       items: this.itemsRouter.router,
+      kits: this.kitsRouter.router,
     });
   }
 }
