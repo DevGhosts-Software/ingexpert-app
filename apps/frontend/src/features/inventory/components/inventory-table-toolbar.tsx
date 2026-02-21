@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
+import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+import { toast } from 'sonner';
 
 import { ItemFormSheet } from './item-form-sheet';
 import { ImportExcelDialog } from './import-excel-dialog';
@@ -22,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trpc } from '@/lib/trpc';
 
 import type { ItemCounts } from '@ingexpert/schema';
 import { TAB_ITEMS } from './inventory-table.types';
@@ -53,6 +56,32 @@ export function InventoryTableToolbar({
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const utils = trpc.useUtils();
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const items = await utils.items.getAll.fetch();
+      const rows = items.map((item) => ({
+        CODIGO: item.code,
+        NOMBRE: item.name,
+        UBICACION: item.location,
+        STOCK: item.stock,
+        UNIDAD: item.unit,
+        OBSERVACION: item.observations ?? '',
+      }));
+      const ws = xlsxUtils.json_to_sheet(rows);
+      const wb = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
+      const date = new Date().toISOString().slice(0, 10);
+      xlsxWriteFile(wb, `inventario_${date}.xlsx`);
+    } catch {
+      toast.error('Error al exportar el inventario');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [utils]);
 
   return (
     <div className="space-y-4">
@@ -134,9 +163,15 @@ export function InventoryTableToolbar({
             <Upload className="h-4 w-4" />
             Importar
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => void handleExport()}
+            disabled={isExporting}
+          >
             <Download className="h-4 w-4" />
-            Exportar
+            {isExporting ? 'Exportando...' : 'Exportar'}
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
             <Plus className="h-4 w-4" />

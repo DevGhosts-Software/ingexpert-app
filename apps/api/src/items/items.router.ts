@@ -72,6 +72,10 @@ export class ItemsRouter {
       getLocations: this.trpc.protectedProcedure.query(async () => {
         return this.itemsService.getLocations();
       }),
+
+      getAll: this.trpc.adminProcedure.query(async () => {
+        return this.itemsService.findAll();
+      }),
     });
   }
 }

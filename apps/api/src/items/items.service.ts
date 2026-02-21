@@ -179,4 +179,11 @@ export class ItemsService {
     });
     return result.map((r) => r.location);
   }
+
+  async findAll(): Promise<ItemEntity[]> {
+    const items = await this.prisma.item.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return items.map((item) => this.mapItem(item));
+  }
 }
