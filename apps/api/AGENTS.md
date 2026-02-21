@@ -92,6 +92,7 @@ private mapItem(item: Item): ItemEntity {
     unit: item.unit,
     type: item.type,
     imageUrl: item.imageUrl,
+    observations: item.observations ?? null, // optional String? → null
   };
 }
 
@@ -131,3 +132,38 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
     - Create/Update `[domain].router.ts` in `apps/api/src/[domain]/`.
     - Implement Logic in Service.
     - Register router in `AppRouter`.
+
+## 6. Bulk Operations Pattern
+
+When implementing batch write operations (e.g. Excel import via `upsertManyByName`), **do not use a single interactive `$transaction` wrapping many sequential queries** — Prisma's default timeout is 5 s and it will expire on large datasets.
+
+Instead use the pre-fetch + bulk pattern:
+
+```typescript
+async upsertManyByName(items: CreateItemDto[]): Promise<void> {
+  // 1 query — find all existing items by name
+  const existing = await this.prisma.item.findMany({
+    where: { name: { in: items.map((i) => i.name) } },
+    select: { id: true, name: true },
+  });
+  const existingMap = new Map(existing.map((e) => [e.name, e.id]));
+
+  const toCreate = items.filter((i) => !existingMap.has(i.name));
+  const toUpdate = items.filter((i) => existingMap.has(i.name));
+
+  // 1 query — batch insert all new rows
+  if (toCreate.length > 0) {
+    await this.prisma.item.createMany({ data: toCreate.map(mapData) });
+  }
+  // N parallel updates — no wrapping transaction
+  if (toUpdate.length > 0) {
+    await Promise.all(
+      toUpdate.map((item) =>
+        this.prisma.item.update({ where: { id: existingMap.get(item.name)! }, data: mapData(item) }),
+      ),
+    );
+  }
+}
+```
+
+Total DB round-trips: **1 findMany + 1 createMany + N parallel updates** (vs. N×2 sequential before).

@@ -167,3 +167,35 @@ const { data } = trpc.items.list.useQuery({ search: search || undefined });
 - Pass the **debounced** value to every `useQuery` that uses it.
 - Default delay is **400 ms** — do not lower it without a strong reason.
 - `useDebounce` is generic (`useDebounce<T>`) and works with any value type.
+
+## 11. Role-Based UI
+
+Use the `useIsAdmin()` hook (`src/hooks/use-is-admin.ts`) to gate admin-only UI. It reads `trpc.users.me` with `staleTime: Infinity` — the layout has already fetched it, so **no extra network request** is made.
+
+```typescript
+import { useIsAdmin } from '@/hooks/use-is-admin';
+
+// In the page container — pass down as a prop
+const isAdmin = useIsAdmin();
+<InventoryTable isAdmin={isAdmin} ... />
+
+// In a presenter — receive as prop, never call useQuery directly
+{isAdmin && <Button>Agregar item</Button>}
+```
+
+- `isAdmin` flows from the **Container** (page) down to Presenters as a prop — Presenters never call `useIsAdmin()` directly.
+- Exception: shared layout-level components (e.g. `AppSidebar`) that are not feature Presenters may call `useIsAdmin()` directly.
+- The API enforces authorization independently via `adminProcedure` — the UI gates are a UX layer only.
+
+## 12. On-Demand Fetch (no persistent query)
+
+For actions that fetch data only once on user trigger (e.g. "Export to Excel"), use `utils.[domain].[procedure].fetch()` instead of `useQuery`. This avoids a persistent subscription and only runs when called.
+
+```typescript
+const utils = trpc.useUtils();
+
+const handleExport = async () => {
+  const items = await utils.items.getAll.fetch(); // one-shot, no re-render subscription
+  // ... generate file
+};
+```

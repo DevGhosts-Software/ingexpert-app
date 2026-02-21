@@ -93,5 +93,6 @@ Each `[domain].schema.ts` file is divided into two explicit sections.
   - `Date` fields (JSON-serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
 - **Safety guarantee:** Adding a new column to the Prisma schema causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. This is intentional — schema drift surfaces at compile time.
 - **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
+  - `null`-able optional fields (e.g. `String?`) are mapped as-is: `observations: item.observations ?? null`.
 - **Frontend rule:** Always import entity types from `@ingexpert/schema`. Never declare local interfaces that duplicate the shape of API data.
 - **tRPC inference:** When a service method returns `Promise<ItemEntity>`, tRPC infers the client-side call type automatically — no manual type annotation needed on the frontend.
