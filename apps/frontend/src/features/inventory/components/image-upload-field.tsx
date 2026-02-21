@@ -96,9 +96,9 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
             // Local blob preview — not yet uploaded
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewUrl} alt="Vista previa" className="w-full h-40 object-contain" />
-          ) : (
-            <StorageImage src={value!} alt="Vista previa" className="w-full h-40 object-contain" />
-          )}
+          ) : value ? (
+            <StorageImage src={value} alt="Vista previa" className="w-full h-40 object-contain" />
+          ) : null}
           {isUploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <div className="flex flex-col items-center gap-1 text-white">
