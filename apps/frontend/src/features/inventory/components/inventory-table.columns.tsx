@@ -133,11 +133,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
             open={open === 'edit'}
             onClose={() => setOpen(null)}
           />
-          <ItemDeleteDialog
-            item={item}
-            open={open === 'delete'}
-            onClose={() => setOpen(null)}
-          />
+          <ItemDeleteDialog item={item} open={open === 'delete'} onClose={() => setOpen(null)} />
         </>
       )}
     </div>
@@ -148,96 +144,96 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
   return [
     {
       id: 'image',
-    header: () => <span className="sr-only">Imagen</span>,
-    cell: ({ row }) => {
-      const url = row.original.imageUrl;
-      if (!url) {
+      header: () => <span className="sr-only">Imagen</span>,
+      cell: ({ row }) => {
+        const url = row.original.imageUrl;
+        if (!url) {
+          return (
+            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+              <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+            </div>
+          );
+        }
         return (
-          <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
-            <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+          <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
+            <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
           </div>
         );
-      }
-      return (
-        <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
-          <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
-        </div>
-      );
+      },
+      enableSorting: false,
     },
-    enableSorting: false,
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => (
-      <ColHeader
-        label="Nombre"
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      />
-    ),
-    cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
-  },
-  {
-    accessorKey: 'code',
-    header: ({ column }) => (
-      <ColHeader
-        label="Código"
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      />
-    ),
-    cell: ({ row }) => <span className="font-medium">{row.getValue('code')}</span>,
-  },
-  {
-    accessorKey: 'type',
-    header: 'Tipo',
-    cell: ({ row }) => <ItemTypeBadge type={row.getValue('type')} />,
-    enableSorting: false,
-  },
-  {
-    accessorKey: 'location',
-    header: ({ column }) => (
-      <ColHeader
-        label="Ubicacion"
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      />
-    ),
-    cell: ({ row }) => (
-      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-        <MapPin className="h-3 w-3" />
-        {row.getValue('location')}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'stock',
-    header: ({ column }) => (
-      <ColHeader
-        label="Stock"
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      />
-    ),
-    cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('stock')}</span>,
-  },
-  {
-    accessorKey: 'unit',
-    header: ({ column }) => (
-      <ColHeader
-        label="Unidad"
-        sorted={column.getIsSorted()}
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      />
-    ),
-    cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('unit')}</span>,
-  },
-  {
-    id: 'status',
-    header: 'Estado',
-    cell: ({ row }) => <StockBadge stock={row.original.stock} />,
-    enableSorting: false,
-  },
+    {
+      accessorKey: 'name',
+      header: ({ column }) => (
+        <ColHeader
+          label="Nombre"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        />
+      ),
+      cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+    },
+    {
+      accessorKey: 'code',
+      header: ({ column }) => (
+        <ColHeader
+          label="Código"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        />
+      ),
+      cell: ({ row }) => <span className="font-medium">{row.getValue('code')}</span>,
+    },
+    {
+      accessorKey: 'type',
+      header: 'Tipo',
+      cell: ({ row }) => <ItemTypeBadge type={row.getValue('type')} />,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'location',
+      header: ({ column }) => (
+        <ColHeader
+          label="Ubicacion"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        />
+      ),
+      cell: ({ row }) => (
+        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+          <MapPin className="h-3 w-3" />
+          {row.getValue('location')}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'stock',
+      header: ({ column }) => (
+        <ColHeader
+          label="Stock"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        />
+      ),
+      cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('stock')}</span>,
+    },
+    {
+      accessorKey: 'unit',
+      header: ({ column }) => (
+        <ColHeader
+          label="Unidad"
+          sorted={column.getIsSorted()}
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        />
+      ),
+      cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('unit')}</span>,
+    },
+    {
+      id: 'status',
+      header: 'Estado',
+      cell: ({ row }) => <StockBadge stock={row.original.stock} />,
+      enableSorting: false,
+    },
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,

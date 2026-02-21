@@ -40,7 +40,9 @@ function normalizeRow(row: RawExcelRow): RawExcelRow {
 }
 
 function parseItemType(value: unknown): CreateItemDto['type'] {
-  const str = String(value ?? '').toUpperCase().trim();
+  const str = String(value ?? '')
+    .toUpperCase()
+    .trim();
   if (str === 'EQUIPMENT' || str === 'EQUIPO') return ItemType.EQUIPMENT;
   if (str === 'TOOL' || str === 'HERRAMIENTA') return ItemType.TOOL;
   if (str === 'KIT') return ItemType.KIT;
@@ -88,7 +90,8 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
   const [isImporting, setIsImporting] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
-  const progress = parsedRows.length > 0 ? Math.round((importedCount / parsedRows.length) * 100) : 0;
+  const progress =
+    parsedRows.length > 0 ? Math.round((importedCount / parsedRows.length) * 100) : 0;
 
   const upsertMutation = trpc.items.upsertManyByName.useMutation();
 
@@ -272,4 +275,3 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
     </Dialog>
   );
 }
-
