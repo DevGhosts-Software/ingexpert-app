@@ -91,26 +91,24 @@ export class ItemsService {
   }
 
   async upsertManyByName(items: CreateItemDto[]): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      for (const item of items) {
-        const existing = await tx.item.findFirst({ where: { name: item.name } });
-        const data = {
-          name: item.name,
-          code: item.code,
-          location: item.location,
-          stock: new Prisma.Decimal(item.stock),
-          unit: item.unit,
-          type: item.type,
-          imageUrl: item.imageUrl ?? '',
-          observations: item.observations ?? null,
-        };
-        if (existing) {
-          await tx.item.update({ where: { id: existing.id }, data });
-        } else {
-          await tx.item.create({ data });
-        }
+    for (const item of items) {
+      const existing = await this.prisma.item.findFirst({ where: { name: item.name } });
+      const data = {
+        name: item.name,
+        code: item.code,
+        location: item.location,
+        stock: new Prisma.Decimal(item.stock),
+        unit: item.unit,
+        type: item.type,
+        imageUrl: item.imageUrl ?? '',
+        observations: item.observations ?? null,
+      };
+      if (existing) {
+        await this.prisma.item.update({ where: { id: existing.id }, data });
+      } else {
+        await this.prisma.item.create({ data });
       }
-    });
+    }
   }
 
   async getStats(): Promise<ItemStats> {
