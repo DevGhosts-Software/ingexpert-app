@@ -1,18 +1,32 @@
 'use client';
 
+import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   Briefcase,
   KeyRound,
+  Loader2,
   MoreHorizontal,
   Pencil,
   ShieldCheck,
   Trash2,
   User,
 } from 'lucide-react';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,8 +34,289 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { trpc } from '@/lib/trpc';
+import { UserEditSheet } from './user-edit-sheet';
 import type { UserEntity, UserRole } from './user-table.types';
+
+// ─── Permission helpers ───────────────────────────────────────────────────────
+
+function canEdit(currentId: string, target: UserEntity): boolean {
+  if (target.id === currentId) return true;       // can always edit yourself
+  if (target.role === 'ADMIN') return false;       // can't edit other admins
+  return true;
+}
+
+function canDelete(currentId: string, target: UserEntity): boolean {
+  if (target.id === currentId) return false;       // can't delete yourself
+  if (target.role === 'ADMIN') return false;       // can't delete other admins
+  return true;
+}
+
+// ─── Reset password dialog ────────────────────────────────────────────────────
+
+const ResetPwSchema = z
+  .object({
+    password: z.string().min(8, 'Mínimo 8 caracteres'),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+type ResetPwValues = z.infer<typeof ResetPwSchema>;
+
+function ResetPasswordDialog({
+  user,
+  open,
+  onClose,
+}: {
+  user: UserEntity;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const form = useForm<ResetPwValues>({
+    resolver: zodResolver(ResetPwSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
+
+  const mutation = trpc.adminUsers.updatePassword.useMutation({
+    onSuccess: () => {
+      toast.success('Contraseña restablecida correctamente');
+      form.reset();
+      onClose();
+    },
+    onError: (err) => toast.error(err.message ?? 'Error al restablecer la contraseña'),
+  });
+
+  const onSubmit = ({ password }: ResetPwValues) => {
+    mutation.mutate({ id: user.id, password });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />
+            Restablecer contraseña
+          </DialogTitle>
+          <DialogDescription>{user.name ?? user.email}</DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nueva contraseña</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPw ? 'text' : 'password'}
+                        placeholder="Mínimo 8 caracteres"
+                        className="pr-10"
+                        disabled={mutation.isPending}
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw((s) => !s)}
+                        tabIndex={-1}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPw ? '🙈' : '👁'}
+                      </button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar contraseña</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showConfirm ? 'text' : 'password'}
+                        placeholder="Repite la contraseña"
+                        className="pr-10"
+                        disabled={mutation.isPending}
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm((s) => !s)}
+                        tabIndex={-1}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirm ? '🙈' : '👁'}
+                      </button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Restablecer
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Delete confirm dialog ────────────────────────────────────────────────────
+
+function DeleteUserDialog({
+  user,
+  open,
+  onClose,
+}: {
+  user: UserEntity;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+
+  const mutation = trpc.adminUsers.remove.useMutation({
+    onSuccess: () => {
+      toast.success('Usuario eliminado correctamente');
+      void utils.adminUsers.list.invalidate();
+      void utils.adminUsers.getStats.invalidate();
+      onClose();
+    },
+    onError: (err) => toast.error(err.message ?? 'Error al eliminar el usuario'),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-destructive" />
+            Eliminar usuario
+          </DialogTitle>
+          <DialogDescription>
+            ¿Estás seguro de que deseas eliminar a{' '}
+            <span className="font-medium text-foreground">{user.name ?? user.email}</span>? Esta
+            acción no se puede deshacer.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => mutation.mutate(user.id)}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Eliminar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Row actions ──────────────────────────────────────────────────────────────
+
+function RowActions({ user }: { user: UserEntity }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [resetPwOpen, setResetPwOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { data: me } = trpc.users.me.useQuery();
+  const currentId = me?.id ?? '';
+  const isEditAllowed = canEdit(currentId, user);
+  const isDeleteAllowed = canDelete(currentId, user);
+  // Role change is only shown when editing non-self regular users
+  const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Abrir menú</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => setEditOpen(true)}
+            disabled={!isEditAllowed}
+          >
+            <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
+            Editar usuario
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setResetPwOpen(true)}>
+            <KeyRound className="h-4 w-4 mr-2 text-muted-foreground" />
+            Restablecer contraseña
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            disabled={!isDeleteAllowed}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar usuario
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {editOpen && (
+        <UserEditSheet
+          user={user}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          canChangeRole={canChangeRole}
+        />
+      )}
+      <ResetPasswordDialog
+        user={user}
+        open={resetPwOpen}
+        onClose={() => setResetPwOpen(false)}
+      />
+      <DeleteUserDialog
+        user={user}
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+      />
+    </>
+  );
+}
+
+// ─── Exported helpers ─────────────────────────────────────────────────────────
 
 export function RoleBadge({ role }: { role: UserRole }) {
   if (role === 'ADMIN') {
@@ -54,48 +349,6 @@ export function UserAvatar({ name, email }: { name: string | null; email: string
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
       {initials}
     </div>
-  );
-}
-
-function RowActions({ user }: { user: UserEntity }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="h-8 w-8">
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Abrir menú</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem>
-          <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
-          Editar usuario
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <KeyRound className="h-4 w-4 mr-2 text-muted-foreground" />
-          Restablecer contraseña
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          {user.role === 'ADMIN' ? (
-            <>
-              <User className="h-4 w-4 mr-2 text-muted-foreground" />
-              Cambiar a Usuario
-            </>
-          ) : (
-            <>
-              <ShieldCheck className="h-4 w-4 mr-2 text-muted-foreground" />
-              Promover a Admin
-            </>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
-          <Trash2 className="h-4 w-4 mr-2" />
-          Eliminar usuario
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -150,3 +403,4 @@ export function getColumns(): ColumnDef<UserEntity>[] {
     },
   ];
 }
+

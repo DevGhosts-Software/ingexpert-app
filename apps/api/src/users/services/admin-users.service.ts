@@ -135,19 +135,39 @@ export class AdminUsersService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<UserEntity> {
     await this.findOne(id);
 
-    // Update Prisma local data
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { name: updateUserDto.name, avatar: updateUserDto.avatar },
-      include: { staff: true },
+    const user = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: {
+          name: updateUserDto.name,
+          avatar: updateUserDto.avatar,
+          ...(updateUserDto.role !== undefined ? { role: updateUserDto.role } : {}),
+        },
+        include: { staff: true },
+      });
+
+      if (updateUserDto.workArea !== undefined) {
+        if (updateUserDto.workArea) {
+          await tx.staff.upsert({
+            where: { id },
+            create: { id, workArea: updateUserDto.workArea },
+            update: { workArea: updateUserDto.workArea },
+          });
+        } else {
+          await tx.staff.updateMany({
+            where: { id },
+            data: { workArea: null },
+          });
+        }
+        return tx.user.findUniqueOrThrow({ where: { id }, include: { staff: true } });
+      }
+
+      return updated;
     });
 
-    // Optionally update Supabase metadata if name changed
     if (updateUserDto.name) {
       await this.supabaseAdmin.auth.admin.updateUserById(id, {
-        user_metadata: {
-          nombre: updateUserDto.name,
-        },
+        user_metadata: { nombre: updateUserDto.name },
       });
     }
 

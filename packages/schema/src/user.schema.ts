@@ -19,6 +19,8 @@ export const UpdateUserSchema = z.object({
   name: z.string().max(100).optional().nullable(),
   password: z.string().max(100).optional().nullable(),
   avatar: z.string().url().max(500).optional().nullable(),
+  workArea: z.string().max(100).optional().nullable(),
+  role: z.nativeEnum(UserRole).optional(),
 });
 export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 
