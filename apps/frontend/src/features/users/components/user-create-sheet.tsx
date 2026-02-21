@@ -1,24 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { ControllerRenderProps } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ControllerRenderProps } from 'react-hook-form';
 
 import { CreateUserSchema, UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from '@/components/ui/combobox';
 import {
   Form,
   FormControl,
@@ -108,45 +101,73 @@ function WorkAreaCombobox({
   workAreas: string[];
   disabled: boolean;
 }) {
-  const [inputText, setInputText] = useState(field.value ?? '');
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
 
-  // Sync when the form resets (e.g. sheet reopens)
-  useEffect(() => {
-    setInputText(field.value ?? '');
-  }, [field.value]);
+  const inputValue = field.value ?? '';
+  const filtered = workAreas.filter((a) => a.toLowerCase().includes(inputValue.toLowerCase()));
+  const showDropdown = open && filtered.length > 0;
+
+  const select = (area: string) => {
+    field.onChange(area);
+    setOpen(false);
+    setHighlighted(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlighted((i) => Math.min(i + 1, filtered.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlighted((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && highlighted >= 0) {
+      e.preventDefault();
+      select(filtered[highlighted]);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
+  };
 
   return (
-    <Combobox
-      items={workAreas}
-      value={field.value ?? ''}
-      onValueChange={(v) => {
-        const val = v ?? '';
-        field.onChange(val);
-        setInputText(val);
-      }}
-      inputValue={inputText}
-      onInputValueChange={(v) => setInputText(v)}
-      disabled={disabled}
-    >
-      <ComboboxInput
+    <div className="relative">
+      <Input
         placeholder="Ej: Taller A, Laboratorio"
-        showClear={!!field.value}
-        onBlur={() => {
-          field.onBlur();
-          field.onChange(inputText || null);
+        disabled={disabled}
+        value={inputValue}
+        onChange={(e) => {
+          field.onChange(e.target.value);
+          setOpen(true);
+          setHighlighted(-1);
         }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          setTimeout(() => setOpen(false), 150);
+          field.onBlur();
+        }}
+        onKeyDown={handleKeyDown}
       />
-      <ComboboxContent>
-        <ComboboxEmpty>Sin áreas existentes. Se creará una nueva.</ComboboxEmpty>
-        <ComboboxList>
-          {(area) => (
-            <ComboboxItem key={area} value={area}>
+      {showDropdown && (
+        <ul className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md p-1 max-h-48 overflow-auto">
+          {filtered.map((area, i) => (
+            <li
+              key={area}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => select(area)}
+              className={cn(
+                'flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm',
+                i === highlighted
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent hover:text-accent-foreground',
+              )}
+            >
               {area}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -274,11 +295,7 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isPending}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar rol" />
@@ -304,11 +321,7 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                     <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
                   </FormLabel>
                   <FormControl>
-                    <WorkAreaCombobox
-                      field={field}
-                      workAreas={workAreas}
-                      disabled={isPending}
-                    />
+                    <WorkAreaCombobox field={field} workAreas={workAreas} disabled={isPending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -325,7 +338,11 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                 <FormItem>
                   <FormLabel>Contraseña</FormLabel>
                   <FormControl>
-                    <PasswordInput placeholder="Mínimo 8 caracteres" disabled={isPending} {...field} />
+                    <PasswordInput
+                      placeholder="Mínimo 8 caracteres"
+                      disabled={isPending}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -339,7 +356,11 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                 <FormItem>
                   <FormLabel>Confirmar contraseña</FormLabel>
                   <FormControl>
-                    <PasswordInput placeholder="Repite la contraseña" disabled={isPending} {...field} />
+                    <PasswordInput
+                      placeholder="Repite la contraseña"
+                      disabled={isPending}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
