@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { ModeToggle } from '@/components/theme/mode-toggle';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { StorageAvatarImage } from '@/components/ui/storage-image';
 import type { User } from '@ingexpert/database';
 import { UserProfileSheet } from '@/features/users/components/user-profile-sheet';
 
@@ -48,7 +49,7 @@ export function DashboardNavbar({ title, user, onLogout }: DashboardNavbarProps)
               <p className="text-xs text-muted-foreground capitalize">{user.role?.toLowerCase()}</p>
             </div>
             <Avatar size="sm">
-              {user.avatar && <AvatarImage src={user.avatar} alt={user.name ?? user.email} />}
+              {user.avatar && <StorageAvatarImage src={user.avatar} alt={user.name ?? user.email} />}
               <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
             </Avatar>
           </button>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { AvatarImage } from '@/components/ui/avatar';
 
 const BUCKET = 'app-data';
 const SIGNED_URL_TTL = 60 * 60; // 1 hour in seconds
@@ -14,38 +15,36 @@ function extractPath(url: string): string | null {
   return url.slice(idx + marker.length);
 }
 
-interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-  src: string;
-  alt: string;
-}
-
-export function StorageImage({ src, alt, className, ...props }: StorageImageProps) {
+function useSignedStorageUrl(src: string | null | undefined): string | null {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
+    if (!src) { setSignedUrl(null); return; }
     setSignedUrl(null);
-    setImgLoaded(false);
     const path = extractPath(src);
-    if (!path) {
-      setSignedUrl(src);
-      return;
-    }
+    if (!path) { setSignedUrl(src); return; }
 
     let cancelled = false;
     supabase.storage
       .from(BUCKET)
       .createSignedUrl(path, SIGNED_URL_TTL)
       .then(({ data, error }) => {
-        if (!cancelled && !error && data) {
-          setSignedUrl(data.signedUrl);
-        }
+        if (!cancelled && !error && data) setSignedUrl(data.signedUrl);
       });
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [src]);
+
+  return signedUrl;
+}
+
+interface StorageImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  src: string;
+  alt: string;
+}
+
+export function StorageImage({ src, alt, className, ...props }: StorageImageProps) {
+  const signedUrl = useSignedStorageUrl(src);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const showPlaceholder = !signedUrl || !imgLoaded;
 
@@ -68,4 +67,11 @@ export function StorageImage({ src, alt, className, ...props }: StorageImageProp
       )}
     </>
   );
+}
+
+/** Drop-in replacement for AvatarImage that handles Supabase RLS via signed URLs. */
+export function StorageAvatarImage({ src, alt }: { src: string; alt: string }) {
+  const signedUrl = useSignedStorageUrl(src);
+  if (!signedUrl) return null; // AvatarFallback renders in the meantime
+  return <AvatarImage src={signedUrl} alt={alt} />;
 }

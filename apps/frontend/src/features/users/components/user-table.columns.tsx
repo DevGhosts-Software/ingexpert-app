@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { StorageAvatarImage } from '@/components/ui/storage-image';
 import {
   Dialog,
   DialogContent,
@@ -340,7 +342,7 @@ export function RoleBadge({ role }: { role: UserRole }) {
   );
 }
 
-export function UserAvatar({ name, email }: { name: string | null; email: string }) {
+export function UserAvatar({ name, avatar, email }: { name: string | null; avatar: string | null; email: string }) {
   const initials = name
     ? name
         .split(' ')
@@ -351,9 +353,10 @@ export function UserAvatar({ name, email }: { name: string | null; email: string
     : email[0].toUpperCase();
 
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-      {initials}
-    </div>
+    <Avatar size="sm">
+      {avatar && <StorageAvatarImage src={avatar} alt={name ?? email} />}
+      <AvatarFallback>{initials}</AvatarFallback>
+    </Avatar>
   );
 }
 
@@ -365,7 +368,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       header: 'Usuario',
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <UserAvatar name={row.original.name} email={row.original.email} />
+          <UserAvatar name={row.original.name} avatar={row.original.avatar} email={row.original.email} />
           <span className="font-medium">{row.original.name ?? '—'}</span>
         </div>
       ),
