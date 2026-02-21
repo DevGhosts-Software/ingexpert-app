@@ -4,12 +4,16 @@ import { supabase } from '@/lib/supabase';
 
 const BUCKET = 'app-data';
 
-export function useStorageUpload() {
+interface UseStorageUploadOptions {
+  folder?: string;
+}
+
+export function useStorageUpload({ folder = 'inventory' }: UseStorageUploadOptions = {}) {
   const [isUploading, setIsUploading] = useState(false);
 
   async function uploadFile(file: File): Promise<string> {
     const ext = file.name.split('.').pop() ?? 'jpg';
-    const path = `inventory/${uuidv4()}.${ext}`;
+    const path = `${folder}/${uuidv4()}.${ext}`;
 
     setIsUploading(true);
     try {

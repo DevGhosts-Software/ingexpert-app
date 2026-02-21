@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { Eye, EyeOff, LogOut, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { trpc } from '@/lib/trpc';
+import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -26,15 +27,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  ImageUploadField,
+  type ImageUploadFieldHandle,
+} from '@/features/inventory/components/image-upload-field';
 import type { User } from '@ingexpert/database';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
-const ProfileFormSchema = z.object({
-  name: z.string().max(100).optional().nullable(),
-  avatar: z.string().url('URL inválida').max(500).optional().nullable().or(z.literal('')),
+const AvatarFormSchema = z.object({
+  avatar: z.string().url().max(500).optional().nullable(),
 });
-type ProfileValues = z.infer<typeof ProfileFormSchema>;
+type AvatarValues = z.infer<typeof AvatarFormSchema>;
 
 const PasswordFormSchema = z
   .object({
@@ -95,29 +99,41 @@ interface UserProfileSheetProps {
 
 export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileSheetProps) {
   const utils = trpc.useUtils();
+  const imageFieldRef = useRef<ImageUploadFieldHandle>(null);
+  const { uploadFile, deleteFile, isUploading } = useStorageUpload({ folder: 'uploads' });
 
-  // ── Profile form ──
-  const profileForm = useForm<ProfileValues>({
-    resolver: zodResolver(ProfileFormSchema),
-    defaultValues: {
-      name: user.name ?? '',
-      avatar: user.avatar ?? '',
-    },
+  // ── Avatar form ──
+  const avatarForm = useForm<AvatarValues>({
+    resolver: zodResolver(AvatarFormSchema),
+    defaultValues: { avatar: user.avatar ?? null },
   });
 
   const updateMeMutation = trpc.users.updateMe.useMutation({
     onSuccess: () => {
-      toast.success('Perfil actualizado');
+      toast.success('Avatar actualizado');
+      imageFieldRef.current?.reset();
       utils.users.me.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const onProfileSubmit = (values: ProfileValues) => {
-    updateMeMutation.mutate({
-      name: values.name || null,
-      avatar: values.avatar || null,
-    });
+  const onAvatarSubmit = async (values: AvatarValues) => {
+    const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
+    let finalAvatarUrl = values.avatar ?? null;
+
+    if (pendingFile) {
+      try {
+        finalAvatarUrl = await uploadFile(pendingFile);
+      } catch {
+        return; // uploadFile toasts the error
+      }
+      // Delete old avatar if replaced
+      if (user.avatar && user.avatar !== finalAvatarUrl) {
+        void deleteFile(user.avatar);
+      }
+    }
+
+    updateMeMutation.mutate({ avatar: finalAvatarUrl });
   };
 
   // ── Password form ──
@@ -138,6 +154,8 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
     updatePasswordMutation.mutate({ password: values.password });
   };
 
+  const isAvatarPending = updateMeMutation.isPending || isUploading;
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="flex flex-col gap-0 overflow-y-auto sm:max-w-md">
@@ -146,62 +164,54 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
             <UserCog className="h-5 w-5 text-muted-foreground" />
             <SheetTitle>Mi Perfil</SheetTitle>
           </div>
-          <SheetDescription>Actualiza tu nombre, avatar o contraseña.</SheetDescription>
+          <SheetDescription>Actualiza tu avatar o contraseña.</SheetDescription>
         </SheetHeader>
 
         <Separator />
 
-        {/* Profile section */}
+        {/* Info (read-only) */}
+        <div className="px-6 py-5 space-y-3">
+          <p className="text-sm font-medium">Información de cuenta</p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Correo electrónico</p>
+            <p className="text-sm">{user.email}</p>
+          </div>
+          {user.name && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Nombre</p>
+              <p className="text-sm">{user.name}</p>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Avatar section */}
         <div className="px-6 py-5">
-          <p className="text-sm font-medium mb-4">Información personal</p>
-          <Form {...profileForm}>
-            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-              <FormItem>
-                <FormLabel>Correo electrónico</FormLabel>
-                <Input value={user.email} disabled />
-              </FormItem>
-
+          <p className="text-sm font-medium mb-4">Foto de perfil</p>
+          <Form {...avatarForm}>
+            <form onSubmit={avatarForm.handleSubmit(onAvatarSubmit)} className="space-y-4">
               <FormField
-                control={profileForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Tu nombre completo"
-                        disabled={updateMeMutation.isPending}
-                        {...field}
-                        value={field.value ?? ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={profileForm.control}
+                control={avatarForm.control}
                 name="avatar"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL de avatar</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="https://..."
-                        disabled={updateMeMutation.isPending}
-                        {...field}
-                        value={field.value ?? ''}
+                      <ImageUploadField
+                        ref={imageFieldRef}
+                        value={field.value ?? null}
+                        onChange={(url) => field.onChange(url ?? null)}
+                        disabled={isAvatarPending}
+                        isUploading={isUploading}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <div className="flex justify-end">
-                <Button type="submit" disabled={updateMeMutation.isPending} size="sm">
-                  {updateMeMutation.isPending ? 'Guardando…' : 'Guardar cambios'}
+                <Button type="submit" disabled={isAvatarPending} size="sm">
+                  {isAvatarPending ? 'Guardando…' : 'Guardar avatar'}
                 </Button>
               </div>
             </form>
