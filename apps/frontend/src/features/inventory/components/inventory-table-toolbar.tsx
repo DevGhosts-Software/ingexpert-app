@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, Download, Filter, Plus, Search, Trash2 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
+import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+import { toast } from 'sonner';
 
 import { ItemFormSheet } from './item-form-sheet';
+import { ImportExcelDialog } from './import-excel-dialog';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,8 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trpc } from '@/lib/trpc';
 
-import { TAB_ITEMS, type TypeCounts } from './inventory-table.types';
+import type { ItemCounts } from '@ingexpert/schema';
+import { TAB_ITEMS } from './inventory-table.types';
 
 interface InventoryTableToolbarProps {
   search: string;
@@ -34,9 +39,8 @@ interface InventoryTableToolbarProps {
   onStockLevelFilterChange: (value: string) => void;
   activeTab: string;
   onTabChange: (value: string) => void;
-  typeCounts: TypeCounts;
-  totalSelected: number;
-  onClearSelection: () => void;
+  typeCounts: ItemCounts;
+  isAdmin: boolean;
 }
 
 export function InventoryTableToolbar({
@@ -50,10 +54,36 @@ export function InventoryTableToolbar({
   activeTab,
   onTabChange,
   typeCounts,
-  totalSelected,
-  onClearSelection,
+  isAdmin,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const utils = trpc.useUtils();
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const items = await utils.items.getAll.fetch();
+      const rows = items.map((item) => ({
+        CODIGO: item.code,
+        NOMBRE: item.name,
+        UBICACION: item.location,
+        STOCK: item.stock,
+        UNIDAD: item.unit,
+        OBSERVACION: item.observations ?? '',
+      }));
+      const ws = xlsxUtils.json_to_sheet(rows);
+      const wb = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
+      const date = new Date().toISOString().slice(0, 10);
+      xlsxWriteFile(wb, `inventario_${date}.xlsx`);
+    } catch {
+      toast.error('Error al exportar el inventario');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [utils]);
 
   return (
     <div className="space-y-4">
@@ -131,37 +161,41 @@ export function InventoryTableToolbar({
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Agregar item
-          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void handleExport()}
+                disabled={isExporting}
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exportando...' : 'Exportar'}
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Agregar item
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
-
-      {/* Bulk action bar */}
-      {totalSelected > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-          <span className="text-sm font-medium">{totalSelected} item(s) seleccionado(s)</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <Button variant="outline" size="sm" className="h-7 gap-1.5">
-              <Download className="h-3.5 w-3.5" />
-              Exportar seleccion
-            </Button>
-            <Button variant="destructive" size="sm" className="h-7 gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" />
-              Dar de baja en lote
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7" onClick={onClearSelection}>
-              Cancelar seleccion
-            </Button>
-          </div>
-        </div>
+      {isAdmin && (
+        <>
+          <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+          <ImportExcelDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        </>
       )}
 
       {/* Type tabs */}
@@ -171,7 +205,7 @@ export function InventoryTableToolbar({
             <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
               {tab.label}
               <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
-                {typeCounts[tab.type as keyof TypeCounts]}
+                {typeCounts[tab.type as keyof ItemCounts]}
               </Badge>
             </TabsTrigger>
           ))}

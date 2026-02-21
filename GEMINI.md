@@ -26,10 +26,11 @@ For every task, adhere to this strict sequence:
 3.  **Safety Check:** Run `pnpm lint` or `pnpm type-check` to catch errors.
 4.  **Formatting:** Run `pnpm format` to ensure consistency.
 
-### 2. Coding Constraints
+## 2. Coding Constraints
 
-- **Strict Typing:** `no-explicit-any` is enforced. Use `unknown` + Zod parsing at boundaries.
+- **Strict Typing:** `no-explicit-any` is enforced. No `any` anywhere.
 - **Shared Schemas:** NEVER define Zod schemas inside Routers. Always import them from `@ingexpert/schema`.
+- **Entity Types:** NEVER define Zod schemas for API response types. Use Prisma-derived entity types from `@ingexpert/schema` (see root `AGENTS.md` Section 5).
 - **Data Integrity:** Stock operations MUST be performed within database transactions to ensure consistency between product counts and audit logs.
 - **No Git:** Do not execute git commands.
 - **Completion:** Do not leave `// TODO` or `// FIXME`. Implement the solution or define the interface clearly.

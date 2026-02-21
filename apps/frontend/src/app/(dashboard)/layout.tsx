@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           title={pageTitle}
           userEmail={user.email}
           userRole={user.role}
-          onLogout={() => logoutMutation.mutate()}
+          onLogout={handleLogout}
         />
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>

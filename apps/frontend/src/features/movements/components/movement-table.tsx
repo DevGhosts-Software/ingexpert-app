@@ -29,6 +29,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+import { type MovementType } from '@ingexpert/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,7 +68,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export type MovementType = 'ENTRY' | 'EXIT';
+export type { MovementType } from '@ingexpert/schema';
 
 export interface MovementDetail {
   itemId: string;

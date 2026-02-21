@@ -23,6 +23,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 
+import { type UserRole } from '@ingexpert/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -62,7 +63,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export type UserRole = 'ADMIN' | 'USER';
+export type { UserRole } from '@ingexpert/schema';
 
 export interface AppUser {
   id: string;

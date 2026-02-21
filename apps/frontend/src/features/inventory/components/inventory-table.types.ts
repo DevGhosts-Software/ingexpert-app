@@ -4,7 +4,6 @@ import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
 
 // Re-export shared entity types so callers within this feature only need one import
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
-export type { ItemCounts as TypeCounts } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
 
 export const LOW_STOCK_THRESHOLD = 10;
@@ -30,6 +29,7 @@ export const TAB_ITEMS: Array<{ value: string; label: string; type: ItemType | '
 export interface InventoryTableProps {
   items: ItemEntity[];
   isLoading?: boolean;
+  isAdmin: boolean;
   pageCount: number;
   pagination: PaginationState;
   onPaginationChange: OnChangeFn<PaginationState>;
@@ -43,4 +43,5 @@ export interface InventoryTableProps {
   allLocations?: string[];
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
+  onRowClick: (item: ItemEntity) => void;
 }
