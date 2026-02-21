@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
-import { FileUp, Upload } from 'lucide-react';
+import { AlertCircle, FileUp, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { CreateItemDto } from '@ingexpert/schema';
@@ -17,15 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+
+const CHUNK_SIZE = 100;
 
 interface RawExcelRow {
-  Código?: unknown;
-  Nombre?: unknown;
-  Ubicación?: unknown;
-  Stock?: unknown;
-  Unidad?: unknown;
-  CODIGO?: unknown;
-  OBSERVACION?: unknown;
   [key: string]: unknown;
 }
 
@@ -39,19 +35,20 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
 
 function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
   return rows
-    .filter((row) => row['Nombre'] || row['CODIGO'] || row['Código'])
+    .filter((row) => row['Nombre'] || row['CODIGO'] || row['Codigo'])
     .map((row): CreateItemDto => {
-      const code = String(row['CODIGO'] ?? row['Código'] ?? '').trim();
+      const code = String(row['CODIGO'] ?? row['Codigo'] ?? '').trim();
       const name = String(row['Nombre'] ?? '').trim();
-      const location = String(row['Ubicación'] ?? '').trim();
+      const location = String(row['Ubicacion'] ?? row['Ubicación'] ?? '').trim();
       const stock = Number(row['Stock'] ?? 0);
       const unit = String(row['Unidad'] ?? 'unidad').trim();
-      const observations = row['OBSERVACION'] != null ? String(row['OBSERVACION']).trim() : undefined;
+      const observations =
+        row['OBSERVACION'] != null ? String(row['OBSERVACION']).trim() : undefined;
 
       return {
         code: code || name.slice(0, 20),
         name,
-        location: location || 'Sin ubicación',
+        location: location || 'Sin ubicacion',
         stock: isNaN(stock) ? 0 : stock,
         unit: unit || 'unidad',
         type: parseItemType(row['Tipo']),
@@ -73,31 +70,37 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
 
-  const upsertMutation = trpc.items.upsertManyByName.useMutation({
-    onSuccess: () => {
-      toast.success(`${parsedRows.length} ítems importados correctamente`);
-      void Promise.all([
+  const [isImporting, setIsImporting] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+  const progress = parsedRows.length > 0 ? Math.round((importedCount / parsedRows.length) * 100) : 0;
+
+  const upsertMutation = trpc.items.upsertManyByName.useMutation();
+
+  const invalidateAll = useCallback(
+    () =>
+      Promise.all([
         utils.items.list.invalidate(),
         utils.items.getStats.invalidate(),
         utils.items.getCounts.invalidate(),
         utils.items.getLocations.invalidate(),
-      ]);
-      handleClose();
-    },
-    onError: (err) => toast.error(err.message ?? 'Error al importar ítems'),
-  });
+      ]),
+    [utils],
+  );
 
   const handleClose = useCallback(() => {
+    if (isImporting) return;
     setParsedRows([]);
     setFileName('');
     setParseError('');
+    setImportedCount(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
     onClose();
-  }, [onClose]);
+  }, [isImporting, onClose]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setParseError('');
     setParsedRows([]);
+    setImportedCount(0);
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
@@ -111,21 +114,50 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         const rawRows = xlsxUtils.sheet_to_json<RawExcelRow>(sheet, { defval: '' });
         const items = parseRows(rawRows);
         if (items.length === 0) {
-          setParseError('No se encontraron filas válidas en el archivo.');
+          setParseError('No se encontraron filas validas en el archivo.');
           return;
         }
         setParsedRows(items);
       } catch {
-        setParseError('Error al leer el archivo. Asegúrate de que sea un .xlsx válido.');
+        setParseError('Error al leer el archivo. Asegurate de que sea un .xlsx valido.');
       }
     };
     reader.readAsArrayBuffer(file);
   }, []);
 
-  const handleImport = useCallback(() => {
+  const handleImport = useCallback(async () => {
     if (parsedRows.length === 0) return;
-    upsertMutation.mutate(parsedRows);
-  }, [parsedRows, upsertMutation]);
+    setIsImporting(true);
+    setImportedCount(0);
+
+    const chunks: CreateItemDto[][] = [];
+    for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
+      chunks.push(parsedRows.slice(i, i + CHUNK_SIZE));
+    }
+
+    try {
+      let done = 0;
+      for (const chunk of chunks) {
+        await upsertMutation.mutateAsync(chunk);
+        done += chunk.length;
+        setImportedCount(done);
+      }
+      toast.success(`${parsedRows.length} items importados correctamente`);
+      void invalidateAll();
+      setParsedRows([]);
+      setFileName('');
+      setImportedCount(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      onClose();
+    } catch {
+      toast.error('Error durante la importacion. Algunos items pueden haberse guardado.');
+    } finally {
+      setIsImporting(false);
+    }
+  }, [parsedRows, upsertMutation, invalidateAll, onClose]);
+
+  const chunkCount = Math.ceil(parsedRows.length / CHUNK_SIZE);
+  const currentChunk = Math.min(Math.ceil(importedCount / CHUNK_SIZE) + 1, chunkCount);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -136,15 +168,19 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             Importar desde Excel
           </DialogTitle>
           <DialogDescription>
-            Selecciona un archivo .xlsx con las columnas: Código, Nombre, Ubicación, Stock, Unidad,
-            CODIGO, OBSERVACION.
+            Selecciona un archivo .xlsx con las columnas: Codigo, Nombre, Ubicacion, Stock, Unidad,
+            CODIGO, OBSERVACION. Los items existentes (por nombre) seran actualizados.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div
-            className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              isImporting
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer hover:border-primary/50'
+            }`}
+            onClick={() => !isImporting && fileInputRef.current?.click()}
           >
             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             {fileName ? (
@@ -160,28 +196,53 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
               accept=".xlsx,.xls"
               className="hidden"
               onChange={handleFileChange}
+              disabled={isImporting}
             />
           </div>
 
           {parseError && <p className="text-sm text-destructive">{parseError}</p>}
 
-          {parsedRows.length > 0 && (
+          {parsedRows.length > 0 && !isImporting && (
             <div className="rounded-md bg-muted px-4 py-3 text-sm">
-              <span className="font-medium">{parsedRows.length}</span> ítems listos para importar.
-              Los existentes (por nombre) serán actualizados.
+              <span className="font-medium">{parsedRows.length}</span> items detectados en{' '}
+              <span className="font-medium">{chunkCount}</span>{' '}
+              {chunkCount === 1 ? 'lote' : 'lotes'}.
+            </div>
+          )}
+
+          {isImporting && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Lote {currentChunk} de {chunkCount}
+                </span>
+                <span className="font-medium tabular-nums">
+                  {importedCount} / {parsedRows.length} items
+                </span>
+              </div>
+              <Progress value={progress} />
+              <div className="flex gap-2 rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 px-3 py-2.5 text-xs text-blue-800 dark:text-blue-300">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  La importacion se procesa en el servidor. Puedes cerrar esta ventana sin
+                  interrumpirla: los items seguiran guardandose en segundo plano.
+                </p>
+              </div>
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={upsertMutation.isPending}>
-            Cancelar
+          <Button variant="outline" onClick={handleClose} disabled={isImporting}>
+            {isImporting ? 'Procesando...' : 'Cancelar'}
           </Button>
           <Button
-            onClick={handleImport}
-            disabled={parsedRows.length === 0 || upsertMutation.isPending}
+            onClick={() => void handleImport()}
+            disabled={parsedRows.length === 0 || isImporting}
           >
-            {upsertMutation.isPending ? 'Importando...' : `Importar ${parsedRows.length > 0 ? parsedRows.length : ''} ítems`}
+            {isImporting
+              ? `${progress}% completado`
+              : `Importar ${parsedRows.length > 0 ? parsedRows.length : ''} items`}
           </Button>
         </DialogFooter>
       </DialogContent>
