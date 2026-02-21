@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Download, Filter, Plus, Search } from 'lucide-react';
+import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
 
 import { ItemFormSheet } from './item-form-sheet';
+import { ImportExcelDialog } from './import-excel-dialog';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export function InventoryTableToolbar({
   typeCounts,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -128,6 +130,10 @@ export function InventoryTableToolbar({
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Importar
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5">
             <Download className="h-4 w-4" />
             Exportar
@@ -140,6 +146,7 @@ export function InventoryTableToolbar({
       </div>
 
       <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+      <ImportExcelDialog open={importOpen} onClose={() => setImportOpen(false)} />
 
       {/* Type tabs */}
       <Tabs value={activeTab} onValueChange={onTabChange}>
