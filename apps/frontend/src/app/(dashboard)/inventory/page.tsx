@@ -5,6 +5,7 @@ import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-
 import type { ItemCounts, ItemEntity, ItemStats, ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
 import { InventoryTable } from '@/features/inventory/components/inventory-table';
 import { ItemDetailsSheet } from '@/features/inventory/components/item-details-sheet';
@@ -27,6 +28,7 @@ const DEFAULT_COUNTS: ItemCounts = {
 };
 
 export default function InventoryPage() {
+  const isAdmin = useIsAdmin();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
@@ -112,6 +114,7 @@ export default function InventoryPage() {
       <InventoryTable
         items={items}
         isLoading={isLoading}
+        isAdmin={isAdmin}
         pageCount={listResult?.meta.totalPages ?? 1}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}

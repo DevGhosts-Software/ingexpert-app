@@ -88,7 +88,7 @@ function ColHeader({
 
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
-function RowActions({ item }: { item: InventoryItem }) {
+function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }) {
   const [open, setOpen] = useState<ActionView>(null);
 
   return (
@@ -105,31 +105,49 @@ function RowActions({ item }: { item: InventoryItem }) {
             <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
             Ver detalles
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpen('edit')}>
-            <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
-            Editar ítem
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setOpen('delete')}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar ítem
-          </DropdownMenuItem>
+          {isAdmin && (
+            <>
+              <DropdownMenuItem onClick={() => setOpen('edit')}>
+                <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
+                Editar ítem
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setOpen('delete')}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar ítem
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
       <ItemDetailsSheet item={item} open={open === 'details'} onClose={() => setOpen(null)} />
-      <ItemFormSheet mode="edit" item={item} open={open === 'edit'} onClose={() => setOpen(null)} />
-      <ItemDeleteDialog item={item} open={open === 'delete'} onClose={() => setOpen(null)} />
+      {isAdmin && (
+        <>
+          <ItemFormSheet
+            mode="edit"
+            item={item}
+            open={open === 'edit'}
+            onClose={() => setOpen(null)}
+          />
+          <ItemDeleteDialog
+            item={item}
+            open={open === 'delete'}
+            onClose={() => setOpen(null)}
+          />
+        </>
+      )}
     </div>
   );
 }
 
-export const COLUMNS: ColumnDef<InventoryItem>[] = [
-  {
-    id: 'image',
+export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
+  return [
+    {
+      id: 'image',
     header: () => <span className="sr-only">Imagen</span>,
     cell: ({ row }) => {
       const url = row.original.imageUrl;
@@ -220,10 +238,11 @@ export const COLUMNS: ColumnDef<InventoryItem>[] = [
     cell: ({ row }) => <StockBadge stock={row.original.stock} />,
     enableSorting: false,
   },
-  {
-    id: 'actions',
-    header: () => <span className="sr-only">Acciones</span>,
-    cell: ({ row }) => <RowActions item={row.original} />,
-    enableSorting: false,
-  },
-];
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Acciones</span>,
+      cell: ({ row }) => <RowActions item={row.original} isAdmin={isAdmin} />,
+      enableSorting: false,
+    },
+  ];
+}

@@ -40,6 +40,7 @@ interface InventoryTableToolbarProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
+  isAdmin: boolean;
 }
 
 export function InventoryTableToolbar({
@@ -53,6 +54,7 @@ export function InventoryTableToolbar({
   activeTab,
   onTabChange,
   typeCounts,
+  isAdmin,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -159,29 +161,42 @@ export function InventoryTableToolbar({
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportOpen(true)}>
-            <Upload className="h-4 w-4" />
-            Importar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => void handleExport()}
-            disabled={isExporting}
-          >
-            <Download className="h-4 w-4" />
-            {isExporting ? 'Exportando...' : 'Exportar'}
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Agregar item
-          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void handleExport()}
+                disabled={isExporting}
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exportando...' : 'Exportar'}
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Agregar item
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
-      <ImportExcelDialog open={importOpen} onClose={() => setImportOpen(false)} />
+      {isAdmin && (
+        <>
+          <ItemFormSheet mode="create" open={addItemOpen} onClose={() => setAddItemOpen(false)} />
+          <ImportExcelDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        </>
+      )}
 
       {/* Type tabs */}
       <Tabs value={activeTab} onValueChange={onTabChange}>
