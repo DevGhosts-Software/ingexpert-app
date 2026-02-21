@@ -4,6 +4,7 @@ import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { trpc } from '@/lib/trpc';
+import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -24,10 +25,12 @@ interface ItemDeleteDialogProps {
 
 export function ItemDeleteDialog({ item, open, onClose }: ItemDeleteDialogProps) {
   const utils = trpc.useUtils();
+  const { deleteFile } = useStorageUpload();
 
   const deleteMutation = trpc.items.remove.useMutation({
     onSuccess: () => {
       toast.success(`"${item?.name}" eliminado correctamente`);
+      if (item?.imageUrl) void deleteFile(item.imageUrl);
       void utils.items.list.invalidate();
       void utils.items.getStats.invalidate();
       void utils.items.getCounts.invalidate();
