@@ -55,7 +55,7 @@ interface UserEditSheetProps {
 
 // ─── WorkArea autocomplete ────────────────────────────────────────────────────
 
-function WorkAreaInput({
+function WorkAreaCombobox({
   field,
   workAreas,
   disabled,
@@ -242,7 +242,7 @@ export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSh
                     <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
                   </FormLabel>
                   <FormControl>
-                    <WorkAreaInput field={field} workAreas={workAreas} disabled={isPending} />
+                    <WorkAreaCombobox field={field} workAreas={workAreas} disabled={isPending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

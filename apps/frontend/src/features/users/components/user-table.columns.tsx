@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   Briefcase,
+  Eye,
+  EyeOff,
   KeyRound,
   Loader2,
   MoreHorizontal,
@@ -61,6 +63,35 @@ function canDelete(currentId: string, target: UserEntity): boolean {
   return true;
 }
 
+// ─── Shared password input ────────────────────────────────────────────────────
+
+function PasswordInput({
+  placeholder,
+  disabled,
+  ...props
+}: React.ComponentProps<typeof Input>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        type={show ? 'text' : 'password'}
+        placeholder={placeholder}
+        className="pr-10"
+        disabled={disabled}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        tabIndex={-1}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
 // ─── Reset password dialog ────────────────────────────────────────────────────
 
 const ResetPwSchema = z
@@ -84,9 +115,6 @@ function ResetPasswordDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const [showPw, setShowPw] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const form = useForm<ResetPwValues>({
     resolver: zodResolver(ResetPwSchema),
     defaultValues: { password: '', confirmPassword: '' },
@@ -125,23 +153,11 @@ function ResetPasswordDialog({
                 <FormItem>
                   <FormLabel>Nueva contraseña</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPw ? 'text' : 'password'}
-                        placeholder="Mínimo 8 caracteres"
-                        className="pr-10"
-                        disabled={mutation.isPending}
-                        {...field}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw((s) => !s)}
-                        tabIndex={-1}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPw ? '🙈' : '👁'}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      placeholder="Mínimo 8 caracteres"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -154,23 +170,11 @@ function ResetPasswordDialog({
                 <FormItem>
                   <FormLabel>Confirmar contraseña</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showConfirm ? 'text' : 'password'}
-                        placeholder="Repite la contraseña"
-                        className="pr-10"
-                        disabled={mutation.isPending}
-                        {...field}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirm((s) => !s)}
-                        tabIndex={-1}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showConfirm ? '🙈' : '👁'}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      placeholder="Repite la contraseña"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -258,6 +262,7 @@ function RowActions({ user }: { user: UserEntity }) {
   const currentId = me?.id ?? '';
   const isEditAllowed = canEdit(currentId, user);
   const isDeleteAllowed = canDelete(currentId, user);
+  const isResetPasswordAllowed = user.id === currentId || user.role !== 'ADMIN';
   // Role change is only shown when editing non-self regular users
   const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
 
@@ -278,7 +283,7 @@ function RowActions({ user }: { user: UserEntity }) {
             <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
             Editar usuario
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setResetPwOpen(true)}>
+          <DropdownMenuItem onClick={() => setResetPwOpen(true)} disabled={!isResetPasswordAllowed}>
             <KeyRound className="h-4 w-4 mr-2 text-muted-foreground" />
             Restablecer contraseña
           </DropdownMenuItem>

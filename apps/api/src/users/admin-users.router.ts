@@ -48,7 +48,7 @@ export class AdminUsersRouter {
         return await this.adminUsersService.remove(input);
       }),
 
-      updatePassword: this.trpc.protectedProcedure
+      updatePassword: this.trpc.adminProcedure
         .input(
           z.object({
             id: z.uuid(),
