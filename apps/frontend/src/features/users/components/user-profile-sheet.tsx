@@ -109,9 +109,10 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
   });
 
   const updateMeMutation = trpc.users.updateMe.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success('Avatar actualizado');
       imageFieldRef.current?.reset();
+      avatarForm.setValue('avatar', variables.avatar ?? null);
       utils.users.me.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -131,6 +132,9 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
       if (user.avatar && user.avatar !== finalAvatarUrl) {
         void deleteFile(user.avatar);
       }
+    } else if (finalAvatarUrl === null && user.avatar) {
+      // Avatar was explicitly removed — delete from storage
+      void deleteFile(user.avatar);
     }
 
     updateMeMutation.mutate({ avatar: finalAvatarUrl });
