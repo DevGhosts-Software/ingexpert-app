@@ -2,11 +2,12 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import type { ItemCounts, ItemStats, ItemType } from '@ingexpert/schema';
+import type { ItemCounts, ItemEntity, ItemStats, ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
 import { InventoryTable } from '@/features/inventory/components/inventory-table';
+import { ItemDetailsSheet } from '@/features/inventory/components/item-details-sheet';
 
 const DEFAULT_STATS: ItemStats = {
   total: 0,
@@ -32,6 +33,8 @@ export default function InventoryPage() {
   const [typeFilter, setTypeFilter] = useState<ItemType | 'ALL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  const [selectedItem, setSelectedItem] = useState<ItemEntity | null>(null);
 
   // Global unfiltered stats for the summary cards
   const { data: statsData } = trpc.items.getStats.useQuery();
@@ -92,6 +95,10 @@ export default function InventoryPage() {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
   }, []);
 
+  const handleRowClick = useCallback((item: ItemEntity) => {
+    setSelectedItem(item);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -118,6 +125,12 @@ export default function InventoryPage() {
         allLocations={allLocations ?? []}
         sorting={sorting}
         onSortingChange={handleSortingChange}
+        onRowClick={handleRowClick}
+      />
+      <ItemDetailsSheet
+        item={selectedItem}
+        open={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
       />
     </div>
   );

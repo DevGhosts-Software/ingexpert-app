@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Eye,
+  ImageIcon,
   MapPin,
   MoreHorizontal,
   Pencil,
@@ -23,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { StorageImage } from '@/components/ui/storage-image';
 import { ItemDeleteDialog } from './item-delete-dialog';
 import { ItemDetailsSheet } from './item-details-sheet';
 import { ItemFormSheet } from './item-form-sheet';
@@ -90,7 +92,7 @@ function RowActions({ item }: { item: InventoryItem }) {
   const [open, setOpen] = useState<ActionView>(null);
 
   return (
-    <>
+    <div onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="h-8 w-8">
@@ -121,11 +123,31 @@ function RowActions({ item }: { item: InventoryItem }) {
       <ItemDetailsSheet item={item} open={open === 'details'} onClose={() => setOpen(null)} />
       <ItemFormSheet mode="edit" item={item} open={open === 'edit'} onClose={() => setOpen(null)} />
       <ItemDeleteDialog item={item} open={open === 'delete'} onClose={() => setOpen(null)} />
-    </>
+    </div>
   );
 }
 
 export const COLUMNS: ColumnDef<InventoryItem>[] = [
+  {
+    id: 'image',
+    header: () => <span className="sr-only">Imagen</span>,
+    cell: ({ row }) => {
+      const url = row.original.imageUrl;
+      if (!url) {
+        return (
+          <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+            <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+          </div>
+        );
+      }
+      return (
+        <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
+          <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
+        </div>
+      );
+    },
+    enableSorting: false,
+  },
   {
     accessorKey: 'name',
     header: ({ column }) => (

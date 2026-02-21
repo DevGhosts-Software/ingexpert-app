@@ -36,6 +36,7 @@ export function InventoryTable({
   allLocations,
   sorting,
   onSortingChange,
+  onRowClick,
 }: InventoryTableProps) {
   const [stockLevelFilter, setStockLevelFilter] = useState('all');
 
@@ -130,7 +131,12 @@ export function InventoryTable({
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="cursor-pointer"
+                  onClick={() => onRowClick(row.original)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

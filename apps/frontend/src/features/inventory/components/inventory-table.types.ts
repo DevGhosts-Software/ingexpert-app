@@ -42,4 +42,5 @@ export interface InventoryTableProps {
   allLocations?: string[];
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
+  onRowClick: (item: ItemEntity) => void;
 }
