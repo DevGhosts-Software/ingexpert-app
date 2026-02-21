@@ -8,6 +8,7 @@ import { AppRouter } from './trpc/app.router';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ItemsModule } from './items/items.module';
+import { MovementsModule } from './movements/movements.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ItemsModule } from './items/items.module';
     UsersModule,
     AuthModule,
     ItemsModule,
+    MovementsModule,
   ],
   controllers: [],
   providers: [
@@ -36,4 +38,4 @@ import { ItemsModule } from './items/items.module';
     AppRouter,
   ],
 })
-export class AppModule {}
+export class AppModule { }

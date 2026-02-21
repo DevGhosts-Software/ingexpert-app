@@ -1,77 +1,139 @@
-// apps/api/src/movements/movements.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Movement, Prisma, MovementType } from '@ingexpert/database';
-import { CreateMovementDto } from '@ingexpert/schema';
+import { Prisma, MovementType } from '@ingexpert/database';
+import { CreateMovementDto, MovementEntityWithDetails, MovementHeaderEntity } from '@ingexpert/schema';
 
 @Injectable()
 export class MovementsService {
     constructor(private readonly prisma: PrismaService) { }
 
-    /**
-     * Obtiene todos los movimientos con sus detalles e ítems relacionados.
-     */
-    async findAll(): Promise<Movement[]> {
-        return this.prisma.movement.findMany({
-            orderBy: { date: 'desc' }, // Los más recientes primero
-            include: {
-                details: {
-                    include: {
-                        item: true, // Para poder ver qué ítem se movió
-                    },
-                },
-                responsibleDelivery: true,
-                responsibleReceipt: true,
-                project: true,
-            },
-        });
+    private mapMovementWithDetails(
+        m: Prisma.MovementGetPayload<{ include: { details: { include: { item: true } } } }>
+    ): MovementEntityWithDetails {
+        return {
+            id: m.id,
+            type: m.type,
+            personalName: m.personalName,
+            destination: m.destination,
+            responsibleDeliveryId: m.responsibleDeliveryId,
+            responsibleReceiptId: m.responsibleReceiptId,
+            projectId: m.projectId,
+            date: m.date.toISOString(),
+            itemsCount: m.details.length,
+            details: m.details.map((d) => ({
+                id: d.id,
+                movementId: d.movementId,
+                itemId: d.itemId,
+                quantity: d.quantity.toNumber(),
+                item: {
+                    ...d.item,
+                    stock: d.item.stock.toNumber(),
+                }
+            })),
+        };
     }
 
-    /**
-     * Crea un movimiento, sus detalles y actualiza el stock de los ítems en una sola transacción.
-     */
-    async create(createMovementDto: CreateMovementDto): Promise<Movement> {
-        return this.prisma.$transaction(async (tx) => {
-            // 1. Crear el movimiento y sus detalles automáticamente (Nested Writes de Prisma)
-            const movement = await tx.movement.create({
+    private mapMovementHeader(
+        m: Prisma.MovementGetPayload<{ include: { _count: { select: { details: true } } } }>
+    ): MovementHeaderEntity {
+        return {
+            id: m.id,
+            type: m.type,
+            personalName: m.personalName,
+            destination: m.destination,
+            responsibleDeliveryId: m.responsibleDeliveryId,
+            responsibleReceiptId: m.responsibleReceiptId,
+            projectId: m.projectId,
+            date: m.date.toISOString(),
+            itemsCount: m._count.details,
+        };
+    }
+
+    async findAll(): Promise<MovementHeaderEntity[]> {
+        const movements = await this.prisma.movement.findMany({
+            orderBy: { date: 'desc' },
+            include: { _count: { select: { details: true } } },
+        });
+        return movements.map((m) => this.mapMovementHeader(m));
+    }
+
+    async findOne(id: string): Promise<MovementEntityWithDetails> {
+        const movement = await this.prisma.movement.findUnique({
+            where: { id },
+            include: { details: { include: { item: true } } },
+        });
+
+        if (!movement) {
+            throw new NotFoundException(`El movimiento con ID ${id} no existe.`);
+        }
+
+        return this.mapMovementWithDetails(movement);
+    }
+
+    async create(input: CreateMovementDto): Promise<MovementEntityWithDetails> {
+        const movement = await this.prisma.$transaction(async (tx) => {
+
+            // 1. Obtener el stock actual de los ítems involucrados desde la BD
+            const itemIds = input.details.map((d) => d.itemId);
+            const itemsInDb = await tx.item.findMany({
+                where: { id: { in: itemIds } },
+                select: { id: true, name: true, stock: true },
+            });
+            const itemsMap = new Map(itemsInDb.map((item) => [item.id, item]));
+
+            // 2. Agrupar las cantidades solicitadas por ítem 
+            // (Previene bugs si el frontend envía el mismo ID varias veces en el array)
+            const requiredQuantities = new Map<string, number>();
+            for (const detail of input.details) {
+                const current = requiredQuantities.get(detail.itemId) || 0;
+                requiredQuantities.set(detail.itemId, current + detail.quantity);
+            }
+
+            // 3. Validar que los ítems existan y que haya stock suficiente para salidas (EXIT)
+            for (const [itemId, totalRequired] of requiredQuantities.entries()) {
+                const currentItem = itemsMap.get(itemId);
+                if (!currentItem) throw new BadRequestException(`El ítem con ID ${itemId} no existe en la base de datos.`);
+
+                if (input.type === MovementType.EXIT) {
+                    const currentStock = currentItem.stock.toNumber();
+                    if (currentStock < totalRequired) {
+                        throw new BadRequestException(`Stock insuficiente para el ítem "${currentItem.name}". Tienes ${currentStock} y solicitas ${totalRequired}.`);
+                    }
+                }
+            }
+
+            const created = await tx.movement.create({
                 data: {
-                    type: createMovementDto.type,
-                    personalName: createMovementDto.personalName,
-                    destination: createMovementDto.destination,
-                    responsibleDeliveryId: createMovementDto.responsibleDeliveryId,
-                    responsibleReceiptId: createMovementDto.responsibleReceiptId,
-                    date: new Date(), // Fecha actual del movimiento
-                    projectId: createMovementDto.projectId,
-                    // Esto crea los N registros en la tabla intermedia MovementDetail
+                    type: input.type,
+                    personalName: input.personalName,
+                    destination: input.destination,
+                    responsibleDeliveryId: input.responsibleDeliveryId,
+                    responsibleReceiptId: input.responsibleReceiptId,
+                    projectId: input.projectId,
+                    date: new Date(),
                     details: {
-                        create: createMovementDto.details.map((detail) => ({
-                            itemId: detail.itemId,
-                            quantity: new Prisma.Decimal(detail.quantity),
+                        create: input.details.map((d) => ({
+                            itemId: d.itemId,
+                            quantity: new Prisma.Decimal(d.quantity),
                         })),
                     },
                 },
-                include: {
-                    details: true,
-                },
+                include: { details: { include: { item: true } } },
             });
 
-            // 2. Actualizar el stock de cada ítem involucrado
-            for (const detail of createMovementDto.details) {
-                const qty = new Prisma.Decimal(detail.quantity);
+            const qtyOp = input.type === MovementType.ENTRY ? 'increment' : 'decrement';
+            await Promise.all(
+                input.details.map((d) =>
+                    tx.item.update({
+                        where: { id: d.itemId },
+                        data: { stock: { [qtyOp]: new Prisma.Decimal(d.quantity) } },
+                    })
+                )
+            );
 
-                await tx.item.update({
-                    where: { id: detail.itemId },
-                    data: {
-                        // Operaciones atómicas de Prisma: incrementa o decrementa el stock de forma segura
-                        stock:
-                            createMovementDto.type === MovementType.ENTRY
-                                ? { increment: qty }
-                                : { decrement: qty },
-                    },
-                });
-            }
-
-            return movement;
+            return created;
         });
+
+        return this.mapMovementWithDetails(movement);
     }
 }

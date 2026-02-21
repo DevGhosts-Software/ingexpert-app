@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { type Movement, type MovementDetail, MovementType } from '@ingexpert/database';
+import { type Movement, type MovementDetail, MovementType, type Item } from '@ingexpert/database';
 
 export { MovementType } from '@ingexpert/database';
 
@@ -20,40 +20,27 @@ export const CreateMovementSchema = z.object({
   details: z.array(MovementDetailSchema).min(1),
 });
 
-
-/*
-export const MovementDetailEntitySchema = z.object({
-  id: z.string().uuid(),
-  itemId: z.string().uuid(),
-  quantity: z.number().positive(),
-  movementId: z.string().uuid(),
-});
-
-export const MovementEntitySchema = z.object({
-  id: z.string().uuid(),
-  type: z.nativeEnum(MovementType),
-  personalName: z.string(),
-  destination: z.string().optional(),
-  responsibleDeliveryId: z.string().uuid().optional(),
-  responsibleReceiptId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
-  details: z.array(MovementDetailEntitySchema),
-});
 export type CreateMovementDto = z.infer<typeof CreateMovementSchema>;
-*/
 
-
-// ─── Entities (Prisma-derived — changes to the DB schema surface here) ────────
+// ─── Entities (Lo único que el API devuelve al Frontend) ──────────────────────
 
 /**
- * Wire representation of a Movement returned by the API.
- * Derived from the Prisma `Movement` model.
- * `date` is overridden from `Date` → `string` (ISO 8601 serialized over JSON).
+ * Entidad única y completa para Movimientos.
+ * Reemplaza los tipos nativos de Prisma (Date -> string, Decimal -> number)
+ * e incluye el array de detalles serializado y el conteo útil para la UI.
  */
-export type MovementEntity = Omit<Movement, 'date'> & { date: string };
+export type MovementEntityWithDetails = Omit<Movement, 'date'> & {
+  date: string;
+  itemsCount: number;
+  details: Array<
+    Omit<MovementDetail, 'quantity'> & {
+      quantity: number;
+      item: Omit<Item, 'stock'> & { stock: number };
+    }
+  >;
+};
 
-/**
- * Wire representation of a MovementDetail returned by the API.
- * `quantity` is overridden from `Decimal` → `number` (serialized by the service).
- */
-export type MovementDetailEntity = Omit<MovementDetail, 'quantity'> & { quantity: number };
+export type MovementHeaderEntity = Omit<Movement, 'date'> & {
+  date: string;
+  itemsCount: number;
+};
