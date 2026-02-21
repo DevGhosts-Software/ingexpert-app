@@ -25,6 +25,20 @@ interface RawExcelRow {
   [key: string]: unknown;
 }
 
+/** Normalize a header key: uppercase + strip diacritics (e.g. "Ubicación" → "UBICACION"). */
+function normalizeKey(key: string): string {
+  return key
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+/** Re-key a raw row so every header is normalized to uppercase-no-accents. */
+function normalizeRow(row: RawExcelRow): RawExcelRow {
+  return Object.fromEntries(Object.entries(row).map(([k, v]) => [normalizeKey(k), v]));
+}
+
 function parseItemType(value: unknown): CreateItemDto['type'] {
   const str = String(value ?? '').toUpperCase().trim();
   if (str === 'EQUIPMENT' || str === 'EQUIPO') return ItemType.EQUIPMENT;
@@ -33,15 +47,17 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   return ItemType.PRODUCT;
 }
 
+// Expected columns (all-caps, no accents): CODIGO NOMBRE UBICACION STOCK UNIDAD OBSERVACION
 function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
   return rows
-    .filter((row) => row['Nombre'] || row['CODIGO'] || row['Codigo'])
+    .map(normalizeRow)
+    .filter((row) => row['NOMBRE'] || row['CODIGO'])
     .map((row): CreateItemDto => {
-      const code = String(row['CODIGO'] ?? row['Codigo'] ?? '').trim();
-      const name = String(row['Nombre'] ?? '').trim();
-      const location = String(row['Ubicacion'] ?? row['Ubicación'] ?? '').trim();
-      const stock = Number(row['Stock'] ?? 0);
-      const unit = String(row['Unidad'] ?? 'unidad').trim();
+      const code = String(row['CODIGO'] ?? '').trim();
+      const name = String(row['NOMBRE'] ?? '').trim();
+      const location = String(row['UBICACION'] ?? '').trim();
+      const stock = Number(row['STOCK'] ?? 0);
+      const unit = String(row['UNIDAD'] ?? 'unidad').trim();
       const observations =
         row['OBSERVACION'] != null ? String(row['OBSERVACION']).trim() : undefined;
 
@@ -51,7 +67,7 @@ function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
         location: location || 'Sin ubicacion',
         stock: isNaN(stock) ? 0 : stock,
         unit: unit || 'unidad',
-        type: parseItemType(row['Tipo']),
+        type: parseItemType(row['TIPO']),
         imageUrl: '',
         observations: observations || undefined,
       };
@@ -168,8 +184,11 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             Importar desde Excel
           </DialogTitle>
           <DialogDescription>
-            Selecciona un archivo .xlsx con las columnas: Codigo, Nombre, Ubicacion, Stock, Unidad,
-            CODIGO, OBSERVACION. Los items existentes (por nombre) seran actualizados.
+            Selecciona un archivo .xlsx. La primera fila debe tener los encabezados en mayusculas:{' '}
+            <span className="font-mono font-medium text-foreground">
+              CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD · OBSERVACION
+            </span>
+            . Los items existentes (por nombre) seran actualizados.
           </DialogDescription>
         </DialogHeader>
 
