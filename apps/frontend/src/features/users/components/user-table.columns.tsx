@@ -136,7 +136,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
             {row.original.workArea}
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+          <Badge variant="outline" className="text-muted-foreground text-xs">
             Sin asignar
           </Badge>
         ),
