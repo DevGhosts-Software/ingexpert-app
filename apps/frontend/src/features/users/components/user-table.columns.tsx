@@ -54,24 +54,20 @@ import type { UserEntity, UserRole } from './user-table.types';
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
 function canEdit(currentId: string, target: UserEntity): boolean {
-  if (target.id === currentId) return true;       // can always edit yourself
-  if (target.role === 'ADMIN') return false;       // can't edit other admins
+  if (target.id === currentId) return true; // can always edit yourself
+  if (target.role === 'ADMIN') return false; // can't edit other admins
   return true;
 }
 
 function canDelete(currentId: string, target: UserEntity): boolean {
-  if (target.id === currentId) return false;       // can't delete yourself
-  if (target.role === 'ADMIN') return false;       // can't delete other admins
+  if (target.id === currentId) return false; // can't delete yourself
+  if (target.role === 'ADMIN') return false; // can't delete other admins
   return true;
 }
 
 // ─── Shared password input ────────────────────────────────────────────────────
 
-function PasswordInput({
-  placeholder,
-  disabled,
-  ...props
-}: React.ComponentProps<typeof Input>) {
+function PasswordInput({ placeholder, disabled, ...props }: React.ComponentProps<typeof Input>) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -183,7 +179,12 @@ function ResetPasswordDialog({
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={mutation.isPending}
+              >
                 Cancelar
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
@@ -278,10 +279,7 @@ function RowActions({ user }: { user: UserEntity }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => setEditOpen(true)}
-            disabled={!isEditAllowed}
-          >
+          <DropdownMenuItem onClick={() => setEditOpen(true)} disabled={!isEditAllowed}>
             <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
             Editar usuario
           </DropdownMenuItem>
@@ -309,16 +307,8 @@ function RowActions({ user }: { user: UserEntity }) {
           canChangeRole={canChangeRole}
         />
       )}
-      <ResetPasswordDialog
-        user={user}
-        open={resetPwOpen}
-        onClose={() => setResetPwOpen(false)}
-      />
-      <DeleteUserDialog
-        user={user}
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-      />
+      <ResetPasswordDialog user={user} open={resetPwOpen} onClose={() => setResetPwOpen(false)} />
+      <DeleteUserDialog user={user} open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </>
   );
 }
@@ -342,7 +332,15 @@ export function RoleBadge({ role }: { role: UserRole }) {
   );
 }
 
-export function UserAvatar({ name, avatar, email }: { name: string | null; avatar: string | null; email: string }) {
+export function UserAvatar({
+  name,
+  avatar,
+  email,
+}: {
+  name: string | null;
+  avatar: string | null;
+  email: string;
+}) {
   const initials = name
     ? name
         .split(' ')
@@ -368,7 +366,11 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       header: 'Usuario',
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <UserAvatar name={row.original.name} avatar={row.original.avatar} email={row.original.email} />
+          <UserAvatar
+            name={row.original.name}
+            avatar={row.original.avatar}
+            email={row.original.email}
+          />
           <span className="font-medium">{row.original.name ?? '—'}</span>
         </div>
       ),
@@ -411,4 +413,3 @@ export function getColumns(): ColumnDef<UserEntity>[] {
     },
   ];
 }
-

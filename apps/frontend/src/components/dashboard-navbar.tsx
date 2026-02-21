@@ -49,14 +49,21 @@ export function DashboardNavbar({ title, user, onLogout }: DashboardNavbarProps)
               <p className="text-xs text-muted-foreground capitalize">{user.role?.toLowerCase()}</p>
             </div>
             <Avatar size="sm">
-              {user.avatar && <StorageAvatarImage src={user.avatar} alt={user.name ?? user.email} />}
+              {user.avatar && (
+                <StorageAvatarImage src={user.avatar} alt={user.name ?? user.email} />
+              )}
               <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
             </Avatar>
           </button>
         </div>
       </header>
 
-      <UserProfileSheet user={user} open={profileOpen} onClose={() => setProfileOpen(false)} onLogout={onLogout} />
+      <UserProfileSheet
+        user={user}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onLogout={onLogout}
+      />
     </>
   );
 }

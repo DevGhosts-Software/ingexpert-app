@@ -68,9 +68,7 @@ function WorkAreaCombobox({
   const [highlighted, setHighlighted] = useState(-1);
 
   const inputValue = field.value ?? '';
-  const filtered = workAreas.filter((a) =>
-    a.toLowerCase().includes(inputValue.toLowerCase()),
-  );
+  const filtered = workAreas.filter((a) => a.toLowerCase().includes(inputValue.toLowerCase()));
   const showDropdown = open && filtered.length > 0;
 
   const select = (area: string) => {
@@ -203,9 +201,7 @@ export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSh
             <UserCog className="h-5 w-5" />
             Editar Usuario
           </SheetTitle>
-          <SheetDescription>
-            {user.name ?? user.email}
-          </SheetDescription>
+          <SheetDescription>{user.name ?? user.email}</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
