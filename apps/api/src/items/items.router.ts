@@ -18,12 +18,12 @@ export class ItemsRouter {
       }),
 
       // POST /items
-      create: this.trpc.protectedProcedure.input(CreateItemSchema).mutation(async ({ input }) => {
+      create: this.trpc.adminProcedure.input(CreateItemSchema).mutation(async ({ input }) => {
         return this.itemsService.create(input);
       }),
 
       // PATCH /items/:id
-      update: this.trpc.protectedProcedure
+      update: this.trpc.adminProcedure
         .input(
           UpdateItemSchema.extend({
             id: z.string().uuid(),
@@ -35,19 +35,19 @@ export class ItemsRouter {
         }),
 
       // DELETE /items/:id
-      remove: this.trpc.protectedProcedure.input(z.string().uuid()).mutation(async ({ input }) => {
+      remove: this.trpc.adminProcedure.input(z.string().uuid()).mutation(async ({ input }) => {
         return this.itemsService.remove(input);
       }),
 
       // Batch create (para import desde Excel)
-      createBatch: this.trpc.protectedProcedure
+      createBatch: this.trpc.adminProcedure
         .input(z.array(CreateItemSchema))
         .mutation(async ({ input }) => {
           await this.itemsService.createBatch(input);
           return { success: true };
         }),
       // Batch upsert (para import desde Excel)
-      upsertManyByName: this.trpc.protectedProcedure
+      upsertManyByName: this.trpc.adminProcedure
         .input(z.array(CreateItemSchema))
         .mutation(async ({ input }) => {
           await this.itemsService.upsertManyByName(input);
