@@ -1,7 +1,15 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { Briefcase, KeyRound, MoreHorizontal, Pencil, ShieldCheck, Trash2, User } from 'lucide-react';
+import {
+  Briefcase,
+  KeyRound,
+  MoreHorizontal,
+  Pencil,
+  ShieldCheck,
+  Trash2,
+  User,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

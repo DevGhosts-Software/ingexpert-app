@@ -49,19 +49,15 @@ export class AdminUsersRouter {
       }),
 
       updatePassword: this.trpc.protectedProcedure
-          .input(
-              z.object({
-                id: z.uuid(),
-                password: z.string(),
-              }),
-          )
-          .mutation(async ({ input }) => {
-            return await this.adminUsersService.changePassword(input.id, input.password);
+        .input(
+          z.object({
+            id: z.uuid(),
+            password: z.string(),
           }),
+        )
+        .mutation(async ({ input }) => {
+          return await this.adminUsersService.changePassword(input.id, input.password);
+        }),
     });
-
-
-
   }
-
 }

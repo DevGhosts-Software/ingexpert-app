@@ -2,8 +2,6 @@ import { Users, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import type { UserStats } from '@ingexpert/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export type { UserStats } from '@ingexpert/schema';
-
 interface UserStatsProps {
   stats: UserStats;
 }

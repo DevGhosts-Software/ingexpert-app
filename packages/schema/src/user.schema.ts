@@ -15,7 +15,7 @@ export const CreateUserSchema = z.object({
 });
 export type CreateUserDto = z.infer<typeof CreateUserSchema>;
 
-export const UpdateUserSchema =z.object({
+export const UpdateUserSchema = z.object({
   name: z.string().max(100).optional().nullable(),
   password: z.string().max(100).optional().nullable(),
   avatar: z.string().url().max(500).optional().nullable(),
@@ -34,6 +34,6 @@ export type UserEntity = User & { workArea: string | null };
 export type UserStats = {
   total: number;
   admins: number;
-  active: number;   // users with a work area assigned
+  active: number; // users with a work area assigned
   inactive: number; // users without a work area
 };

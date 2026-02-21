@@ -6,7 +6,11 @@ import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
 import { UserStats } from '@/features/users/components/user-stats';
 import { UserTable } from '@/features/users/components/user-table';
-import type { ActiveTab, RoleCounts, UserEntity } from '@/features/users/components/user-table.types';
+import type {
+  ActiveTab,
+  RoleCounts,
+  UserEntity,
+} from '@/features/users/components/user-table.types';
 import type { UserStats as UserStatsType } from '@ingexpert/schema';
 
 const DEFAULT_STATS: UserStatsType = { total: 0, admins: 0, active: 0, inactive: 0 };
@@ -121,4 +125,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
