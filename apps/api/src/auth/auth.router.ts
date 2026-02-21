@@ -25,9 +25,7 @@ export class AuthRouter {
   }
 
   private accessMaxAge(expiresAt: number | undefined): number {
-    return expiresAt
-      ? (expiresAt - Math.floor(Date.now() / 1000)) * 1000
-      : 60 * 60 * 1000; // default 1 hr
+    return expiresAt ? (expiresAt - Math.floor(Date.now() / 1000)) * 1000 : 60 * 60 * 1000; // default 1 hr
   }
 
   public get router() {

@@ -50,7 +50,11 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
           {/* Image */}
           {item.imageUrl ? (
             <div className="w-full rounded-lg border overflow-hidden bg-muted/30">
-              <StorageImage src={item.imageUrl} alt={item.name} className="w-full h-48 object-contain" />
+              <StorageImage
+                src={item.imageUrl}
+                alt={item.name}
+                className="w-full h-48 object-contain"
+              />
             </div>
           ) : (
             <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">

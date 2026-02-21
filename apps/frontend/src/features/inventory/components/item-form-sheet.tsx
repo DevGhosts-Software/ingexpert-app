@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PackagePlus, Pencil } from 'lucide-react';
@@ -130,30 +130,34 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     ]);
   }
 
-  async function onSubmit(values: FormValues) {
-    const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
+  const onSubmit = useCallback(
+    async (values: FormValues) => {
+      const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
 
-    let finalImageUrl = values.imageUrl;
-    if (pendingFile) {
-      try {
-        finalImageUrl = await uploadFile(pendingFile);
-      } catch {
-        return; // uploadFile already toasts the error
+      let finalImageUrl = values.imageUrl;
+      if (pendingFile) {
+        try {
+          finalImageUrl = await uploadFile(pendingFile);
+        } catch {
+          return; // uploadFile already toasts the error
+        }
       }
-    }
 
-    // Delete old image if it was replaced or removed
-    if (originalImageUrl.current && originalImageUrl.current !== finalImageUrl) {
-      void deleteFile(originalImageUrl.current);
-    }
+      // Delete old image if it was replaced or removed
+      if (originalImageUrl.current && originalImageUrl.current !== finalImageUrl) {
+        void deleteFile(originalImageUrl.current);
+      }
 
-    const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
-    if (isEdit && item) {
-      updateMutation.mutate({ id: item.id, ...submitValues });
-    } else {
-      createMutation.mutate(submitValues);
-    }
-  }
+      const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
+      if (isEdit && item) {
+        updateMutation.mutate({ id: item.id, ...submitValues });
+      } else {
+        createMutation.mutate(submitValues);
+      }
+      // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
+    },
+    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation],
+  );
 
   const isPending = createMutation.isPending || updateMutation.isPending || isUploading;
 

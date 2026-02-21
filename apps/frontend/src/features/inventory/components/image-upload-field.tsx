@@ -38,19 +38,14 @@ export const ImageUploadField = forwardRef<ImageUploadFieldHandle, ImageUploadFi
     }));
 
     useEffect(() => {
-      if (!pendingFile) {
-        setPreviewUrl(null);
-        return;
-      }
+      if (!pendingFile) return;
       const url = URL.createObjectURL(pendingFile);
       setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
+      return () => {
+        URL.revokeObjectURL(url);
+        setPreviewUrl(null); // cleanup when pendingFile clears or changes
+      };
     }, [pendingFile]);
-
-    // Reset `removed` when the parent provides a fresh URL (e.g. form reset to a different item)
-    useEffect(() => {
-      if (value) setRemoved(false);
-    }, [value]);
 
     const isDisabled = disabled || isUploading;
     const showPreview = pendingFile !== null || (!!value && !removed);
