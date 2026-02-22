@@ -64,16 +64,16 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
 
   const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
-  const [kitInitialized, setKitInitialized] = useState(false);
 
   // Load existing kit components when editing a KIT item
   const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
     enabled: isEdit && item?.type === 'KIT' && open,
   });
 
-  // Initialize kitComponents from server data when editing a KIT (once per open)
+  // Mirror query data into local state (handles both cache hits and async loads).
+  // Reset to [] when sheet closes.
   useEffect(() => {
-    if (isEdit && existingComponents && !kitInitialized) {
+    if (open && isEdit && existingComponents) {
       setKitComponents(
         existingComponents.map((c) => ({
           componentId: c.componentId,
@@ -84,9 +84,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
           quantity: Number(c.quantity),
         })),
       );
-      setKitInitialized(true);
+    } else if (!open) {
+      setKitComponents([]);
     }
-  }, [isEdit, existingComponents, kitInitialized]);
+  }, [open, isEdit, existingComponents]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(ItemFormSchema),
@@ -112,11 +113,9 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     }
   }, [watchedType, form]);
 
-  // Prefill form when editing
+  // Prefill form fields when sheet opens/closes
   useEffect(() => {
     imageFieldRef.current?.reset();
-    setKitComponents([]);
-    setKitInitialized(false);
     if (isEdit && item && open) {
       originalImageUrl.current = item.imageUrl ?? undefined;
       form.reset({
@@ -190,25 +189,28 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       try {
         if (isEdit && item) {
           await updateMutation.mutateAsync({ id: item.id, ...submitValues });
-          // Save kit components when editing a KIT
+          // Save kit components when editing a KIT, then update cache immediately
           if (values.type === 'KIT') {
             if (kitComponents.length > 0) {
-              await setComponentsMutation.mutateAsync({
+              const updated = await setComponentsMutation.mutateAsync({
                 kit_id: item.id,
                 components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
               });
+              utils.kits.getComponents.setData(item.id, updated);
             } else {
               await clearKitMutation.mutateAsync(item.id);
+              utils.kits.getComponents.setData(item.id, []);
             }
           }
           toast.success('Ítem actualizado correctamente');
         } else {
           const created = await createMutation.mutateAsync(submitValues);
           if (values.type === 'KIT' && kitComponents.length > 0) {
-            await setComponentsMutation.mutateAsync({
+            const created2 = await setComponentsMutation.mutateAsync({
               kit_id: created.id,
               components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
             });
+            utils.kits.getComponents.setData(created.id, created2);
           }
           toast.success('Ítem agregado correctamente');
         }
@@ -219,7 +221,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       }
       // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
-    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation, setComponentsMutation, clearKitMutation, kitComponents, onClose],
+    [uploadFile, deleteFile, isEdit, item, utils, updateMutation, createMutation, setComponentsMutation, clearKitMutation, kitComponents, onClose],
   );
 
   const isPending =
