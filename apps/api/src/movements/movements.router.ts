@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { MovementsService } from './movements.service';
-import { CreateMovementSchema } from '@ingexpert/schema';
+import { CreateMovementSchema, UpdateMovementSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 
 @Injectable()
@@ -33,10 +33,20 @@ export class MovementsRouter {
                 return this.movementsService.getProjects();
             }),
 
+            getStaff: this.trpc.protectedProcedure.query(async () => {
+                return this.movementsService.getStaff();
+            }),
+
             create: this.trpc.protectedProcedure
                 .input(CreateMovementSchema)
                 .mutation(async ({ input }) => {
                     return this.movementsService.create(input);
+                }),
+
+            update: this.trpc.protectedProcedure
+                .input(z.object({ id: z.string().uuid(), data: UpdateMovementSchema }))
+                .mutation(async ({ input }) => {
+                    return this.movementsService.update(input.id, input.data);
                 }),
         });
     }

@@ -30,6 +30,12 @@ export class UsersRouter {
         .mutation(async ({ input, ctx }) => {
           return await this.adminUsersService.changePassword(ctx.user.id, input.password);
         }),
+
+      listNames: this.trpc.protectedProcedure.query(async () => {
+        return await this.usersService.findAll().then((users) =>
+          users.map((u) => ({ id: u.id, name: u.name, email: u.email })),
+        );
+      }),
     });
   }
 }

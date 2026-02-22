@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   type ColumnDef,
   type OnChangeFn,
@@ -48,6 +48,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { getColumns } from './movement-table.columns';
+import { MovementFormSheet } from './movement-form-sheet';
 import type { ActiveTab, MovementRow, TypeCounts } from './movement-table.types';
 import type { ProjectEntity } from '@ingexpert/schema';
 
@@ -92,6 +93,7 @@ export function MovementTable({
   sorting,
   onSortingChange,
 }: MovementTableProps) {
+  const [createOpen, setCreateOpen] = useState(false);
   const columns = useMemo<ColumnDef<MovementRow>[]>(() => getColumns(), []);
 
   const table = useReactTable({
@@ -169,11 +171,14 @@ export function MovementTable({
           </DropdownMenu>
         </div>
 
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" />
           Registrar movimiento
         </Button>
       </div>
+
+      {/* Create sheet */}
+      <MovementFormSheet mode="create" open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Tabs */}
       <Tabs value={typeFilter} onValueChange={(v) => onTypeFilterChange(v as ActiveTab)}>
