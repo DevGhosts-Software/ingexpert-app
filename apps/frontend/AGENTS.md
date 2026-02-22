@@ -127,15 +127,15 @@ const createMutation = trpc.items.create.useMutation({
 
 ## 8. Implementation Mapping for AI Agents
 
-| Resource Type     | File Name (Kebab-Case)          | Code Identifier                     |
-| :---------------- | :------------------------------ | :---------------------------------- |
-| **Container**     | `page.tsx`                      | `export default function Page()`    |
-| **Presenter**     | `[feature]-table.tsx`           | `export function FeatureTable()`    |
-| **Columns**       | `[feature]-table.columns.tsx`   | `export function getColumns()`      |
-| **Types file**    | `[feature]-table.types.ts`      | Re-exports from `@ingexpert/schema` |
-| **Toolbar**       | `[feature]-table-toolbar.tsx`   | `export function FeatureTableToolbar()` |
-| **tRPC Query**    | `page.tsx`                      | `trpc.items.list.useQuery()`        |
-| **tRPC Mutation** | `[component].tsx`               | `trpc.items.create.useMutation()`   |
+| Resource Type     | File Name (Kebab-Case)        | Code Identifier                         |
+| :---------------- | :---------------------------- | :-------------------------------------- |
+| **Container**     | `page.tsx`                    | `export default function Page()`        |
+| **Presenter**     | `[feature]-table.tsx`         | `export function FeatureTable()`        |
+| **Columns**       | `[feature]-table.columns.tsx` | `export function getColumns()`          |
+| **Types file**    | `[feature]-table.types.ts`    | Re-exports from `@ingexpert/schema`     |
+| **Toolbar**       | `[feature]-table-toolbar.tsx` | `export function FeatureTableToolbar()` |
+| **tRPC Query**    | `page.tsx`                    | `trpc.items.list.useQuery()`            |
+| **tRPC Mutation** | `[component].tsx`             | `trpc.items.create.useMutation()`       |
 
 ### Feature Table Modularization
 
@@ -269,6 +269,7 @@ function WorkAreaCombobox({ field, workAreas, disabled }) {
 ```
 
 Key rules:
+
 - `onMouseDown={e.preventDefault()}` on list items is **required** — prevents the input blur from firing before the click registers.
 - `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
 - The component must be a named function (not inline) to use `useState`.
@@ -278,6 +279,7 @@ Key rules:
 `DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
 
 `UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** way for any user to edit their own name, avatar URL, and password. It uses:
+
 - `trpc.users.updateMe` — for name and avatar.
 - `trpc.users.updateMyPassword` — for password change (protectedProcedure, self only).
 

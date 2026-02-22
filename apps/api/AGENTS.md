@@ -129,12 +129,13 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 
 The users domain has **two separate routers** in `apps/api/src/users/`:
 
-| Router | Procedure | Purpose |
-|---|---|---|
-| `UsersRouter` | `protectedProcedure` | Self-service: `me`, `updateMe`, `updateMyPassword` |
-| `AdminUsersRouter` | `adminProcedure` | Admin CRUD: `create`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
+| Router             | Procedure            | Purpose                                                                                               |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `UsersRouter`      | `protectedProcedure` | Self-service: `me`, `updateMe`, `updateMyPassword`                                                    |
+| `AdminUsersRouter` | `adminProcedure`     | Admin CRUD: `create`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
 
 Key rules:
+
 - `updateMyPassword` (self-service) → `protectedProcedure` in `UsersRouter`, delegates to `AdminUsersService.changePassword(ctx.user.id, ...)`. `AdminUsersService` is injected into `UsersRouter` to reuse its Supabase Admin client.
 - `updatePassword` (admin reset any user) → `adminProcedure` in `AdminUsersRouter`.
 - **Never add a `protectedProcedure` to `AdminUsersRouter`** — the procedure type must match the router's intent.
