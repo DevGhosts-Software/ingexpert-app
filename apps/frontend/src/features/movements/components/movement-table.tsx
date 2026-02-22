@@ -48,6 +48,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { getColumns } from './movement-table.columns';
+import { MovementDetailSheet } from './movement-detail-sheet';
 import { MovementFormSheet } from './movement-form-sheet';
 import type { ActiveTab, MovementRow, TypeCounts } from './movement-table.types';
 import type { ProjectEntity } from '@ingexpert/schema';
@@ -94,6 +95,7 @@ export function MovementTable({
   onSortingChange,
 }: MovementTableProps) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const columns = useMemo<ColumnDef<MovementRow>[]>(() => getColumns(), []);
 
   const table = useReactTable({
@@ -180,6 +182,13 @@ export function MovementTable({
       {/* Create sheet */}
       <MovementFormSheet mode="create" open={createOpen} onClose={() => setCreateOpen(false)} />
 
+      {/* Row detail sheet */}
+      <MovementDetailSheet
+        movementId={detailId ?? ''}
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+      />
+
       {/* Tabs */}
       <Tabs value={typeFilter} onValueChange={(v) => onTypeFilterChange(v as ActiveTab)}>
         <TabsList>
@@ -246,7 +255,11 @@ export function MovementTable({
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => setDetailId(row.original.id)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

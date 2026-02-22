@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarIcon, ClipboardList, Loader2, MapPin, Package, User } from 'lucide-react';
+import { CalendarIcon, ClipboardList, Loader2, MapPin, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -30,7 +30,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg p-4">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
@@ -104,7 +104,9 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                       <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground">Fecha:</span>
                       <span className="font-medium">
-                        {format(new Date(movement.date), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
+                        {format(new Date(movement.date), "dd/MM/yyyy 'a las' HH:mm", {
+                          locale: es,
+                        })}
                       </span>
                     </div>
                   )}
@@ -117,25 +119,34 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                 <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   Ítems ({movement.details.length})
                 </h4>
-                <div className="space-y-2">
-                  {movement.details.map((detail) => (
-                    <div
-                      key={detail.id}
-                      className="flex items-center justify-between rounded-lg border px-3 py-2"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{detail.item.name}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{detail.item.code}</p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-mono text-muted-foreground whitespace-nowrap ml-3">
-                        {detail.quantity} {detail.item.unit}
-                      </span>
+                {movement.details.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-md">
+                    Sin ítems registrados
+                  </p>
+                ) : (
+                  <div className="border rounded-md divide-y text-sm">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+                      <span>Ítem</span>
+                      <span className="text-right">Cantidad</span>
                     </div>
-                  ))}
-                </div>
+                    {movement.details.map((detail) => (
+                      <div
+                        key={detail.id}
+                        className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 items-center"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium leading-tight truncate">{detail.item.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {detail.item.code}
+                          </p>
+                        </div>
+                        <span className="text-right font-mono text-xs whitespace-nowrap">
+                          {detail.quantity} {detail.item.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </ScrollArea>
