@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { Table } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -34,6 +36,8 @@ export function DataTablePagination<TData>({
   const pageSize = pageSizeProp ?? tableState.pageSize;
   const pageCount = pageCountProp ?? table.getPageCount();
 
+  const [inputValue, setInputValue] = useState('');
+
   const handlePageSizeChange = (v: string) => {
     const newSize = Number(v);
     if (onPageSizeChange) {
@@ -41,6 +45,15 @@ export function DataTablePagination<TData>({
     } else {
       table.setPageSize(newSize);
     }
+  };
+
+  const commitPage = () => {
+    const parsed = parseInt(inputValue, 10);
+    if (!Number.isNaN(parsed)) {
+      const clamped = Math.max(1, Math.min(parsed, pageCount));
+      table.setPageIndex(clamped - 1);
+    }
+    setInputValue('');
   };
 
   return (
@@ -66,6 +79,21 @@ export function DataTablePagination<TData>({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium hidden sm:block">Ir a</p>
+          <Input
+            type="number"
+            min={1}
+            max={pageCount}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commitPage()}
+            onBlur={commitPage}
+            placeholder={`${pageIndex + 1}`}
+            className="h-8 w-14 text-xs text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
         </div>
 
         <div className="flex items-center gap-1">
