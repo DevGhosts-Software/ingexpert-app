@@ -18,15 +18,16 @@ export class MovementsService {
       include: {
         details: { include: { item: true } };
         project: { select: { name: true } };
-        responsibleDelivery: { include: { user: { select: { name: true } } } };
-        responsibleReceipt: { include: { user: { select: { name: true } } } };
+        createdBy: { select: { name: true; email: true } };
+        responsibleDelivery: { select: { name: true } };
+        responsibleReceipt: { select: { name: true } };
       };
     }>,
   ): MovementEntityWithDetails {
     return {
       id: m.id,
       type: m.type,
-      personalName: m.personalName,
+      createdById: m.createdById,
       destination: m.destination,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
@@ -34,8 +35,9 @@ export class MovementsService {
       date: m.date.toISOString(),
       itemsCount: m.details.length,
       projectName: m.project?.name ?? null,
-      responsibleDeliveryName: m.responsibleDelivery?.user?.name ?? null,
-      responsibleReceiptName: m.responsibleReceipt?.user?.name ?? null,
+      creatorName: m.createdBy.name ?? m.createdBy.email,
+      responsibleDeliveryName: m.responsibleDelivery?.name ?? null,
+      responsibleReceiptName: m.responsibleReceipt?.name ?? null,
       details: m.details.map((d) => ({
         id: d.id,
         movementId: d.movementId,
@@ -54,13 +56,14 @@ export class MovementsService {
       include: {
         _count: { select: { details: true } };
         project: { select: { name: true } };
+        createdBy: { select: { name: true; email: true } };
       };
     }>,
   ): MovementHeaderEntity {
     return {
       id: m.id,
       type: m.type,
-      personalName: m.personalName,
+      createdById: m.createdById,
       destination: m.destination,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
@@ -68,6 +71,7 @@ export class MovementsService {
       date: m.date.toISOString(),
       itemsCount: m._count.details,
       projectName: m.project?.name ?? null,
+      creatorName: m.createdBy.name ?? m.createdBy.email,
     };
   }
 
@@ -77,6 +81,7 @@ export class MovementsService {
       include: {
         _count: { select: { details: true } },
         project: { select: { name: true } },
+        createdBy: { select: { name: true, email: true } },
       },
     });
     return movements.map((m) => this.mapMovementHeader(m));
@@ -88,8 +93,9 @@ export class MovementsService {
       include: {
         details: { include: { item: true } },
         project: { select: { name: true } },
-        responsibleDelivery: { include: { user: { select: { name: true } } } },
-        responsibleReceipt: { include: { user: { select: { name: true } } } },
+        createdBy: { select: { name: true, email: true } },
+        responsibleDelivery: { select: { name: true } },
+        responsibleReceipt: { select: { name: true } },
       },
     });
 
@@ -187,7 +193,6 @@ export class MovementsService {
         where: { id },
         data: {
           type: input.type,
-          personalName: input.personalName,
           destination: input.destination ?? null,
           responsibleDeliveryId: input.responsibleDeliveryId ?? null,
           responsibleReceiptId: input.responsibleReceiptId ?? null,
@@ -202,8 +207,9 @@ export class MovementsService {
         include: {
           details: { include: { item: true } },
           project: { select: { name: true } },
-          responsibleDelivery: { include: { user: { select: { name: true } } } },
-          responsibleReceipt: { include: { user: { select: { name: true } } } },
+          createdBy: { select: { name: true, email: true } },
+          responsibleDelivery: { select: { name: true } },
+          responsibleReceipt: { select: { name: true } },
         },
       });
 
@@ -224,7 +230,7 @@ export class MovementsService {
     return this.mapMovementWithDetails(movement);
   }
 
-  async create(input: CreateMovementDto): Promise<MovementEntityWithDetails> {
+  async create(input: CreateMovementDto, createdById: string): Promise<MovementEntityWithDetails> {
     const movement = await this.prisma.$transaction(async (tx) => {
       // 1. Obtener el stock actual de los ítems involucrados desde la BD
       const itemIds = input.details.map((d) => d.itemId);
@@ -260,7 +266,7 @@ export class MovementsService {
       const created = await tx.movement.create({
         data: {
           type: input.type,
-          personalName: input.personalName,
+          createdById,
           destination: input.destination,
           responsibleDeliveryId: input.responsibleDeliveryId,
           responsibleReceiptId: input.responsibleReceiptId,
@@ -276,8 +282,9 @@ export class MovementsService {
         include: {
           details: { include: { item: true } },
           project: { select: { name: true } },
-          responsibleDelivery: { include: { user: { select: { name: true } } } },
-          responsibleReceipt: { include: { user: { select: { name: true } } } },
+          createdBy: { select: { name: true, email: true } },
+          responsibleDelivery: { select: { name: true } },
+          responsibleReceipt: { select: { name: true } },
         },
       });
 

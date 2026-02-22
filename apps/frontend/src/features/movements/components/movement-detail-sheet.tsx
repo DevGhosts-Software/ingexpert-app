@@ -68,8 +68,8 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground">Personal:</span>
-                    <span className="font-medium">{movement.personalName}</span>
+                    <span className="text-muted-foreground">Creado por:</span>
+                    <span className="font-medium">{movement.creatorName ?? '—'}</span>
                   </div>
                   {movement.responsibleDeliveryName && (
                     <div className="flex items-center gap-2 text-sm">

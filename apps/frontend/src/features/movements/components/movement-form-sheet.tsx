@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowDownCircle, ArrowUpCircle, ClipboardList, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { z } from 'zod';
 
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
@@ -44,9 +43,7 @@ import type { MovementRow } from './movement-table.types';
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
 
-const MovementFormSchema = CreateMovementSchema.extend({
-  personalName: z.string().min(1, 'Requerido'),
-});
+const MovementFormSchema = CreateMovementSchema;
 type FormValues = CreateMovementDto;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -94,14 +91,13 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
 
   // ── Support data ────────────────────────────────────────────────────────────
   const { data: projects = [] } = trpc.movements.getProjects.useQuery();
-  const { data: staff = [] } = trpc.movements.getStaff.useQuery();
+  const { data: users = [] } = trpc.users.listNames.useQuery();
 
   // ── Form ────────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
     resolver: zodResolver(MovementFormSchema),
     defaultValues: {
       type: 'EXIT',
-      personalName: '',
       destination: '',
       responsibleDeliveryId: undefined,
       responsibleReceiptId: undefined,
@@ -116,7 +112,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
     if (isEdit && existingMovement && open) {
       form.reset({
         type: existingMovement.type,
-        personalName: existingMovement.personalName,
         destination: existingMovement.destination ?? '',
         responsibleDeliveryId: existingMovement.responsibleDeliveryId ?? undefined,
         responsibleReceiptId: existingMovement.responsibleReceiptId ?? undefined,
@@ -126,7 +121,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
     } else if (!isEdit && open) {
       form.reset({
         type: 'EXIT',
-        personalName: '',
         destination: '',
         responsibleDeliveryId: undefined,
         responsibleReceiptId: undefined,
@@ -265,20 +259,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
               />
 
               {/* Personal name */}
-              <FormField
-                control={form.control}
-                name="personalName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del personal</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Carlos Méndez" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Destination (EXIT only) */}
               {watchedType === 'EXIT' && (
                 <FormField
@@ -332,75 +312,71 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
                 )}
               />
 
-              {/* Responsible delivery (EXIT) */}
-              {watchedType === 'EXIT' && (
-                <FormField
-                  control={form.control}
-                  name="responsibleDeliveryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Responsable de entrega{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                        value={field.value ?? 'none'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {staff.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.user.name ?? s.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Responsible delivery */}
+              <FormField
+                control={form.control}
+                name="responsibleDeliveryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Responsable de entrega{' '}
+                      <span className="text-muted-foreground font-normal">(opcional)</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                      value={field.value ?? 'none'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Sin asignar</SelectItem>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name ?? u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              {/* Responsible receipt (ENTRY) */}
-              {watchedType === 'ENTRY' && (
-                <FormField
-                  control={form.control}
-                  name="responsibleReceiptId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Responsable de recepción{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                        value={field.value ?? 'none'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {staff.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.user.name ?? s.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Responsible receipt */}
+              <FormField
+                control={form.control}
+                name="responsibleReceiptId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Responsable de recepción{' '}
+                      <span className="text-muted-foreground font-normal">(opcional)</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                      value={field.value ?? 'none'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Sin asignar</SelectItem>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name ?? u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <Separator />
 

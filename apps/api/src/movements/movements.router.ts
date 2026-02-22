@@ -39,8 +39,8 @@ export class MovementsRouter {
 
             create: this.trpc.protectedProcedure
                 .input(CreateMovementSchema)
-                .mutation(async ({ input }) => {
-                    return this.movementsService.create(input);
+                .mutation(async ({ input, ctx }) => {
+                    return this.movementsService.create(input, ctx.user.id);
                 }),
 
             update: this.trpc.protectedProcedure

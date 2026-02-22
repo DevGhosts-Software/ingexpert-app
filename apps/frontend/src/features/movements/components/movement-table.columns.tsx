@@ -85,11 +85,11 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       ),
     },
     {
-      accessorKey: 'personalName',
-      header: 'Personal',
+      accessorKey: 'creatorName',
+      header: 'Creado por',
       cell: ({ row }) => (
-        <span className="font-medium block max-w-[160px] truncate" title={row.original.personalName}>
-          {row.original.personalName}
+        <span className="font-medium block max-w-[160px] truncate" title={row.original.creatorName ?? ''}>
+          {row.original.creatorName ?? '—'}
         </span>
       ),
     },
