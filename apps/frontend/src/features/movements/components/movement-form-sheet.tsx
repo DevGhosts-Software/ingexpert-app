@@ -43,8 +43,8 @@ import type { MovementRow } from './movement-table.types';
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
 
-const MovementFormSchema = CreateMovementSchema;
-type FormValues = CreateMovementDto;
+const MovementFormSchema = CreateMovementSchema.omit({ details: true });
+type FormValues = z.infer<typeof MovementFormSchema>;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
       responsibleDeliveryId: undefined,
       responsibleReceiptId: undefined,
       projectId: undefined,
-      details: [],
     },
   });
 
@@ -116,7 +115,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
         responsibleDeliveryId: existingMovement.responsibleDeliveryId ?? undefined,
         responsibleReceiptId: existingMovement.responsibleReceiptId ?? undefined,
         projectId: existingMovement.projectId ?? undefined,
-        details: [],
       });
     } else if (!isEdit && open) {
       form.reset({
@@ -125,7 +123,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
         responsibleDeliveryId: undefined,
         responsibleReceiptId: undefined,
         projectId: undefined,
-        details: [],
       });
     }
   }, [open, isEdit, existingMovement, form]);
