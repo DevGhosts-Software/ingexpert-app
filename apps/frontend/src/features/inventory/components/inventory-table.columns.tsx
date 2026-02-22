@@ -182,7 +182,11 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         />
       ),
-      cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium block max-w-[300px] truncate" title={row.getValue('name')}>
+          {row.getValue('name')}
+        </span>
+      ),
     },
     {
       accessorKey: 'code',
@@ -211,9 +215,12 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         />
       ),
       cell: ({ row }) => (
-        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPin className="h-3 w-3" />
-          {row.getValue('location')}
+        <span
+          className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
+          title={row.getValue('location')}
+        >
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="truncate">{row.getValue('location')}</span>
         </span>
       ),
     },
@@ -250,7 +257,9 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       id: 'status',
       header: 'Estado',
-      cell: ({ row }) => <StockBadge stock={row.original.stock} isKit={row.original.type === 'KIT'} />,
+      cell: ({ row }) => (
+        <StockBadge stock={row.original.stock} isKit={row.original.type === 'KIT'} />
+      ),
       enableSorting: false,
     },
     {
