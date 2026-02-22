@@ -8,7 +8,7 @@ import { AppRouter } from './trpc/app.router';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ItemsModule } from './items/items.module';
-import {KitsModule} from "./kits/kits.module";
+import { KitsModule } from './kits/kits.module';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import {KitsModule} from "./kits/kits.module";
     UsersModule,
     AuthModule,
     ItemsModule,
-      KitsModule,
+    KitsModule,
   ],
   controllers: [],
   providers: [

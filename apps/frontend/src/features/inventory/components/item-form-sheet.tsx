@@ -194,7 +194,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
             if (kitComponents.length > 0) {
               const updated = await setComponentsMutation.mutateAsync({
                 kit_id: item.id,
-                components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
+                components: kitComponents.map((c) => ({
+                  item_id: c.componentId,
+                  quantity: c.quantity,
+                })),
               });
               utils.kits.getComponents.setData(item.id, updated);
             } else {
@@ -208,7 +211,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
           if (values.type === 'KIT' && kitComponents.length > 0) {
             const created2 = await setComponentsMutation.mutateAsync({
               kit_id: created.id,
-              components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
+              components: kitComponents.map((c) => ({
+                item_id: c.componentId,
+                quantity: c.quantity,
+              })),
             });
             utils.kits.getComponents.setData(created.id, created2);
           }
@@ -221,7 +227,19 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       }
       // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
-    [uploadFile, deleteFile, isEdit, item, utils, updateMutation, createMutation, setComponentsMutation, clearKitMutation, kitComponents, onClose],
+    [
+      uploadFile,
+      deleteFile,
+      isEdit,
+      item,
+      utils,
+      updateMutation,
+      createMutation,
+      setComponentsMutation,
+      clearKitMutation,
+      kitComponents,
+      onClose,
+    ],
   );
 
   const isPending =
@@ -253,7 +271,9 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const handleKitQtyChange = useCallback((componentId: string, qty: number) => {
     setKitComponents((prev) =>
       prev.map((c) =>
-        c.componentId === componentId ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) } : c,
+        c.componentId === componentId
+          ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) }
+          : c,
       ),
     );
   }, []);
@@ -461,4 +481,3 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     </Sheet>
   );
 }
-

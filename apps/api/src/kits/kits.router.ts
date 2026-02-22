@@ -6,33 +6,31 @@ import { SetKitComponentsSchema } from '@ingexpert/schema';
 
 @Injectable()
 export class KitsRouter {
-    constructor(
-        private readonly trpc: TrpcService,
-        private readonly kitsService: KitsService,
-    ) {}
+  constructor(
+    private readonly trpc: TrpcService,
+    private readonly kitsService: KitsService,
+  ) {}
 
-    public get router() {
-        return this.trpc.router({
+  public get router() {
+    return this.trpc.router({
+      getComponents: this.trpc.protectedProcedure
+        .input(z.string().uuid())
+        .query(async ({ input }) => {
+          return this.kitsService.getComponents(input);
+        }),
 
-            getComponents: this.trpc.protectedProcedure
-                .input(z.string().uuid())
-                .query(async ({ input }) => {
-                    return this.kitsService.getComponents(input);
-                }),
+      setComponents: this.trpc.protectedProcedure
+        .input(SetKitComponentsSchema)
+        .mutation(async ({ input }) => {
+          return this.kitsService.setComponents(input);
+        }),
 
-            setComponents: this.trpc.protectedProcedure
-                .input(SetKitComponentsSchema)
-                .mutation(async ({ input }) => {
-                    return this.kitsService.setComponents(input);
-                }),
-
-            clearKit: this.trpc.protectedProcedure
-                .input(z.string().uuid())
-                .mutation(async ({ input }) => {
-                    await this.kitsService.clearKit(input);
-                    return { success: true };
-                }),
-
-        });
-    }
+      clearKit: this.trpc.protectedProcedure
+        .input(z.string().uuid())
+        .mutation(async ({ input }) => {
+          await this.kitsService.clearKit(input);
+          return { success: true };
+        }),
+    });
+  }
 }

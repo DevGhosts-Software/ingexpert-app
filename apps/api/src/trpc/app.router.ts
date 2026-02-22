@@ -4,7 +4,7 @@ import { UsersRouter } from '../users/users.router';
 import { AdminUsersRouter } from '../users/admin-users.router';
 import { AuthRouter } from '../auth/auth.router';
 import { ItemsRouter } from '../items/items.router';
-import {KitsRouter} from "../kits/kits.router";
+import { KitsRouter } from '../kits/kits.router';
 
 @Injectable()
 export class AppRouter {

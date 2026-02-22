@@ -51,9 +51,11 @@ export function AddComponentInput({
     [results, excludeIds],
   );
 
-  const showDropdown = open && debouncedQuery.trim().length >= 2 && (filtered.length > 0 || isSearching);
+  const showDropdown =
+    open && debouncedQuery.trim().length >= 2 && (filtered.length > 0 || isSearching);
 
-  const showEmpty = open && debouncedQuery.trim().length >= 2 && !isSearching && filtered.length === 0;
+  const showEmpty =
+    open && debouncedQuery.trim().length >= 2 && !isSearching && filtered.length === 0;
 
   const handleSelect = (item: (typeof filtered)[0]) => {
     onAdd({
@@ -127,7 +129,9 @@ export function AddComponentInput({
                 )}
               >
                 <span className="truncate">{item.name}</span>
-                <span className="text-xs text-muted-foreground font-mono shrink-0">{item.code}</span>
+                <span className="text-xs text-muted-foreground font-mono shrink-0">
+                  {item.code}
+                </span>
               </li>
             ))
           )}

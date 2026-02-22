@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { type Item, ItemType } from '@ingexpert/database';
 import { BasePaginationSchema } from './pagination.schema';
-import {KitComponentSchema} from "./kit.schema";
+import { KitComponentSchema } from './kit.schema';
 
 export { ItemType } from '@ingexpert/database';
 
@@ -17,7 +17,6 @@ export const CreateItemSchema = z.object({
   imageUrl: z.string().optional(),
   observations: z.string().optional(),
   kitComponents: z.array(KitComponentSchema).optional(),
-
 });
 export type CreateItemDto = z.infer<typeof CreateItemSchema>;
 

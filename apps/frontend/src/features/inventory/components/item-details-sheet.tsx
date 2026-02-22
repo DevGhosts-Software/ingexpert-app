@@ -114,8 +114,8 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
 
         <div className="mt-6 space-y-4">
           {/* Image — hidden for KIT items */}
-          {!isKit && (
-            item.imageUrl ? (
+          {!isKit &&
+            (item.imageUrl ? (
               <div className="w-full rounded-lg border overflow-hidden bg-muted/30">
                 <StorageImage
                   src={item.imageUrl}
@@ -130,8 +130,7 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
                   <span className="text-xs">Sin imagen</span>
                 </div>
               </div>
-            )
-          )}
+            ))}
 
           {!isKit && <Separator />}
 
@@ -161,7 +160,11 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
               <>
                 <DetailRow
                   label="Stock"
-                  value={<span className="font-mono">{item.stock} {item.unit}</span>}
+                  value={
+                    <span className="font-mono">
+                      {item.stock} {item.unit}
+                    </span>
+                  }
                 />
                 <DetailRow label="Estado" value={<StockBadge stock={item.stock} />} />
               </>
@@ -179,4 +182,3 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
     </Sheet>
   );
 }
-
