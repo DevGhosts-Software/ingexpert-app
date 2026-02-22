@@ -35,7 +35,10 @@ import {
   TYPE_CONFIG,
 } from './inventory-table.types';
 
-function StockBadge({ stock }: { stock: number }) {
+const EM_DASH = '—';
+
+function StockBadge({ stock, isKit }: { stock: number; isKit: boolean }) {
+  if (isKit) return <span className="text-muted-foreground">{EM_DASH}</span>;
   if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
   if (stock < LOW_STOCK_THRESHOLD)
     return (
@@ -146,7 +149,15 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       id: 'image',
       header: () => <span className="sr-only">Imagen</span>,
       cell: ({ row }) => {
+        const isKit = row.original.type === 'KIT';
         const url = row.original.imageUrl;
+        if (isKit) {
+          return (
+            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground text-xs">
+              {EM_DASH}
+            </div>
+          );
+        }
         if (!url) {
           return (
             <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
@@ -215,7 +226,11 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         />
       ),
-      cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('stock')}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">
+          {row.original.type === 'KIT' ? EM_DASH : row.getValue('stock')}
+        </span>
+      ),
     },
     {
       accessorKey: 'unit',
@@ -226,12 +241,16 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         />
       ),
-      cell: ({ row }) => <span className="font-mono text-sm">{row.getValue('unit')}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">
+          {row.original.type === 'KIT' ? EM_DASH : row.getValue('unit')}
+        </span>
+      ),
     },
     {
       id: 'status',
       header: 'Estado',
-      cell: ({ row }) => <StockBadge stock={row.original.stock} />,
+      cell: ({ row }) => <StockBadge stock={row.original.stock} isKit={row.original.type === 'KIT'} />,
       enableSorting: false,
     },
     {
