@@ -38,4 +38,4 @@ yarn-error.log*
 *.pem
 
 
-next-env.d.ts
+apps/frontend/next-env.d.ts

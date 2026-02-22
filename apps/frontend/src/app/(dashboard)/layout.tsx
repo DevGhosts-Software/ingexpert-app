@@ -72,12 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <DashboardNavbar
-          title={pageTitle}
-          userEmail={user.email}
-          userRole={user.role}
-          onLogout={handleLogout}
-        />
+        <DashboardNavbar title={pageTitle} user={user} onLogout={handleLogout} />
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>

@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ItemsModule } from './items/items.module';
 import { MovementsModule } from './movements/movements.module';
+import { KitsModule } from './kits/kits.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MovementsModule } from './movements/movements.module';
     AuthModule,
     ItemsModule,
     MovementsModule,
+    KitsModule,
   ],
   controllers: [],
   providers: [

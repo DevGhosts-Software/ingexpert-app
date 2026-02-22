@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, ArrowLeftRight, Users, Settings, Boxes } from 'lucide-react';
+import { ArrowLeftRight, Boxes, LayoutDashboard, Package, Users } from 'lucide-react';
 
 import {
   Sidebar,
@@ -43,11 +43,6 @@ const adminNavItems = [
     title: 'Usuarios',
     href: '/admin/users',
     icon: Users,
-  },
-  {
-    title: 'Configuración',
-    href: '/settings',
-    icon: Settings,
   },
 ];
 

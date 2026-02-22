@@ -1,88 +1,98 @@
-import { UserStats, type UserStats as UserStatsType } from '@/features/users/components/user-stats';
-import { UserTable, type AppUser } from '@/features/users/components/user-table';
+'use client';
 
-const mockUsers: AppUser[] = [
-  {
-    id: 'u-001',
-    email: 'admin@ingexpert.com',
-    name: 'Alejandro Castro',
-    role: 'ADMIN',
-    workArea: 'Gerencia',
-  },
-  {
-    id: 'u-002',
-    email: 'laura.torres@ingexpert.com',
-    name: 'Laura Torres',
-    role: 'ADMIN',
-    workArea: 'Logística',
-  },
-  {
-    id: 'u-003',
-    email: 'carlos.mendez@ingexpert.com',
-    name: 'Carlos Méndez',
-    role: 'USER',
-    workArea: 'Taller A',
-  },
-  {
-    id: 'u-004',
-    email: 'maria.gonzalez@ingexpert.com',
-    name: 'María González',
-    role: 'USER',
-    workArea: 'Taller B',
-  },
-  {
-    id: 'u-005',
-    email: 'jorge.ramirez@ingexpert.com',
-    name: 'Jorge Ramírez',
-    role: 'USER',
-    workArea: 'Almacén',
-  },
-  {
-    id: 'u-006',
-    email: 'sofia.herrera@ingexpert.com',
-    name: 'Sofía Herrera',
-    role: 'USER',
-    workArea: 'Laboratorio',
-  },
-  {
-    id: 'u-007',
-    email: 'luis.fernandez@ingexpert.com',
-    name: 'Luis Fernández',
-    role: 'USER',
-    workArea: 'Laboratorio',
-  },
-  {
-    id: 'u-008',
-    email: 'pedro.alvarez@ingexpert.com',
-    name: 'Pedro Álvarez',
-    role: 'USER',
-  },
-  {
-    id: 'u-009',
-    email: 'ana.castillo@ingexpert.com',
-    name: 'Ana Castillo',
-    role: 'USER',
-    workArea: 'Logística',
-  },
-  {
-    id: 'u-010',
-    email: 'roberto.diaz@ingexpert.com',
-    name: 'Roberto Díaz',
-    role: 'USER',
-  },
-];
+import { useCallback, useMemo, useState } from 'react';
+import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
+import { trpc } from '@/lib/trpc';
+import { useDebounce } from '@/hooks/use-debounce';
+import { UserStats } from '@/features/users/components/user-stats';
+import { UserTable } from '@/features/users/components/user-table';
+import type {
+  ActiveTab,
+  RoleCounts,
+  UserEntity,
+} from '@/features/users/components/user-table.types';
+import type { UserStats as UserStatsType } from '@ingexpert/schema';
 
-function computeStats(users: AppUser[]): UserStatsType {
-  return {
-    total: users.length,
-    admins: users.filter((u) => u.role === 'ADMIN').length,
-    active: users.filter((u) => u.workArea).length,
-    inactive: users.filter((u) => !u.workArea).length,
-  };
-}
+const DEFAULT_STATS: UserStatsType = { total: 0, admins: 0, active: 0, inactive: 0 };
 
 export default function UsersPage() {
-  const stats = computeStats(mockUsers);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
+  const [workAreaFilter, setWorkAreaFilter] = useState('all');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+
+  const { data: allUsers = [], isLoading } = trpc.adminUsers.list.useQuery();
+  const { data: stats = DEFAULT_STATS } = trpc.adminUsers.getStats.useQuery();
+  const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
+
+  // Client-side filtering + pagination over the already-fetched list
+  const { tableData, pageCount, roleCounts } = useMemo(() => {
+    const roleMap: Record<ActiveTab, 'ADMIN' | 'USER' | undefined> = {
+      all: undefined,
+      admin: 'ADMIN',
+      user: 'USER',
+    };
+
+    const preRole = allUsers.filter((u) => {
+      const matchesSearch =
+        debouncedSearch === '' ||
+        u.email.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (u.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
+        (u.workArea?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false);
+      const matchesArea = workAreaFilter === 'all' || u.workArea === workAreaFilter;
+      return matchesSearch && matchesArea;
+    });
+
+    const roleFilter = roleMap[activeTab];
+    const filtered = roleFilter ? preRole.filter((u) => u.role === roleFilter) : preRole;
+
+    const sorted = [...filtered].sort((a, b) => {
+      const col = sorting[0];
+      if (!col) return 0;
+      const av = String(a[col.id as keyof UserEntity] ?? '');
+      const bv = String(b[col.id as keyof UserEntity] ?? '');
+      const cmp = av.localeCompare(bv);
+      return col.desc ? -cmp : cmp;
+    });
+
+    const { pageIndex, pageSize } = pagination;
+
+    return {
+      tableData: sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+      pageCount: Math.ceil(sorted.length / pageSize),
+      roleCounts: {
+        all: preRole.length,
+        admin: preRole.filter((u) => u.role === 'ADMIN').length,
+        user: preRole.filter((u) => u.role === 'USER').length,
+      } satisfies RoleCounts,
+    };
+  }, [allUsers, debouncedSearch, workAreaFilter, activeTab, sorting, pagination]);
+
+  const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
+    setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
+    setSorting((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleActiveTabChange = useCallback((value: ActiveTab) => {
+    setActiveTab(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleWorkAreaFilterChange = useCallback((value: string) => {
+    setWorkAreaFilter(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -95,7 +105,23 @@ export default function UsersPage() {
       </div>
 
       <UserStats stats={stats} />
-      <UserTable users={mockUsers} />
+      <UserTable
+        users={tableData}
+        isLoading={isLoading}
+        pageCount={pageCount}
+        pagination={pagination}
+        onPaginationChange={handlePaginationChange}
+        search={search}
+        onSearchChange={handleSearchChange}
+        activeTab={activeTab}
+        onActiveTabChange={handleActiveTabChange}
+        workAreaFilter={workAreaFilter}
+        onWorkAreaFilterChange={handleWorkAreaFilterChange}
+        workAreas={workAreas}
+        sorting={sorting}
+        onSortingChange={handleSortingChange}
+        roleCounts={roleCounts}
+      />
     </div>
   );
 }

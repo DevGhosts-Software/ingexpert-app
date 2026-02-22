@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PackagePlus, Pencil } from 'lucide-react';
+import { Boxes, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
@@ -38,6 +38,7 @@ import {
 
 import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
 import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
+import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
 const ItemFormSchema = CreateItemSchema.extend({
   name: z.string().min(1, 'Nombre requerido'),
@@ -62,6 +63,32 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const originalImageUrl = useRef<string | undefined>(undefined);
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
 
+  const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
+
+  // Load existing kit components when editing a KIT item
+  const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
+    enabled: isEdit && item?.type === 'KIT' && open,
+  });
+
+  // Mirror query data into local state (handles both cache hits and async loads).
+  // Reset to [] when sheet closes.
+  useEffect(() => {
+    if (open && isEdit && existingComponents) {
+      setKitComponents(
+        existingComponents.map((c) => ({
+          componentId: c.componentId,
+          name: c.component.name,
+          code: c.component.code,
+          unit: c.component.unit,
+          stock: Number(c.component.stock),
+          quantity: Number(c.quantity),
+        })),
+      );
+    } else if (!open) {
+      setKitComponents([]);
+    }
+  }, [open, isEdit, existingComponents]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(ItemFormSchema),
     defaultValues: {
@@ -75,7 +102,18 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     },
   });
 
-  // Prefill form when editing
+  const watchedType = form.watch('type');
+
+  // Auto-fill hidden KIT fields so validation passes
+  useEffect(() => {
+    if (watchedType === 'KIT') {
+      form.setValue('unit', 'kit', { shouldValidate: false });
+      form.setValue('stock', 0, { shouldValidate: false });
+      form.setValue('imageUrl', undefined, { shouldValidate: false });
+    }
+  }, [watchedType, form]);
+
+  // Prefill form fields when sheet opens/closes
   useEffect(() => {
     imageFieldRef.current?.reset();
     if (isEdit && item && open) {
@@ -104,21 +142,19 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   }, [open, isEdit, item, form]);
 
   const createMutation = trpc.items.create.useMutation({
-    onSuccess: () => {
-      toast.success('Ítem agregado correctamente');
-      void invalidateAll();
-      onClose();
-    },
     onError: (error) => toast.error(error.message ?? 'Error al agregar el ítem'),
   });
 
   const updateMutation = trpc.items.update.useMutation({
-    onSuccess: () => {
-      toast.success('Ítem actualizado correctamente');
-      void invalidateAll();
-      onClose();
-    },
     onError: (error) => toast.error(error.message ?? 'Error al actualizar el ítem'),
+  });
+
+  const setComponentsMutation = trpc.kits.setComponents.useMutation({
+    onError: (error) => toast.error(error.message ?? 'Error al guardar los componentes'),
+  });
+
+  const clearKitMutation = trpc.kits.clearKit.useMutation({
+    onError: (error) => toast.error(error.message ?? 'Error al limpiar los componentes'),
   });
 
   function invalidateAll() {
@@ -149,23 +185,102 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       }
 
       const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
-      if (isEdit && item) {
-        updateMutation.mutate({ id: item.id, ...submitValues });
-      } else {
-        createMutation.mutate(submitValues);
+
+      try {
+        if (isEdit && item) {
+          await updateMutation.mutateAsync({ id: item.id, ...submitValues });
+          // Save kit components when editing a KIT, then update cache immediately
+          if (values.type === 'KIT') {
+            if (kitComponents.length > 0) {
+              const updated = await setComponentsMutation.mutateAsync({
+                kit_id: item.id,
+                components: kitComponents.map((c) => ({
+                  item_id: c.componentId,
+                  quantity: c.quantity,
+                })),
+              });
+              utils.kits.getComponents.setData(item.id, updated);
+            } else {
+              await clearKitMutation.mutateAsync(item.id);
+              utils.kits.getComponents.setData(item.id, []);
+            }
+          }
+          toast.success('Ítem actualizado correctamente');
+        } else {
+          const created = await createMutation.mutateAsync(submitValues);
+          if (values.type === 'KIT' && kitComponents.length > 0) {
+            const created2 = await setComponentsMutation.mutateAsync({
+              kit_id: created.id,
+              components: kitComponents.map((c) => ({
+                item_id: c.componentId,
+                quantity: c.quantity,
+              })),
+            });
+            utils.kits.getComponents.setData(created.id, created2);
+          }
+          toast.success('Ítem agregado correctamente');
+        }
+        void invalidateAll();
+        onClose();
+      } catch {
+        // errors handled by each mutation's onError
       }
       // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
-    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation],
+    [
+      uploadFile,
+      deleteFile,
+      isEdit,
+      item,
+      utils,
+      updateMutation,
+      createMutation,
+      setComponentsMutation,
+      clearKitMutation,
+      kitComponents,
+      onClose,
+    ],
   );
 
-  const isPending = createMutation.isPending || updateMutation.isPending || isUploading;
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    setComponentsMutation.isPending ||
+    clearKitMutation.isPending ||
+    isUploading;
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       void form.handleSubmit(onSubmit)(e);
     },
     [form, onSubmit],
+  );
+
+  // Stable kit component handlers
+  const handleKitAdd = useCallback((newItem: LocalComponent) => {
+    setKitComponents((prev) => {
+      if (prev.some((c) => c.componentId === newItem.componentId)) return prev;
+      return [...prev, newItem];
+    });
+  }, []);
+
+  const handleKitRemove = useCallback((componentId: string) => {
+    setKitComponents((prev) => prev.filter((c) => c.componentId !== componentId));
+  }, []);
+
+  const handleKitQtyChange = useCallback((componentId: string, qty: number) => {
+    setKitComponents((prev) =>
+      prev.map((c) =>
+        c.componentId === componentId
+          ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) }
+          : c,
+      ),
+    );
+  }, []);
+
+  const kitExcludeIds = useMemo(
+    () => [item?.id, ...kitComponents.map((c) => c.componentId)].filter(Boolean) as string[],
+    [item?.id, kitComponents],
   );
 
   return (
@@ -185,28 +300,30 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
         <Form {...form}>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
-            {/* Image upload */}
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <ImageUploadField
-                      ref={imageFieldRef}
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={isPending}
-                      isUploading={isUploading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Image upload — hidden for KIT items */}
+            {watchedType !== 'KIT' && (
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <ImageUploadField
+                        ref={imageFieldRef}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isPending}
+                        isUploading={isUploading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -279,43 +396,68 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="stock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        placeholder="0"
-                        disabled={isPending}
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Stock + Unit — hidden for KIT items */}
+            {watchedType !== 'KIT' && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="any"
+                          placeholder="0"
+                          disabled={isPending}
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidad</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Kit components — shown when type is KIT (create or edit) */}
+            {watchedType === 'KIT' && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Boxes className="h-4 w-4 text-muted-foreground" />
+                    Componentes del kit{' '}
+                    <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                  </p>
+                  <KitComponentsBuilder
+                    components={kitComponents}
+                    excludeIds={kitExcludeIds}
+                    onAdd={handleKitAdd}
+                    onRemove={handleKitRemove}
+                    onQtyChange={handleKitQtyChange}
+                    disabled={isPending}
+                  />
+                </div>
+              </>
+            )}
 
             <Separator />
 
