@@ -117,6 +117,15 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 - **Transactions:** Use Prisma interactive transactions (`$transaction`) when updating stock and creating a transaction record simultaneously to ensure data integrity.
 - **Sync Trigger:** User profile creation in Prisma is handled by a PostgreSQL trigger on `auth.users` in Supabase.
 
+### Movement Immutability
+
+Movements are **create-only** by design. Once a movement is created:
+
+- No `update` mutation is exposed on the frontend (the `update()` method exists in the service but is not reachable via the UI).
+- Stock changes are applied atomically in a `$transaction` on creation (EXIT decrements, ENTRY increments).
+- EXIT movements validate that item stock is sufficient **before** committing — throws `BadRequestException` with the item name and available/requested quantities.
+- The `creatorId` is set from `ctx.user.id` at the router level — it cannot be overridden by the client.
+
 ### Authentication & Authorization
 
 - **JWT Validation:** The API verifies the RS256 JWT emitted by Supabase by fetching public keys from JWKS. No shared secret is used.
@@ -129,16 +138,28 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 
 The users domain has **two separate routers** in `apps/api/src/users/`:
 
-| Router             | Procedure            | Purpose                                                                                               |
-| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| `UsersRouter`      | `protectedProcedure` | Self-service: `me`, `updateMe`, `updateMyPassword`                                                    |
-| `AdminUsersRouter` | `adminProcedure`     | Admin CRUD: `create`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
+| Router             | Procedure            | Purpose                                                                                                                                               |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UsersRouter`      | `protectedProcedure` | Self-service: `me`, `updateMe`, `updateMyPassword`, `listNames`                                                                                       |
+| `AdminUsersRouter` | `adminProcedure`     | Admin CRUD: `create`, `createWithoutAuth`, `grantAuth`, `revokeAuth`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
 
 Key rules:
 
 - `updateMyPassword` (self-service) → `protectedProcedure` in `UsersRouter`, delegates to `AdminUsersService.changePassword(ctx.user.id, ...)`. `AdminUsersService` is injected into `UsersRouter` to reuse its Supabase Admin client.
 - `updatePassword` (admin reset any user) → `adminProcedure` in `AdminUsersRouter`.
 - **Never add a `protectedProcedure` to `AdminUsersRouter`** — the procedure type must match the router's intent.
+
+### Auth-Access User Management
+
+Users can exist in the system without a Supabase Auth account (`hasAuth: false`). This supports employees who are tracked (appear in dropdowns, can be assigned to movements) but cannot log in.
+
+| Procedure           | Effect                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `create`            | Creates DB record + Supabase Auth account (`hasAuth: true`)                                                            |
+| `createWithoutAuth` | Creates DB record only, generates UUID, sets `hasAuth: false`. No Supabase call.                                       |
+| `grantAuth`         | Calls `supabaseAdmin.auth.admin.createUser({ id, email, password })` using the existing DB UUID, sets `hasAuth: true`. |
+| `revokeAuth`        | Calls `supabaseAdmin.auth.admin.deleteUser(id)`, sets `hasAuth: false`. DB record is preserved.                        |
+| `remove`            | Deletes DB record. Only calls Supabase `deleteUser` if `hasAuth: true`.                                                |
 
 ### Permission Rules (Users domain)
 

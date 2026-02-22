@@ -44,13 +44,13 @@ function StatCard({
         {loading ? (
           <Skeleton className="h-8 w-16" />
         ) : (
-          <div className={`text-2xl font-bold ${warning && value && value > 0 ? 'text-amber-600' : ''}`}>
+          <div
+            className={`text-2xl font-bold ${warning && value && value > 0 ? 'text-amber-600' : ''}`}
+          >
             {value ?? '—'}
           </div>
         )}
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
       </CardContent>
     </Card>
   );
@@ -78,11 +78,7 @@ export default function DashboardPage() {
           title="Total de Ítems"
           value={itemStats?.total}
           icon={Package}
-          description={
-            itemStats
-              ? `${itemStats.lowStock} con stock bajo`
-              : undefined
-          }
+          description={itemStats ? `${itemStats.lowStock} con stock bajo` : undefined}
           loading={loadingItems}
         />
         <StatCard
@@ -118,7 +114,6 @@ export default function DashboardPage() {
 
       {/* Detail row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-
         {/* Inventario breakdown */}
         <Card>
           <CardHeader className="pb-2">
@@ -168,7 +163,10 @@ export default function DashboardPage() {
                       <span className="flex items-center gap-2 text-amber-600">
                         <AlertTriangle className="h-3.5 w-3.5" /> Stock bajo
                       </span>
-                      <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                      <Badge
+                        variant="outline"
+                        className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20"
+                      >
                         {itemStats?.lowStock}
                       </Badge>
                     </div>
@@ -227,9 +225,13 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               {isAdmin ? (
-                <><Users className="h-4 w-4 text-muted-foreground" /> Resumen de Usuarios</>
+                <>
+                  <Users className="h-4 w-4 text-muted-foreground" /> Resumen de Usuarios
+                </>
               ) : (
-                <><Package className="h-4 w-4 text-muted-foreground" /> Bienvenido</>
+                <>
+                  <Package className="h-4 w-4 text-muted-foreground" /> Bienvenido
+                </>
               )}
             </CardTitle>
           </CardHeader>
@@ -265,8 +267,8 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  Hola, <span className="font-semibold text-foreground">{displayName}</span>. Este es tu
-                  panel de gestión de inventario.
+                  Hola, <span className="font-semibold text-foreground">{displayName}</span>. Este
+                  es tu panel de gestión de inventario.
                 </p>
                 <p>Consulta el stock, revisa movimientos o accede a los proyectos desde el menú.</p>
               </div>

@@ -254,19 +254,55 @@ function GrantAuthDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(({ password }) => mutation.mutate({ id: user.id, password }))} className="space-y-4">
-            <FormField control={form.control} name="password" render={({ field }) => (
-              <FormItem><FormLabel>Contraseña</FormLabel>
-                <FormControl><PasswordInput placeholder="Mínimo 8 caracteres" disabled={mutation.isPending} {...field} /></FormControl>
-                <FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="confirmPassword" render={({ field }) => (
-              <FormItem><FormLabel>Confirmar contraseña</FormLabel>
-                <FormControl><PasswordInput placeholder="Repite la contraseña" disabled={mutation.isPending} {...field} /></FormControl>
-                <FormMessage /></FormItem>
-            )} />
+          <form
+            onSubmit={form.handleSubmit(({ password }) =>
+              mutation.mutate({ id: user.id, password }),
+            )}
+            className="space-y-4"
+          >
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contraseña</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Mínimo 8 caracteres"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar contraseña</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Repite la contraseña"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancelar</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={mutation.isPending}
+              >
+                Cancelar
+              </Button>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Dar acceso
@@ -314,8 +350,14 @@ function RevokeAuthDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancelar</Button>
-          <Button variant="destructive" onClick={() => mutation.mutate(user.id)} disabled={mutation.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => mutation.mutate(user.id)}
+            disabled={mutation.isPending}
+          >
             {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Revocar acceso
           </Button>
@@ -443,7 +485,12 @@ function RowActions({ user }: { user: UserEntity }) {
       </DropdownMenu>
 
       {editOpen && (
-        <UserEditSheet user={user} open={editOpen} onClose={() => setEditOpen(false)} canChangeRole={canChangeRole} />
+        <UserEditSheet
+          user={user}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          canChangeRole={canChangeRole}
+        />
       )}
       <ResetPasswordDialog user={user} open={resetPwOpen} onClose={() => setResetPwOpen(false)} />
       <GrantAuthDialog user={user} open={grantOpen} onClose={() => setGrantOpen(false)} />
@@ -550,7 +597,10 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       header: 'Acceso',
       cell: ({ row }) =>
         row.original.hasAuth ? (
-          <Badge variant="outline" className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+          <Badge
+            variant="outline"
+            className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+          >
             <LockKeyholeOpen className="h-3 w-3" />
             Activo
           </Badge>

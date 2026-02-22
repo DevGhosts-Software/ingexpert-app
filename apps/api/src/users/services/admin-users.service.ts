@@ -179,11 +179,14 @@ export class AdminUsersService {
   async revokeAuth(id: string): Promise<UserEntity> {
     const existing = await this.prisma.user.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Usuario con ID ${id} no encontrado.`);
-    if (!existing.hasAuth) throw new BadRequestException(`El usuario ya no tiene acceso al sistema.`);
+    if (!existing.hasAuth)
+      throw new BadRequestException(`El usuario ya no tiene acceso al sistema.`);
 
     const { error } = await this.supabaseAdmin.auth.admin.deleteUser(id);
     if (error)
-      throw new InternalServerErrorException(`Error al revocar acceso en Supabase: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Error al revocar acceso en Supabase: ${error.message}`,
+      );
 
     const user = await this.prisma.user.update({
       where: { id },
@@ -273,13 +276,18 @@ export class AdminUsersService {
   }
 
   async remove(id: string): Promise<{ success: boolean }> {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: { avatar: true, hasAuth: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { avatar: true, hasAuth: true },
+    });
 
     // Only call Supabase if the user has an auth account
     if (user?.hasAuth) {
       const { error } = await this.supabaseAdmin.auth.admin.deleteUser(id);
       if (error)
-        throw new InternalServerErrorException(`Error deleting user from Supabase: ${error.message}`);
+        throw new InternalServerErrorException(
+          `Error deleting user from Supabase: ${error.message}`,
+        );
     }
 
     try {
