@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { KitDetail, Item } from '@ingexpert/database';
 
 export const KitComponentSchema = z.object({
     item_id: z.string().uuid(),
@@ -11,3 +12,11 @@ export const SetKitComponentsSchema = z.object({
 });
 
 export type SetKitComponentsDto = z.infer<typeof SetKitComponentsSchema>;
+
+// ─── Entities ────────────────────────────────────────────────────────────────
+
+/** Wire representation of a KitDetail row with its nested component Item. */
+export type KitComponentEntity = Omit<KitDetail, 'quantity'> & {
+    quantity: number;
+    component: Omit<Item, 'stock'> & { stock: number };
+};
