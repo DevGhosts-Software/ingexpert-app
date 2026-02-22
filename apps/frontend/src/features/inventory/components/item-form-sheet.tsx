@@ -64,6 +64,29 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
 
   const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
+  const [kitInitialized, setKitInitialized] = useState(false);
+
+  // Load existing kit components when editing a KIT item
+  const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
+    enabled: isEdit && item?.type === 'KIT' && open,
+  });
+
+  // Initialize kitComponents from server data when editing a KIT (once per open)
+  useEffect(() => {
+    if (isEdit && existingComponents && !kitInitialized) {
+      setKitComponents(
+        existingComponents.map((c) => ({
+          componentId: c.componentId,
+          name: c.component.name,
+          code: c.component.code,
+          unit: c.component.unit,
+          stock: Number(c.component.stock),
+          quantity: Number(c.quantity),
+        })),
+      );
+      setKitInitialized(true);
+    }
+  }, [isEdit, existingComponents, kitInitialized]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(ItemFormSchema),
@@ -93,6 +116,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   useEffect(() => {
     imageFieldRef.current?.reset();
     setKitComponents([]);
+    setKitInitialized(false);
     if (isEdit && item && open) {
       originalImageUrl.current = item.imageUrl ?? undefined;
       form.reset({
@@ -130,6 +154,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     onError: (error) => toast.error(error.message ?? 'Error al guardar los componentes'),
   });
 
+  const clearKitMutation = trpc.kits.clearKit.useMutation({
+    onError: (error) => toast.error(error.message ?? 'Error al limpiar los componentes'),
+  });
+
   function invalidateAll() {
     return Promise.all([
       utils.items.list.invalidate(),
@@ -162,6 +190,17 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       try {
         if (isEdit && item) {
           await updateMutation.mutateAsync({ id: item.id, ...submitValues });
+          // Save kit components when editing a KIT
+          if (values.type === 'KIT') {
+            if (kitComponents.length > 0) {
+              await setComponentsMutation.mutateAsync({
+                kit_id: item.id,
+                components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
+              });
+            } else {
+              await clearKitMutation.mutateAsync(item.id);
+            }
+          }
           toast.success('Ítem actualizado correctamente');
         } else {
           const created = await createMutation.mutateAsync(submitValues);
@@ -180,13 +219,14 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       }
       // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
-    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation, setComponentsMutation, kitComponents, onClose],
+    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation, setComponentsMutation, clearKitMutation, kitComponents, onClose],
   );
 
   const isPending =
     createMutation.isPending ||
     updateMutation.isPending ||
     setComponentsMutation.isPending ||
+    clearKitMutation.isPending ||
     isUploading;
 
   const handleFormSubmit = useCallback(
@@ -217,8 +257,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   }, []);
 
   const kitExcludeIds = useMemo(
-    () => kitComponents.map((c) => c.componentId),
-    [kitComponents],
+    () => [item?.id, ...kitComponents.map((c) => c.componentId)].filter(Boolean) as string[],
+    [item?.id, kitComponents],
   );
 
   return (
@@ -375,8 +415,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               </div>
             )}
 
-            {/* Kit components — shown only when type is KIT and creating */}
-            {!isEdit && watchedType === 'KIT' && (
+            {/* Kit components — shown when type is KIT (create or edit) */}
+            {watchedType === 'KIT' && (
               <>
                 <Separator />
                 <div className="space-y-2">
