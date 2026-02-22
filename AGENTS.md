@@ -91,6 +91,7 @@ Each `[domain].schema.ts` file is divided into two explicit sections.
   - No serialization overrides → `export type ProjectEntity = Project`
   - `Decimal` fields → `export type ItemEntity = Omit<Item, 'stock'> & { stock: number }`
   - `Date` fields (JSON-serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
+  - **Join/relation fields** → `export type UserEntity = User & { workArea: string | null }` (field flattened from a related table; the service maps it)
 - **Safety guarantee:** Adding a new column to the Prisma schema causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. This is intentional — schema drift surfaces at compile time.
 - **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
   - `null`-able optional fields (e.g. `String?`) are mapped as-is: `observations: item.observations ?? null`.

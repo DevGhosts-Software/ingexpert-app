@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { UsersService } from './services/users.service';
+import { AdminUsersService } from './services/admin-users.service';
 import { UpdateUserSchema } from '@ingexpert/schema';
+import { z } from 'zod';
 
 @Injectable()
 export class UsersRouter {
   constructor(
     private readonly trpc: TrpcService,
     private readonly usersService: UsersService,
+    private readonly adminUsersService: AdminUsersService,
   ) {}
 
   public get router() {
@@ -22,9 +25,11 @@ export class UsersRouter {
           return await this.usersService.update(ctx.user.id, input);
         }),
 
-      removeMe: this.trpc.protectedProcedure.mutation(async ({ ctx }) => {
-        return await this.usersService.remove(ctx.user.id);
-      }),
+      updateMyPassword: this.trpc.protectedProcedure
+        .input(z.object({ password: z.string().min(8) }))
+        .mutation(async ({ input, ctx }) => {
+          return await this.adminUsersService.changePassword(ctx.user.id, input.password);
+        }),
     });
   }
 }
