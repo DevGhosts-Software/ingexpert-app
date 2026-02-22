@@ -244,7 +244,9 @@ async function main() {
   if (fs.existsSync(sqlPath)) {
     console.log('\nRunning SQL script: app-data bucket policies.sql...');
     const sql = fs.readFileSync(sqlPath, 'utf-8');
-    const dbClient = new Client({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL });
+    const dbClient = new Client({
+      connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
+    });
     await dbClient.connect();
     try {
       await dbClient.query(sql);

@@ -32,9 +32,9 @@ export class UsersRouter {
         }),
 
       listNames: this.trpc.protectedProcedure.query(async () => {
-        return await this.usersService.findAll().then((users) =>
-          users.map((u) => ({ id: u.id, name: u.name, email: u.email })),
-        );
+        return await this.usersService
+          .findAll()
+          .then((users) => users.map((u) => ({ id: u.id, name: u.name, email: u.email })));
       }),
     });
   }

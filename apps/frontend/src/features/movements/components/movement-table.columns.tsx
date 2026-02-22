@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowDownCircle, ArrowUpCircle, CalendarIcon, Eye, MapPin, MoreHorizontal, Package } from 'lucide-react';
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  CalendarIcon,
+  Eye,
+  MapPin,
+  MoreHorizontal,
+  Package,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -82,7 +90,10 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       accessorKey: 'creatorName',
       header: 'Creado por',
       cell: ({ row }) => (
-        <span className="font-medium block max-w-[160px] truncate" title={row.original.creatorName ?? ''}>
+        <span
+          className="font-medium block max-w-[160px] truncate"
+          title={row.original.creatorName ?? ''}
+        >
           {row.original.creatorName ?? '—'}
         </span>
       ),
@@ -105,7 +116,10 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       header: 'Destino',
       cell: ({ row }) =>
         row.original.destination ? (
-          <span className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]" title={row.original.destination}>
+          <span
+            className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
+            title={row.original.destination}
+          >
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{row.original.destination}</span>
           </span>

@@ -154,16 +154,23 @@ export class MovementsService {
         const originalQuantities = new Map<string, number>();
         const originalWasExit = original.type === MovementType.EXIT;
         for (const d of original.details) {
-          originalQuantities.set(d.itemId, (originalQuantities.get(d.itemId) ?? 0) + d.quantity.toNumber());
+          originalQuantities.set(
+            d.itemId,
+            (originalQuantities.get(d.itemId) ?? 0) + d.quantity.toNumber(),
+          );
         }
         for (const [itemId, needed] of newQuantities.entries()) {
           const item = itemsMap.get(itemId);
           if (!item) throw new BadRequestException(`El ítem con ID ${itemId} no existe.`);
           const currentStock = item.stock.toNumber();
           const originalQty = originalQuantities.get(itemId) ?? 0;
-          const stockAfterReverse = originalWasExit ? currentStock + originalQty : currentStock - originalQty;
+          const stockAfterReverse = originalWasExit
+            ? currentStock + originalQty
+            : currentStock - originalQty;
           if (stockAfterReverse < needed) {
-            throw new BadRequestException(`Stock insuficiente para "${item.name}". Disponible: ${stockAfterReverse}, solicitado: ${needed}.`);
+            throw new BadRequestException(
+              `Stock insuficiente para "${item.name}". Disponible: ${stockAfterReverse}, solicitado: ${needed}.`,
+            );
           }
         }
       }

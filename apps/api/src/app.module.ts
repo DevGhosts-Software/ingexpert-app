@@ -40,4 +40,4 @@ import { KitsModule } from './kits/kits.module';
     AppRouter,
   ],
 })
-export class AppModule { }
+export class AppModule {}

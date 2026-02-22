@@ -10,15 +10,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ChevronDown,
-  Filter,
-  Plus,
-  Search,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Filter, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +43,8 @@ import { getColumns } from './movement-table.columns';
 import { MovementDetailSheet } from './movement-detail-sheet';
 import { MovementFormSheet } from './movement-form-sheet';
 import type { ActiveTab, MovementRow, TypeCounts } from './movement-table.types';
-import type { ProjectEntity } from '@ingexpert/schema';
+
+type ProjectOption = { id: string; name: string };
 
 interface MovementTableProps {
   movements: MovementRow[];
@@ -65,7 +58,7 @@ interface MovementTableProps {
   onTypeFilterChange: (v: ActiveTab) => void;
   projectFilter: string;
   onProjectFilterChange: (v: string) => void;
-  projects: ProjectEntity[];
+  projects: ProjectOption[];
   typeCounts: TypeCounts;
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
@@ -133,7 +126,9 @@ export function MovementTable({
                 <Filter className="h-4 w-4" />
                 Filtros
                 {projectFilter !== 'all' && (
-                  <Badge variant="secondary" className="h-4 px-1 text-xs font-mono">1</Badge>
+                  <Badge variant="secondary" className="h-4 px-1 text-xs font-mono">
+                    1
+                  </Badge>
                 )}
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
@@ -213,7 +208,9 @@ export function MovementTable({
                   <TableHead key={header.id}>
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <button
-                        onClick={() => header.column.toggleSorting(header.column.getIsSorted() === 'asc')}
+                        onClick={() =>
+                          header.column.toggleSorting(header.column.getIsSorted() === 'asc')
+                        }
                         className="group flex items-center gap-1 hover:text-foreground font-medium"
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}

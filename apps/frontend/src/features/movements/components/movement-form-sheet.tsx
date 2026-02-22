@@ -194,235 +194,242 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           <ScrollArea className="flex-1 mt-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onValidSubmit)} className="space-y-5 pr-4">
-              {/* Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de movimiento</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="EXIT">
-                          <span className="flex items-center gap-2">
-                            <ArrowUpCircle className="h-4 w-4 text-orange-500" /> Salida
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="ENTRY">
-                          <span className="flex items-center gap-2">
-                            <ArrowDownCircle className="h-4 w-4 text-green-500" /> Entrada
-                          </span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Destination (EXIT only) */}
-              {watchedType === 'EXIT' && (
+                {/* Type */}
                 <FormField
                   control={form.control}
-                  name="destination"
+                  name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Destino{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Sitio de Obra Norte" {...field} />
-                      </FormControl>
+                      <FormLabel>Tipo de movimiento</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="EXIT">
+                            <span className="flex items-center gap-2">
+                              <ArrowUpCircle className="h-4 w-4 text-orange-500" /> Salida
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="ENTRY">
+                            <span className="flex items-center gap-2">
+                              <ArrowDownCircle className="h-4 w-4 text-green-500" /> Entrada
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
 
-              {/* Project */}
-              <FormField
-                control={form.control}
-                name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <ClipboardList className="inline h-3.5 w-3.5 mr-1" />
-                      Proyecto <span className="text-muted-foreground font-normal">(opcional)</span>
-                    </FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                      value={field.value ?? 'none'}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sin proyecto" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Sin proyecto</SelectItem>
-                        {projects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+                {/* Destination (EXIT only) */}
+                {watchedType === 'EXIT' && (
+                  <FormField
+                    control={form.control}
+                    name="destination"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Destino{' '}
+                          <span className="text-muted-foreground font-normal">(opcional)</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: Sitio de Obra Norte" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
 
-              {/* Responsible delivery */}
-              <FormField
-                control={form.control}
-                name="responsibleDeliveryId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Responsable de entrega{' '}
-                      <span className="text-muted-foreground font-normal">(opcional)</span>
-                    </FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                      value={field.value ?? 'none'}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Sin asignar</SelectItem>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name ?? u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Responsible receipt */}
-              <FormField
-                control={form.control}
-                name="responsibleReceiptId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Responsable de recepción{' '}
-                      <span className="text-muted-foreground font-normal">(opcional)</span>
-                    </FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                      value={field.value ?? 'none'}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Sin asignar</SelectItem>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name ?? u.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Separator />
-
-              {/* Items */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium">
-                  Ítems del movimiento
-                  {movementItems.length > 0 && (
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      ({movementItems.length})
-                    </span>
+                {/* Project */}
+                <FormField
+                  control={form.control}
+                  name="projectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <ClipboardList className="inline h-3.5 w-3.5 mr-1" />
+                        Proyecto{' '}
+                        <span className="text-muted-foreground font-normal">(opcional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                        value={field.value ?? 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin proyecto" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin proyecto</SelectItem>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </p>
-                <KitComponentsBuilder
-                  components={movementItems}
-                  excludeIds={excludeIds}
-                  onAdd={handleAddItem}
-                  onRemove={handleRemoveItem}
-                  onQtyChange={handleQtyChange}
-                  disabled={isPending}
                 />
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2 pb-4">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? 'Registrando...' : 'Revisar y confirmar'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
+                {/* Responsible delivery */}
+                <FormField
+                  control={form.control}
+                  name="responsibleDeliveryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Responsable de entrega{' '}
+                        <span className="text-muted-foreground font-normal">(opcional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                        value={field.value ?? 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name ?? u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-    {/* Confirmation dialog — shown after form validation passes */}
-    <AlertDialog open={!!pendingPayload} onOpenChange={(v) => !v && setPendingPayload(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Confirmar registro del movimiento?</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">
-                Este movimiento <strong>no podrá editarse</strong> una vez registrado. Revisa los datos antes de continuar.
-              </p>
-              {pendingPayload && (
-                <div className="rounded-md border divide-y text-sm">
-                  <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
-                    <span>Ítem</span>
-                    <span className="text-right">Cantidad</span>
-                  </div>
-                  {pendingPayload.details.map((d, i) => {
-                    const item = movementItems.find((m) => m.componentId === d.itemId);
-                    return (
-                      <div key={i} className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 items-center">
-                        <div className="min-w-0">
-                          <p className="font-medium leading-tight truncate">{item?.name ?? d.itemId}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{item?.code}</p>
-                        </div>
-                        <span className="text-right font-mono text-xs whitespace-nowrap">
-                          {d.quantity} {item?.unit}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Responsible receipt */}
+                <FormField
+                  control={form.control}
+                  name="responsibleReceiptId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Responsable de recepción{' '}
+                        <span className="text-muted-foreground font-normal">(opcional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                        value={field.value ?? 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name ?? u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Separator />
+
+                {/* Items */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    Ítems del movimiento
+                    {movementItems.length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({movementItems.length})
+                      </span>
+                    )}
+                  </p>
+                  <KitComponentsBuilder
+                    components={movementItems}
+                    excludeIds={excludeIds}
+                    onAdd={handleAddItem}
+                    onRemove={handleRemoveItem}
+                    onQtyChange={handleQtyChange}
+                    disabled={isPending}
+                  />
                 </div>
-              )}
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Volver a editar</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isPending}>
-            {isPending ? 'Registrando...' : 'Confirmar registro'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+
+                <div className="flex justify-end gap-2 pt-2 pb-4">
+                  <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending ? 'Registrando...' : 'Revisar y confirmar'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Confirmation dialog — shown after form validation passes */}
+      <AlertDialog open={!!pendingPayload} onOpenChange={(v) => !v && setPendingPayload(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar registro del movimiento?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  Este movimiento <strong>no podrá editarse</strong> una vez registrado. Revisa los
+                  datos antes de continuar.
+                </p>
+                {pendingPayload && (
+                  <div className="rounded-md border divide-y text-sm">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+                      <span>Ítem</span>
+                      <span className="text-right">Cantidad</span>
+                    </div>
+                    {pendingPayload.details.map((d, i) => {
+                      const item = movementItems.find((m) => m.componentId === d.itemId);
+                      return (
+                        <div
+                          key={i}
+                          className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 items-center"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-medium leading-tight truncate">
+                              {item?.name ?? d.itemId}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono">{item?.code}</p>
+                          </div>
+                          <span className="text-right font-mono text-xs whitespace-nowrap">
+                            {d.quantity} {item?.unit}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Volver a editar</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirm} disabled={isPending}>
+              {isPending ? 'Registrando...' : 'Confirmar registro'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
