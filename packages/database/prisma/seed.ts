@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { ItemType, PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Client } from 'pg';
 
 dotenv.config();
 
@@ -234,6 +237,23 @@ async function main() {
     const items = generateItems(needed);
     await prisma.item.createMany({ data: items });
     console.log(`  Created ${needed} items successfully.`);
+  }
+
+  // ── Run SQL script ──
+  const sqlPath = path.join(__dirname, 'app-data bucket policies.sql');
+  if (fs.existsSync(sqlPath)) {
+    console.log('\nRunning SQL script: app-data bucket policies.sql...');
+    const sql = fs.readFileSync(sqlPath, 'utf-8');
+    const dbClient = new Client({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL });
+    await dbClient.connect();
+    try {
+      await dbClient.query(sql);
+      console.log('  SQL script executed successfully.');
+    } finally {
+      await dbClient.end();
+    }
+  } else {
+    console.warn('\nSQL script not found, skipping.');
   }
 
   console.log('\n✅ Seed complete.');
