@@ -9,10 +9,11 @@ model User {
   // ============================================================
   // ACCOUNT & PROFILE
   // ============================================================
-  email  String   @unique
-  role   UserRole @default(USER)
-  name   String?
-  avatar String?
+  email   String   @unique
+  role    UserRole @default(USER)
+  name    String?
+  avatar  String?
+  hasAuth Boolean  @default(true)
 
   staff Staff?
 
@@ -24,15 +25,24 @@ model User {
   @@map("users")
 }
 
+model WorkArea {
+  id   String @id @default(uuid())
+  name String @unique
+
+  staff Staff[]
+
+  @@map("work_areas")
+}
+
 model Staff {
-  id String @id
+  id         String  @id
+  workAreaId String? @map("work_area_id")
 
-  user User @relation(fields: [id], references: [id], onDelete: Cascade)
-
-  workArea String? @map("work_area")
+  user     User      @relation(fields: [id], references: [id], onDelete: Cascade)
+  workArea WorkArea? @relation(fields: [workAreaId], references: [id], onDelete: SetNull)
 
   // Relations
-  disposals          Disposal[]
+  disposals Disposal[]
 
   @@map("staff")
 }

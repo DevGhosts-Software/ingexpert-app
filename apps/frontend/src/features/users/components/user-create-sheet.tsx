@@ -8,10 +8,11 @@ import { z } from 'zod';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { CreateUserSchema, UserRole } from '@ingexpert/schema';
+import { CreateUserSchema, CreateUserWithoutAuthSchema, UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -50,7 +51,15 @@ const CreateUserFormSchema = CreateUserSchema.extend({
   path: ['confirmPassword'],
 });
 
+const CreateUserWithoutAuthFormSchema = CreateUserWithoutAuthSchema.extend({
+  email: z.string().email('Correo electrónico inválido'),
+  name: z.string().max(100).optional().nullable(),
+  role: z.nativeEnum(UserRole),
+  workArea: z.string().max(100).optional().nullable(),
+});
+
 type FormValues = z.infer<typeof CreateUserFormSchema>;
+type WithoutAuthFormValues = z.infer<typeof CreateUserWithoutAuthFormSchema>;
 
 interface UserCreateSheetProps {
   open: boolean;
@@ -174,6 +183,7 @@ function WorkAreaCombobox({
 export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
   const utils = trpc.useUtils();
   const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
+  const [noAuth, setNoAuth] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(CreateUserFormSchema),
@@ -187,49 +197,50 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
     },
   });
 
+  const noAuthForm = useForm<WithoutAuthFormValues>({
+    resolver: zodResolver(CreateUserWithoutAuthFormSchema),
+    defaultValues: { email: '', name: '', role: 'USER', workArea: '' },
+  });
+
   useEffect(() => {
     if (open) {
-      form.reset({
-        email: '',
-        name: '',
-        role: 'USER',
-        workArea: '',
-        password: '',
-        confirmPassword: '',
-      });
+      form.reset({ email: '', name: '', role: 'USER', workArea: '', password: '', confirmPassword: '' });
+      noAuthForm.reset({ email: '', name: '', role: 'USER', workArea: '' });
+      setNoAuth(false);
     }
-  }, [open, form]);
+  }, [open, form, noAuthForm]);
+
+  function invalidate() {
+    void utils.adminUsers.list.invalidate();
+    void utils.adminUsers.getStats.invalidate();
+    void utils.adminUsers.getWorkAreas.invalidate();
+  }
 
   const createMutation = trpc.adminUsers.create.useMutation({
-    onSuccess: () => {
-      toast.success('Usuario creado correctamente');
-      void utils.adminUsers.list.invalidate();
-      void utils.adminUsers.getStats.invalidate();
-      void utils.adminUsers.getWorkAreas.invalidate();
-      onClose();
-    },
+    onSuccess: () => { toast.success('Usuario creado correctamente'); invalidate(); onClose(); },
+    onError: (error) => toast.error(error.message ?? 'Error al crear el usuario'),
+  });
+
+  const createWithoutAuthMutation = trpc.adminUsers.createWithoutAuth.useMutation({
+    onSuccess: () => { toast.success('Usuario creado sin acceso al sistema'); invalidate(); onClose(); },
     onError: (error) => toast.error(error.message ?? 'Error al crear el usuario'),
   });
 
   const onSubmit = useCallback(
     ({ confirmPassword: _, name, workArea, ...rest }: FormValues) => {
-      createMutation.mutate({
-        ...rest,
-        name: name || null,
-        workArea: workArea || null,
-      });
+      createMutation.mutate({ ...rest, name: name || null, workArea: workArea || null });
     },
     [createMutation],
   );
 
-  const handleFormSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      void form.handleSubmit(onSubmit)(e);
+  const onSubmitWithoutAuth = useCallback(
+    ({ name, workArea, ...rest }: WithoutAuthFormValues) => {
+      createWithoutAuthMutation.mutate({ ...rest, name: name || null, workArea: workArea || null });
     },
-    [form, onSubmit],
+    [createWithoutAuthMutation],
   );
 
-  const isPending = createMutation.isPending;
+  const isPending = createMutation.isPending || createWithoutAuthMutation.isPending;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -240,145 +251,110 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
             Crear Nuevo Usuario
           </SheetTitle>
           <SheetDescription>
-            El usuario podrá iniciar sesión con estas credenciales. Solo los administradores pueden
-            crear cuentas.
+            {noAuth
+              ? 'El usuario será registrado en el sistema pero no podrá iniciar sesión.'
+              : 'El usuario podrá iniciar sesión con estas credenciales.'}
           </SheetDescription>
         </SheetHeader>
 
-        <Form {...form}>
-          <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
-            {/* Account info */}
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Correo electrónico</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="usuario@empresa.com"
-                      disabled={isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {/* No-auth toggle */}
+        <div className="flex items-center gap-2 mt-5 p-3 rounded-lg border bg-muted/40">
+          <Checkbox
+            id="no-auth"
+            checked={noAuth}
+            onCheckedChange={(v) => setNoAuth(!!v)}
+            disabled={isPending}
+          />
+          <label htmlFor="no-auth" className="text-sm cursor-pointer leading-none">
+            Sin acceso al sistema{' '}
+            <span className="text-muted-foreground font-normal">(no puede iniciar sesión)</span>
+          </label>
+        </div>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Nombre completo{' '}
-                    <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ej: Juan Pérez"
-                      disabled={isPending}
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rol</FormLabel>
+        {noAuth ? (
+          /* ── No-auth form ── */
+          <Form {...noAuthForm}>
+            <form onSubmit={noAuthForm.handleSubmit(onSubmitWithoutAuth)} className="space-y-4 mt-4">
+              <FormField control={noAuthForm.control} name="email" render={({ field }) => (
+                <FormItem><FormLabel>Correo electrónico</FormLabel>
+                  <FormControl><Input type="email" placeholder="usuario@empresa.com" disabled={isPending} {...field} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <FormField control={noAuthForm.control} name="name" render={({ field }) => (
+                <FormItem><FormLabel>Nombre completo <span className="text-muted-foreground text-xs font-normal">(opcional)</span></FormLabel>
+                  <FormControl><Input placeholder="Ej: Juan Pérez" disabled={isPending} {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <FormField control={noAuthForm.control} name="role" render={({ field }) => (
+                <FormItem><FormLabel>Rol</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar rol" />
-                      </SelectTrigger>
-                    </FormControl>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="USER">Usuario</SelectItem>
                       <SelectItem value="ADMIN">Administrador</SelectItem>
                     </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="workArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Área de trabajo{' '}
-                    <span className="text-muted-foreground text-xs font-normal">(opcional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <WorkAreaCombobox field={field} workAreas={workAreas} disabled={isPending} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
-            {/* Password */}
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contraseña</FormLabel>
-                  <FormControl>
-                    <PasswordInput
-                      placeholder="Mínimo 8 caracteres"
-                      disabled={isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar contraseña</FormLabel>
-                  <FormControl>
-                    <PasswordInput
-                      placeholder="Repite la contraseña"
-                      disabled={isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Creando...' : 'Crear usuario'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+                  </Select><FormMessage /></FormItem>
+              )} />
+              <FormField control={noAuthForm.control} name="workArea" render={({ field }) => (
+                <FormItem><FormLabel>Área de trabajo <span className="text-muted-foreground text-xs font-normal">(opcional)</span></FormLabel>
+                  <FormControl><WorkAreaCombobox field={field} workAreas={workAreas} disabled={isPending} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <Separator />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
+                <Button type="submit" disabled={isPending}>{isPending ? 'Creando...' : 'Crear usuario'}</Button>
+              </div>
+            </form>
+          </Form>
+        ) : (
+          /* ── Full auth form ── */
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem><FormLabel>Correo electrónico</FormLabel>
+                  <FormControl><Input type="email" placeholder="usuario@empresa.com" disabled={isPending} {...field} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem><FormLabel>Nombre completo <span className="text-muted-foreground text-xs font-normal">(opcional)</span></FormLabel>
+                  <FormControl><Input placeholder="Ej: Juan Pérez" disabled={isPending} {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="role" render={({ field }) => (
+                <FormItem><FormLabel>Rol</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="USER">Usuario</SelectItem>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="workArea" render={({ field }) => (
+                <FormItem><FormLabel>Área de trabajo <span className="text-muted-foreground text-xs font-normal">(opcional)</span></FormLabel>
+                  <FormControl><WorkAreaCombobox field={field} workAreas={workAreas} disabled={isPending} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <Separator />
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem><FormLabel>Contraseña</FormLabel>
+                  <FormControl><PasswordInput placeholder="Mínimo 8 caracteres" disabled={isPending} {...field} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="confirmPassword" render={({ field }) => (
+                <FormItem><FormLabel>Confirmar contraseña</FormLabel>
+                  <FormControl><PasswordInput placeholder="Repite la contraseña" disabled={isPending} {...field} /></FormControl>
+                  <FormMessage /></FormItem>
+              )} />
+              <Separator />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
+                <Button type="submit" disabled={isPending}>{isPending ? 'Creando...' : 'Crear usuario'}</Button>
+              </div>
+            </form>
+          </Form>
+        )}
       </SheetContent>
     </Sheet>
   );
