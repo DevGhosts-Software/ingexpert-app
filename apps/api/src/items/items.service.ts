@@ -71,7 +71,13 @@ export class ItemsService {
   }
 
   async remove(id: string): Promise<ItemEntity> {
-    const item = await this.prisma.item.delete({ where: { id } });
+    const item = await this.prisma.$transaction(async (tx) => {
+      // Delete KitDetail rows where this item is a kit (kitId) or a component (componentId)
+      await tx.kitDetail.deleteMany({
+        where: { OR: [{ kitId: id }, { componentId: id }] },
+      });
+      return tx.item.delete({ where: { id } });
+    });
     return this.mapItem(item);
   }
 
