@@ -12,6 +12,7 @@ const pageTitles: Record<string, string> = {
   '/': 'Panel Principal',
   '/inventory': 'Inventario',
   '/movements': 'Movimientos',
+  '/projects': 'Proyectos',
   '/admin/users': 'Gestión de Usuarios',
   '/settings': 'Configuración',
 };

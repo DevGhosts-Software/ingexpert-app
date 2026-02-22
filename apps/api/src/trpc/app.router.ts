@@ -6,6 +6,7 @@ import { AuthRouter } from '../auth/auth.router';
 import { ItemsRouter } from '../items/items.router';
 import { MovementsRouter } from '../movements/movements.router';
 import { KitsRouter } from '../kits/kits.router';
+import { ProjectsRouter } from '../projects/projects.router';
 
 @Injectable()
 export class AppRouter {
@@ -17,6 +18,7 @@ export class AppRouter {
     private readonly itemsRouter: ItemsRouter,
     private readonly movementsRouter: MovementsRouter,
     private readonly kitsRouter: KitsRouter,
+    private readonly projectsRouter: ProjectsRouter,
   ) {}
 
   public get appRouter() {
@@ -36,6 +38,7 @@ export class AppRouter {
       items: this.itemsRouter.router,
       kits: this.kitsRouter.router,
       movements: this.movementsRouter.router,
+      projects: this.projectsRouter.router,
     });
   }
 }

@@ -17,7 +17,7 @@ model Movement {
   createdBy           User             @relation("MovementCreator", fields: [createdById], references: [id])
   responsibleDelivery User?            @relation("MovementDelivery", fields: [responsibleDeliveryId], references: [id])
   responsibleReceipt  User?            @relation("MovementReceipt", fields: [responsibleReceiptId], references: [id])
-  project             Project?         @relation(fields: [projectId], references: [id])
+  project             Project?         @relation(fields: [projectId], references: [id], onDelete: Restrict)
   details             MovementDetail[]
 
   @@map("movements")

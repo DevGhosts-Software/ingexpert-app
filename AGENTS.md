@@ -70,6 +70,18 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 - `pnpm build` - Build production artifacts.
 - `pnpm db:migrate` - Apply schema changes.
 - `pnpm db:studio` - View database content.
+- `pnpm db:generate` - Regenerate Prisma Client after schema edits (required before `build`).
+
+## 4b. Domain Inventory
+
+| Domain    | API module   | Frontend feature       | Notes                                                |
+| --------- | ------------ | ---------------------- | ---------------------------------------------------- |
+| Auth      | `auth/`      | `features/auth/`       | Login only. No public registration.                  |
+| Items     | `items/`     | `features/inventory/`  | PRODUCT, EQUIPMENT, TOOL, KIT. Stock via Decimal.    |
+| Kits      | `kits/`      | (part of inventory UI) | Kit composition — items inside a kit.                |
+| Movements | `movements/` | `features/movements/`  | CREATE-ONLY. EXIT validates stock. Tracks creatorId. |
+| Projects  | `projects/`  | `features/projects/`   | Cannot delete if linked movements exist.             |
+| Users     | `users/`     | `features/users/`      | Two-router architecture. `hasAuth` flag.             |
 
 ## 5. Shared Types in `packages/schema`
 
@@ -91,7 +103,7 @@ Each `[domain].schema.ts` file is divided into two explicit sections.
   - No serialization overrides → `export type ProjectEntity = Project`
   - `Decimal` fields → `export type ItemEntity = Omit<Item, 'stock'> & { stock: number }`
   - `Date` fields (JSON-serialized) → `export type MovementEntity = Omit<Movement, 'date'> & { date: string }`
-  - **Join/relation fields** → `export type UserEntity = User & { workArea: string | null }` (field flattened from a related table; the service maps it)
+  - **Join/relation fields** → `export type UserEntity = User & { workArea: string | null }` (field flattened from the related `WorkArea` table; the service maps `staff?.workArea?.name ?? null`). New scalar columns added to `User` (e.g. `hasAuth`) are automatically included via the `User` base — no explicit override needed.
 - **Safety guarantee:** Adding a new column to the Prisma schema causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. This is intentional — schema drift surfaces at compile time.
 - **Mapping:** API services map `PrismaModel → Entity` via a private `mapXxx()` method before returning from tRPC procedures.
   - `null`-able optional fields (e.g. `String?`) are mapped as-is: `observations: item.observations ?? null`.

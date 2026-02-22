@@ -274,9 +274,44 @@ Key rules:
 - `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
 - The component must be a named function (not inline) to use `useState`.
 
-## 15. Navbar & User Profile
+## 16. Conditional Forms Inside Sheets/Dialogs
 
-`DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
+**Never conditionally swap two different `<Form>` (or any large component tree) inside a Radix `Sheet` or `Dialog`.** Radix's `FocusScope` re-initializes its focus trap when large DOM subtrees are unmounted and remounted, temporarily blocking pointer events on all inputs.
+
+**Wrong:**
+
+```tsx
+// ❌ Swapping Form providers unmounts the DOM subtree → FocusScope blocks all inputs
+{
+  noAuth ? <Form {...noAuthForm}>...</Form> : <Form {...form}>...</Form>;
+}
+```
+
+**Correct:** Use a **single `<Form>`** with one `useForm` instance. Use `superRefine` for conditional validation, and conditionally show/hide sections with `{condition && <>...</>}`:
+
+```tsx
+// ✅ Single form — no DOM remounting, FocusScope stays stable
+const schema = z.object({
+  noAuth: z.boolean(),
+  password: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.noAuth && !data.password) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'Requerido' });
+  }
+});
+
+const form = useForm({ resolver: zodResolver(schema) });
+const noAuth = form.watch('noAuth');
+
+// In JSX — no conditional Form wrapper:
+{!noAuth && (
+  <FormField name="password" ... />
+)}
+```
+
+## 17. Navbar & User Profile
+
+`DashboardNavbar`(`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
 
 `UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** way for any user to edit their own name, avatar URL, and password. It uses:
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeftRight, Boxes, LayoutDashboard, Package, Users } from 'lucide-react';
+import { ArrowLeftRight, Boxes, FolderOpen, LayoutDashboard, Package, Users } from 'lucide-react';
 
 import {
   Sidebar,
@@ -35,6 +35,11 @@ const mainNavItems = [
     title: 'Movimientos',
     href: '/movements',
     icon: ArrowLeftRight,
+  },
+  {
+    title: 'Proyectos',
+    href: '/projects',
+    icon: FolderOpen,
   },
 ];
 

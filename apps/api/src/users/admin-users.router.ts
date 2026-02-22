@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { AdminUsersService } from './services/admin-users.service';
 import { z } from 'zod';
-import { CreateUserSchema, UpdateUserSchema } from '@ingexpert/schema';
+import {
+  CreateUserSchema,
+  CreateUserWithoutAuthSchema,
+  GrantAuthSchema,
+  UpdateUserSchema,
+} from '@ingexpert/schema';
 
 @Injectable()
 export class AdminUsersRouter {
@@ -15,6 +20,20 @@ export class AdminUsersRouter {
     return this.trpc.router({
       create: this.trpc.adminProcedure.input(CreateUserSchema).mutation(async ({ input }) => {
         return await this.adminUsersService.create(input);
+      }),
+
+      createWithoutAuth: this.trpc.adminProcedure
+        .input(CreateUserWithoutAuthSchema)
+        .mutation(async ({ input }) => {
+          return await this.adminUsersService.createWithoutAuth(input);
+        }),
+
+      grantAuth: this.trpc.adminProcedure.input(GrantAuthSchema).mutation(async ({ input }) => {
+        return await this.adminUsersService.grantAuth(input);
+      }),
+
+      revokeAuth: this.trpc.adminProcedure.input(z.string().uuid()).mutation(async ({ input }) => {
+        return await this.adminUsersService.revokeAuth(input);
       }),
 
       list: this.trpc.adminProcedure.query(async () => {
@@ -34,12 +53,7 @@ export class AdminUsersRouter {
       }),
 
       update: this.trpc.adminProcedure
-        .input(
-          z.object({
-            id: z.uuid(),
-            data: UpdateUserSchema,
-          }),
-        )
+        .input(z.object({ id: z.uuid(), data: UpdateUserSchema }))
         .mutation(async ({ input }) => {
           return await this.adminUsersService.update(input.id, input.data);
         }),
@@ -49,12 +63,7 @@ export class AdminUsersRouter {
       }),
 
       updatePassword: this.trpc.adminProcedure
-        .input(
-          z.object({
-            id: z.uuid(),
-            password: z.string(),
-          }),
-        )
+        .input(z.object({ id: z.uuid(), password: z.string() }))
         .mutation(async ({ input }) => {
           return await this.adminUsersService.changePassword(input.id, input.password);
         }),

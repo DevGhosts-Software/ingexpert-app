@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { ItemsModule } from './items/items.module';
 import { MovementsModule } from './movements/movements.module';
 import { KitsModule } from './kits/kits.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { KitsModule } from './kits/kits.module';
     ItemsModule,
     MovementsModule,
     KitsModule,
+    ProjectsModule,
   ],
   controllers: [],
   providers: [

@@ -40,18 +40,22 @@ export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
 
 // Date → string override (ISO serialized over JSON):
 export type MovementEntity = Omit<Movement, 'date'> & { date: string };
+
+// Relation field flattened to scalar (service maps staff?.workArea?.name):
+// hasAuth is included automatically since User now has it as a DB column.
+export type UserEntity = User & { workArea: string | null };
 ```
 
 ## 3. Modules
 
-| File                   | DTOs                                                           | Entities                                 |
-| ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| `auth.schema.ts`       | `LoginSchema` / `LoginDto`                                     | —                                        |
-| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`                         | `UserEntity`                             |
-| `item.schema.ts`       | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema` | `ItemEntity`, `ItemStats`, `ItemCounts`  |
-| `project.schema.ts`    | `CreateProjectSchema`, `UpdateProjectSchema`                   | `ProjectEntity`                          |
-| `movement.schema.ts`   | `CreateMovementSchema`                                         | `MovementEntity`, `MovementDetailEntity` |
-| `pagination.schema.ts` | `BasePaginationSchema`                                         | —                                        |
+| File                   | DTOs                                                                                     | Entities                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `auth.schema.ts`       | `LoginSchema` / `LoginDto`                                                               | —                                                         |
+| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema` | `UserEntity`, `UserStats`                                 |
+| `item.schema.ts`       | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema`                           | `ItemEntity`, `ItemStats`, `ItemCounts`                   |
+| `project.schema.ts`    | `CreateProjectSchema`, `UpdateProjectSchema`, `ProjectPaginationSchema`                  | `ProjectEntity`                                           |
+| `movement.schema.ts`   | `CreateMovementSchema`, `MovementPaginationSchema`                                       | `MovementEntity`, `MovementDetailEntity`, `MovementStats` |
+| `pagination.schema.ts` | `BasePaginationSchema`                                                                   | —                                                         |
 
 ## 4. Naming Conventions
 

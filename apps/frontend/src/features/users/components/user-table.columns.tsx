@@ -8,6 +8,8 @@ import {
   EyeOff,
   KeyRound,
   Loader2,
+  LockKeyhole,
+  LockKeyholeOpen,
   MoreHorizontal,
   Pencil,
   ShieldCheck,
@@ -199,6 +201,172 @@ function ResetPasswordDialog({
   );
 }
 
+// ─── Grant auth dialog ────────────────────────────────────────────────────────
+
+const GrantAuthPwSchema = z
+  .object({
+    password: z.string().min(8, 'Mínimo 8 caracteres'),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+type GrantAuthPwValues = z.infer<typeof GrantAuthPwSchema>;
+
+function GrantAuthDialog({
+  user,
+  open,
+  onClose,
+}: {
+  user: UserEntity;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const form = useForm<GrantAuthPwValues>({
+    resolver: zodResolver(GrantAuthPwSchema),
+    defaultValues: { password: '', confirmPassword: '' },
+  });
+
+  const mutation = trpc.adminUsers.grantAuth.useMutation({
+    onSuccess: () => {
+      toast.success(`Acceso otorgado a ${user.name ?? user.email}`);
+      void utils.adminUsers.list.invalidate();
+      form.reset();
+      onClose();
+    },
+    onError: (err) => toast.error(err.message ?? 'Error al otorgar acceso'),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LockKeyholeOpen className="h-4 w-4" />
+            Dar acceso al sistema
+          </DialogTitle>
+          <DialogDescription>
+            Crea credenciales de inicio de sesión para{' '}
+            <span className="font-medium text-foreground">{user.name ?? user.email}</span>.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(({ password }) =>
+              mutation.mutate({ id: user.id, password }),
+            )}
+            className="space-y-4"
+          >
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contraseña</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Mínimo 8 caracteres"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar contraseña</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Repite la contraseña"
+                      disabled={mutation.isPending}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={mutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Dar acceso
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Revoke auth dialog ───────────────────────────────────────────────────────
+
+function RevokeAuthDialog({
+  user,
+  open,
+  onClose,
+}: {
+  user: UserEntity;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const mutation = trpc.adminUsers.revokeAuth.useMutation({
+    onSuccess: () => {
+      toast.success(`Acceso revocado para ${user.name ?? user.email}`);
+      void utils.adminUsers.list.invalidate();
+      onClose();
+    },
+    onError: (err) => toast.error(err.message ?? 'Error al revocar acceso'),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LockKeyhole className="h-4 w-4 text-destructive" />
+            Revocar acceso al sistema
+          </DialogTitle>
+          <DialogDescription>
+            <span className="font-medium text-foreground">{user.name ?? user.email}</span> ya no
+            podrá iniciar sesión. Su registro en el sistema se mantiene.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => mutation.mutate(user.id)}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Revocar acceso
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Delete confirm dialog ────────────────────────────────────────────────────
 
 function DeleteUserDialog({
@@ -260,13 +428,14 @@ function RowActions({ user }: { user: UserEntity }) {
   const [editOpen, setEditOpen] = useState(false);
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [revokeOpen, setRevokeOpen] = useState(false);
 
   const { data: me } = trpc.users.me.useQuery();
   const currentId = me?.id ?? '';
   const isEditAllowed = canEdit(currentId, user);
   const isDeleteAllowed = canDelete(currentId, user);
-  const isResetPasswordAllowed = user.id === currentId || user.role !== 'ADMIN';
-  // Role change is only shown when editing non-self regular users
+  const isResetPasswordAllowed = user.hasAuth && (user.id === currentId || user.role !== 'ADMIN');
   const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
 
   return (
@@ -288,6 +457,22 @@ function RowActions({ user }: { user: UserEntity }) {
             Restablecer contraseña
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {user.hasAuth ? (
+            <DropdownMenuItem
+              onClick={() => setRevokeOpen(true)}
+              disabled={user.id === currentId}
+              className="text-orange-600 focus:text-orange-600"
+            >
+              <LockKeyhole className="h-4 w-4 mr-2" />
+              Revocar acceso
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => setGrantOpen(true)}>
+              <LockKeyholeOpen className="h-4 w-4 mr-2 text-muted-foreground" />
+              Dar acceso
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             disabled={!isDeleteAllowed}
@@ -308,6 +493,8 @@ function RowActions({ user }: { user: UserEntity }) {
         />
       )}
       <ResetPasswordDialog user={user} open={resetPwOpen} onClose={() => setResetPwOpen(false)} />
+      <GrantAuthDialog user={user} open={grantOpen} onClose={() => setGrantOpen(false)} />
+      <RevokeAuthDialog user={user} open={revokeOpen} onClose={() => setRevokeOpen(false)} />
       <DeleteUserDialog user={user} open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </>
   );
@@ -401,6 +588,26 @@ export function getColumns(): ColumnDef<UserEntity>[] {
         ) : (
           <Badge variant="outline" className="text-muted-foreground text-xs">
             Sin asignar
+          </Badge>
+        ),
+      enableSorting: false,
+    },
+    {
+      id: 'hasAuth',
+      header: 'Acceso',
+      cell: ({ row }) =>
+        row.original.hasAuth ? (
+          <Badge
+            variant="outline"
+            className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+          >
+            <LockKeyholeOpen className="h-3 w-3" />
+            Activo
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="gap-1 text-muted-foreground">
+            <LockKeyhole className="h-3 w-3" />
+            Sin acceso
           </Badge>
         ),
       enableSorting: false,
