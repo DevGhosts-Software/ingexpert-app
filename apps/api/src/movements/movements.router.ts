@@ -25,6 +25,14 @@ export class MovementsRouter {
                     return this.movementsService.findOne(input);
                 }),
 
+            getStats: this.trpc.protectedProcedure.query(async () => {
+                return this.movementsService.getStats();
+            }),
+
+            getProjects: this.trpc.protectedProcedure.query(async () => {
+                return this.movementsService.getProjects();
+            }),
+
             create: this.trpc.protectedProcedure
                 .input(CreateMovementSchema)
                 .mutation(async ({ input }) => {
