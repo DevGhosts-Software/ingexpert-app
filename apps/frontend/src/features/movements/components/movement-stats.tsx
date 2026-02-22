@@ -1,16 +1,10 @@
 import { ArrowDownCircle, ArrowUpCircle, Activity, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
-export interface MovementStats {
-  total: number;
-  entries: number;
-  exits: number;
-  thisMonth: number;
-}
+import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
 
 interface MovementStatsProps {
-  stats: MovementStats;
+  stats: MovementStatsType;
 }
 
 export function MovementStats({ stats }: MovementStatsProps) {

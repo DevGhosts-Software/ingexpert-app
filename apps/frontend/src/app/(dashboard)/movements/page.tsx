@@ -1,113 +1,98 @@
-import {
-  MovementStats,
-  type MovementStats as MovementStatsType,
-} from '@/features/movements/components/movement-stats';
-import { MovementTable, type Movement } from '@/features/movements/components/movement-table';
+'use client';
 
-const mockMovements: Movement[] = [
-  {
-    id: 'a1b2c3d4-0001',
-    type: 'ENTRY',
-    personalName: 'Carlos Méndez',
-    responsibleReceipt: 'Laura Torres',
-    project: 'Proyecto Alfa',
-    date: new Date('2026-02-15T09:30:00'),
-    details: [
-      { itemId: '9', itemName: 'Aceite Lubricante 1L', quantity: 50, unit: 'botellas' },
-      { itemId: '2', itemName: 'Guantes de Seguridad (Mediano)', quantity: 20, unit: 'pares' },
-    ],
-  },
-  {
-    id: 'a1b2c3d4-0002',
-    type: 'EXIT',
-    personalName: 'María González',
-    destination: 'Sitio de Obra Norte',
-    responsibleDelivery: 'Pedro Álvarez',
-    project: 'Proyecto Beta',
-    date: new Date('2026-02-14T14:00:00'),
-    details: [
-      { itemId: '3', itemName: 'Juego de Llaves de Torsión', quantity: 2, unit: 'unidades' },
-      { itemId: '7', itemName: 'Amoladora Angular', quantity: 1, unit: 'unidades' },
-    ],
-  },
-  {
-    id: 'a1b2c3d4-0003',
-    type: 'EXIT',
-    personalName: 'Jorge Ramírez',
-    destination: 'Almacén Central',
-    responsibleDelivery: 'Ana Castillo',
-    date: new Date('2026-02-13T11:15:00'),
-    details: [{ itemId: '13', itemName: 'Bridas de Plástico 200mm', quantity: 3, unit: 'bolsas' }],
-  },
-  {
-    id: 'a1b2c3d4-0004',
-    type: 'ENTRY',
-    personalName: 'Sofía Herrera',
-    responsibleReceipt: 'Carlos Méndez',
-    project: 'Proyecto Alfa',
-    date: new Date('2026-02-12T08:45:00'),
-    details: [
-      { itemId: '6', itemName: 'Discos de Corte 115mm', quantity: 100, unit: 'piezas' },
-      { itemId: '15', itemName: 'Juego de Llaves Allen', quantity: 5, unit: 'juegos' },
-    ],
-  },
-  {
-    id: 'a1b2c3d4-0005',
-    type: 'EXIT',
-    personalName: 'Luis Fernández',
-    destination: 'Laboratorio de Pruebas',
-    project: 'Proyecto Gamma',
-    date: new Date('2026-02-11T16:30:00'),
-    details: [
-      { itemId: '10', itemName: 'Osciloscopio Digital', quantity: 1, unit: 'unidades' },
-      { itemId: '11', itemName: 'Soldador 60W', quantity: 2, unit: 'unidades' },
-    ],
-  },
-  {
-    id: 'a1b2c3d4-0006',
-    type: 'ENTRY',
-    personalName: 'Elena Vargas',
-    responsibleReceipt: 'Jorge Ramírez',
-    project: 'Proyecto Beta',
-    date: new Date('2026-02-10T10:00:00'),
-    details: [
-      { itemId: '4', itemName: 'Kit de Respuesta de Emergencia', quantity: 3, unit: 'kits' },
-      { itemId: '8', itemName: 'Botiquín de Primeros Auxilios Deluxe', quantity: 2, unit: 'kits' },
-    ],
-  },
-  {
-    id: 'a1b2c3d4-0007',
-    type: 'EXIT',
-    personalName: 'Roberto Díaz',
-    destination: 'Taller B',
-    responsibleDelivery: 'María González',
-    date: new Date('2026-01-28T13:00:00'),
-    details: [{ itemId: '1', itemName: 'Taladradora Industrial', quantity: 1, unit: 'unidades' }],
-  },
-  {
-    id: 'a1b2c3d4-0008',
-    type: 'ENTRY',
-    personalName: 'Patricia Morales',
-    responsibleReceipt: 'Luis Fernández',
-    project: 'Proyecto Gamma',
-    date: new Date('2026-01-20T09:00:00'),
-    details: [{ itemId: '14', itemName: 'Compresor de Aire 50L', quantity: 1, unit: 'unidades' }],
-  },
-];
+import { useCallback, useMemo, useState } from 'react';
+import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
+import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
+import { trpc } from '@/lib/trpc';
+import { useDebounce } from '@/hooks/use-debounce';
+import { MovementStats } from '@/features/movements/components/movement-stats';
+import { MovementTable } from '@/features/movements/components/movement-table';
+import type { ActiveTab, TypeCounts } from '@/features/movements/components/movement-table.types';
 
-function computeStats(movements: Movement[]): MovementStatsType {
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  return {
-    total: movements.length,
-    entries: movements.filter((m) => m.type === 'ENTRY').length,
-    exits: movements.filter((m) => m.type === 'EXIT').length,
-    thisMonth: movements.filter((m) => m.date >= firstOfMonth).length,
-  };
-}
+const DEFAULT_STATS: MovementStatsType = { total: 0, entries: 0, exits: 0, thisMonth: 0 };
+const DEFAULT_COUNTS: TypeCounts = { all: 0, entry: 0, exit: 0 };
 
 export default function MovementsPage() {
-  const stats = computeStats(mockMovements);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
+  const [typeFilter, setTypeFilter] = useState<ActiveTab>('all');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }]);
+
+  const { data: allMovements = [], isLoading } = trpc.movements.getAll.useQuery();
+  const { data: stats = DEFAULT_STATS } = trpc.movements.getStats.useQuery();
+  const { data: projects = [] } = trpc.movements.getProjects.useQuery();
+
+  const { tableData, pageCount, typeCounts } = useMemo(() => {
+    const typeMap: Record<ActiveTab, 'ENTRY' | 'EXIT' | undefined> = {
+      all: undefined,
+      entry: 'ENTRY',
+      exit: 'EXIT',
+    };
+
+    const preType = allMovements.filter((m) => {
+      const matchesSearch =
+        debouncedSearch === '' ||
+        (m.creatorName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
+        (m.destination?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
+        (m.projectName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false);
+      const matchesProject = projectFilter === 'all' || m.projectId === projectFilter;
+      return matchesSearch && matchesProject;
+    });
+
+    const typeFilterValue = typeMap[typeFilter];
+    const filtered = typeFilterValue ? preType.filter((m) => m.type === typeFilterValue) : preType;
+
+    const sorted = [...filtered].sort((a, b) => {
+      const col = sorting[0];
+      if (!col) return 0;
+      if (col.id === 'date') {
+        const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        return col.desc ? -diff : diff;
+      }
+      const av = String(a[col.id as keyof typeof a] ?? '');
+      const bv = String(b[col.id as keyof typeof b] ?? '');
+      const cmp = av.localeCompare(bv);
+      return col.desc ? -cmp : cmp;
+    });
+
+    const { pageIndex, pageSize } = pagination;
+
+    return {
+      tableData: sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+      pageCount: Math.ceil(sorted.length / pageSize),
+      typeCounts: {
+        all: preType.length,
+        entry: preType.filter((m) => m.type === 'ENTRY').length,
+        exit: preType.filter((m) => m.type === 'EXIT').length,
+      } satisfies TypeCounts,
+    };
+  }, [allMovements, debouncedSearch, projectFilter, typeFilter, sorting, pagination]);
+
+  const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
+    setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+  }, []);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
+    setSorting((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleTypeFilterChange = useCallback((value: ActiveTab) => {
+    setTypeFilter(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
+
+  const handleProjectFilterChange = useCallback((value: string) => {
+    setProjectFilter(value);
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -119,7 +104,23 @@ export default function MovementsPage() {
       </div>
 
       <MovementStats stats={stats} />
-      <MovementTable movements={mockMovements} />
+      <MovementTable
+        movements={tableData}
+        isLoading={isLoading}
+        pageCount={pageCount}
+        pagination={pagination}
+        onPaginationChange={handlePaginationChange}
+        search={search}
+        onSearchChange={handleSearchChange}
+        typeFilter={typeFilter}
+        onTypeFilterChange={handleTypeFilterChange}
+        projectFilter={projectFilter}
+        onProjectFilterChange={handleProjectFilterChange}
+        projects={projects}
+        typeCounts={typeCounts ?? DEFAULT_COUNTS}
+        sorting={sorting}
+        onSortingChange={handleSortingChange}
+      />
     </div>
   );
 }

@@ -16,6 +16,10 @@ model User {
 
   staff Staff?
 
+  createdMovements      Movement[] @relation("MovementCreator")
+  deliveredMovements    Movement[] @relation("MovementDelivery")
+  receivedMovements     Movement[] @relation("MovementReceipt")
+
   @@index([email])
   @@map("users")
 }
@@ -28,8 +32,6 @@ model Staff {
   workArea String? @map("work_area")
 
   // Relations
-  deliveredMovements Movement[] @relation("ResponsibleDelivery")
-  receivedMovements  Movement[] @relation("ResponsibleReceipt")
   disposals          Disposal[]
 
   @@map("staff")
