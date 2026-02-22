@@ -27,6 +27,10 @@ export class ProjectsRouter {
         return this.projectsService.findAll();
       }),
 
+      getStats: this.trpc.protectedProcedure.query(async () => {
+        return this.projectsService.getStats();
+      }),
+
       create: this.trpc.adminProcedure
         .input(CreateProjectSchema)
         .mutation(async ({ input }) => {

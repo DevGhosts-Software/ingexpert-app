@@ -25,6 +25,11 @@ export class ProjectsService {
     return this.prisma.project.findMany({ orderBy: { name: 'asc' } });
   }
 
+  async getStats(): Promise<{ total: number }> {
+    const total = await this.prisma.project.count();
+    return { total };
+  }
+
   async create(input: CreateProjectDto): Promise<ProjectEntity> {
     return this.prisma.project.create({ data: input });
   }
