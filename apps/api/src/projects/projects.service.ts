@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginatePrisma } from '../utils/paginatePrisma';
 import {
@@ -38,6 +38,14 @@ export class ProjectsService {
   async remove(id: string): Promise<{ id: string }> {
     const existing = await this.prisma.project.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`El proyecto con ID ${id} no existe.`);
+
+    const movementCount = await this.prisma.movement.count({ where: { projectId: id } });
+    if (movementCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar "${existing.name}": tiene ${movementCount} movimiento${movementCount > 1 ? 's' : ''} asociado${movementCount > 1 ? 's' : ''}.`,
+      );
+    }
+
     await this.prisma.project.delete({ where: { id } });
     return { id };
   }
