@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PackagePlus, Pencil } from 'lucide-react';
+import { Boxes, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
@@ -38,6 +38,7 @@ import {
 
 import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
 import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
+import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
 const ItemFormSchema = CreateItemSchema.extend({
   name: z.string().min(1, 'Nombre requerido'),
@@ -62,6 +63,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const originalImageUrl = useRef<string | undefined>(undefined);
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
 
+  const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(ItemFormSchema),
     defaultValues: {
@@ -75,9 +78,12 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     },
   });
 
+  const watchedType = form.watch('type');
+
   // Prefill form when editing
   useEffect(() => {
     imageFieldRef.current?.reset();
+    setKitComponents([]);
     if (isEdit && item && open) {
       originalImageUrl.current = item.imageUrl ?? undefined;
       form.reset({
@@ -104,21 +110,15 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   }, [open, isEdit, item, form]);
 
   const createMutation = trpc.items.create.useMutation({
-    onSuccess: () => {
-      toast.success('Ítem agregado correctamente');
-      void invalidateAll();
-      onClose();
-    },
     onError: (error) => toast.error(error.message ?? 'Error al agregar el ítem'),
   });
 
   const updateMutation = trpc.items.update.useMutation({
-    onSuccess: () => {
-      toast.success('Ítem actualizado correctamente');
-      void invalidateAll();
-      onClose();
-    },
     onError: (error) => toast.error(error.message ?? 'Error al actualizar el ítem'),
+  });
+
+  const setComponentsMutation = trpc.kits.setComponents.useMutation({
+    onError: (error) => toast.error(error.message ?? 'Error al guardar los componentes'),
   });
 
   function invalidateAll() {
@@ -149,23 +149,67 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       }
 
       const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
-      if (isEdit && item) {
-        updateMutation.mutate({ id: item.id, ...submitValues });
-      } else {
-        createMutation.mutate(submitValues);
+
+      try {
+        if (isEdit && item) {
+          await updateMutation.mutateAsync({ id: item.id, ...submitValues });
+          toast.success('Ítem actualizado correctamente');
+        } else {
+          const created = await createMutation.mutateAsync(submitValues);
+          if (values.type === 'KIT' && kitComponents.length > 0) {
+            await setComponentsMutation.mutateAsync({
+              kit_id: created.id,
+              components: kitComponents.map((c) => ({ item_id: c.componentId, quantity: c.quantity })),
+            });
+          }
+          toast.success('Ítem agregado correctamente');
+        }
+        void invalidateAll();
+        onClose();
+      } catch {
+        // errors handled by each mutation's onError
       }
       // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
-    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation],
+    [uploadFile, deleteFile, isEdit, item, updateMutation, createMutation, setComponentsMutation, kitComponents, onClose],
   );
 
-  const isPending = createMutation.isPending || updateMutation.isPending || isUploading;
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    setComponentsMutation.isPending ||
+    isUploading;
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       void form.handleSubmit(onSubmit)(e);
     },
     [form, onSubmit],
+  );
+
+  // Stable kit component handlers
+  const handleKitAdd = useCallback((newItem: LocalComponent) => {
+    setKitComponents((prev) => {
+      if (prev.some((c) => c.componentId === newItem.componentId)) return prev;
+      return [...prev, newItem];
+    });
+  }, []);
+
+  const handleKitRemove = useCallback((componentId: string) => {
+    setKitComponents((prev) => prev.filter((c) => c.componentId !== componentId));
+  }, []);
+
+  const handleKitQtyChange = useCallback((componentId: string, qty: number) => {
+    setKitComponents((prev) =>
+      prev.map((c) =>
+        c.componentId === componentId ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) } : c,
+      ),
+    );
+  }, []);
+
+  const kitExcludeIds = useMemo(
+    () => kitComponents.map((c) => c.componentId),
+    [kitComponents],
   );
 
   return (
@@ -317,6 +361,28 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               />
             </div>
 
+            {/* Kit components — shown only when type is KIT and creating */}
+            {!isEdit && watchedType === 'KIT' && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Boxes className="h-4 w-4 text-muted-foreground" />
+                    Componentes del kit{' '}
+                    <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                  </p>
+                  <KitComponentsBuilder
+                    components={kitComponents}
+                    excludeIds={kitExcludeIds}
+                    onAdd={handleKitAdd}
+                    onRemove={handleKitRemove}
+                    onQtyChange={handleKitQtyChange}
+                    disabled={isPending}
+                  />
+                </div>
+              </>
+            )}
+
             <Separator />
 
             <div className="flex gap-2 justify-end">
@@ -339,3 +405,4 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     </Sheet>
   );
 }
+

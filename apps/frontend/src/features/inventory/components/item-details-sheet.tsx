@@ -1,20 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Boxes, ImageIcon, Loader2, MapPin, Package, Pencil, X } from 'lucide-react';
+import { Boxes, ImageIcon, Loader2, MapPin, Package, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { StorageImage } from '@/components/ui/storage-image';
-import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
-import { useDebounce } from '@/hooks/use-debounce';
 
 import { type InventoryItem, LOW_STOCK_THRESHOLD, TYPE_CONFIG } from './inventory-table.types';
+import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -41,112 +39,6 @@ function StockBadge({ stock }: { stock: number }) {
 }
 
 // ─── Kit components section ───────────────────────────────────────────────────
-
-type LocalComponent = {
-  componentId: string;
-  name: string;
-  code: string;
-  unit: string;
-  stock: number;
-  quantity: number;
-};
-
-function AddComponentInput({
-  excludeIds,
-  onAdd,
-  disabled,
-}: {
-  excludeIds: string[];
-  onAdd: (item: LocalComponent) => void;
-  disabled?: boolean;
-}) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
-  const debouncedQuery = useDebounce(query, 300);
-
-  const { data: results } = trpc.items.list.useQuery(
-    { page: 1, limit: 8, search: debouncedQuery || undefined },
-    { enabled: debouncedQuery.trim().length >= 2 },
-  );
-
-  const filtered = useMemo(
-    () =>
-      (results?.data ?? [])
-        .filter((i) => !excludeIds.includes(i.id))
-        .map((i) => ({ ...i, stock: Number(i.stock) })),
-    [results, excludeIds],
-  );
-
-  const showDropdown = open && debouncedQuery.trim().length >= 2 && filtered.length > 0;
-
-  const handleSelect = (item: (typeof filtered)[0]) => {
-    onAdd({
-      componentId: item.id,
-      name: item.name,
-      code: item.code,
-      unit: item.unit,
-      stock: item.stock,
-      quantity: 1,
-    });
-    setQuery('');
-    setOpen(false);
-    setHighlighted(-1);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlighted((i) => Math.min(i + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlighted((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && highlighted >= 0) {
-      e.preventDefault();
-      handleSelect(filtered[highlighted]);
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    }
-  };
-
-  return (
-    <div className="relative">
-      <Input
-        placeholder="Buscar ítem para agregar..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          setHighlighted(-1);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        className="h-8 text-sm"
-      />
-      {showDropdown && (
-        <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-          {filtered.map((item, i) => (
-            <li
-              key={item.id}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSelect(item)}
-              className={cn(
-                'px-3 py-2 text-sm cursor-pointer flex justify-between items-center gap-2',
-                i === highlighted && 'bg-accent',
-              )}
-            >
-              <span className="truncate">{item.name}</span>
-              <span className="text-xs text-muted-foreground font-mono shrink-0">{item.code}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 function KitComponentsSection({ kitId }: { kitId: string }) {
   const utils = trpc.useUtils();
@@ -208,11 +100,10 @@ function KitComponentsSection({ kitId }: { kitId: string }) {
     }
   };
 
-  const handleQuantityChange = (componentId: string, raw: string) => {
-    const value = parseInt(raw, 10);
+  const handleQuantityChange = (componentId: string, qty: number) => {
     setLocalComponents((prev) =>
       prev.map((c) =>
-        c.componentId === componentId ? { ...c, quantity: Number.isNaN(value) ? 1 : Math.max(1, value) } : c,
+        c.componentId === componentId ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) } : c,
       ),
     );
   };
@@ -257,13 +148,7 @@ function KitComponentsSection({ kitId }: { kitId: string }) {
           </Button>
         ) : (
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleCancel}
-              disabled={isPending}
-            >
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancel} disabled={isPending}>
               Cancelar
             </Button>
             <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={isPending}>
@@ -273,59 +158,43 @@ function KitComponentsSection({ kitId }: { kitId: string }) {
         )}
       </div>
 
-      {displayComponents.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-md">
-          {isEditing ? 'Sin componentes — guarda para limpiar el kit' : 'Este kit no tiene componentes asignados'}
-        </p>
-      ) : (
-        <div className="border rounded-md divide-y text-sm">
-          <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
-            <span>Componente</span>
-            <span className="text-right">Cantidad</span>
-            {isEditing && <span />}
-          </div>
-          {displayComponents.map((comp) => (
-            <div
-              key={comp.componentId}
-              className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center"
-            >
-              <div className="min-w-0">
-                <p className="font-medium leading-tight truncate">{comp.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{comp.code}</p>
-              </div>
-              {isEditing ? (
-                <Input
-                  type="number"
-                  min={1}
-                  value={comp.quantity}
-                  onChange={(e) => handleQuantityChange(comp.componentId, e.target.value)}
-                  className="h-7 w-16 text-xs text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  disabled={isPending}
-                />
-              ) : (
+      {/* View mode: simple read-only list */}
+      {!isEditing && (
+        displayComponents.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4 border border-dashed rounded-md">
+            Este kit no tiene componentes asignados
+          </p>
+        ) : (
+          <div className="border rounded-md divide-y text-sm">
+            <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+              <span>Componente</span>
+              <span className="text-right">Cantidad</span>
+            </div>
+            {displayComponents.map((comp) => (
+              <div key={comp.componentId} className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 items-center">
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight truncate">{comp.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{comp.code}</p>
+                </div>
                 <span className="text-right font-mono text-xs whitespace-nowrap">
                   {comp.quantity} {comp.unit}
                 </span>
-              )}
-              {isEditing && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => handleRemove(comp.componentId)}
-                  disabled={isPending}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
+      {/* Edit mode: shared builder */}
       {isEditing && (
-        <AddComponentInput excludeIds={excludeIds} onAdd={handleAdd} disabled={isPending} />
+        <KitComponentsBuilder
+          components={localComponents}
+          excludeIds={excludeIds}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+          onQtyChange={handleQuantityChange}
+          disabled={isPending}
+        />
       )}
     </div>
   );
