@@ -180,7 +180,7 @@ export function MovementTable({
       </div>
 
       {/* Create sheet */}
-      <MovementFormSheet mode="create" open={createOpen} onClose={() => setCreateOpen(false)} />
+      <MovementFormSheet open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Row detail sheet */}
       <MovementDetailSheet

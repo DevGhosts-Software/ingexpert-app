@@ -3,12 +3,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowDownCircle, ArrowUpCircle, ClipboardList, PackagePlus, Pencil } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, ClipboardList, PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { z } from 'zod';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Form,
   FormControl,
@@ -39,7 +50,6 @@ import {
   KitComponentsBuilder,
   type LocalComponent,
 } from '@/features/inventory/components/kit-components-builder';
-import type { MovementRow } from './movement-table.types';
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
 
@@ -51,43 +61,22 @@ type FormValues = z.infer<typeof MovementFormSchema>;
 type MovementItem = LocalComponent; // reuse shape: componentId = itemId
 
 interface MovementFormSheetProps {
-  mode: 'create' | 'edit';
-  movement?: MovementRow | null;
   open: boolean;
   onClose: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function MovementFormSheet({ mode, movement, open, onClose }: MovementFormSheetProps) {
+export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   const utils = trpc.useUtils();
-  const isEdit = mode === 'edit';
 
   // ── Items list state ────────────────────────────────────────────────────────
   const [movementItems, setMovementItems] = useState<MovementItem[]>([]);
 
-  // Load full movement details for edit
-  const { data: existingMovement } = trpc.movements.getById.useQuery(movement?.id ?? '', {
-    enabled: isEdit && !!movement?.id && open,
-  });
-
-  // Mirror query data into local state — same pattern as kit components
+  // Reset items when sheet closes
   useEffect(() => {
-    if (open && isEdit && existingMovement) {
-      setMovementItems(
-        existingMovement.details.map((d) => ({
-          componentId: d.itemId,
-          name: d.item.name,
-          code: d.item.code,
-          unit: d.item.unit,
-          stock: Number(d.item.stock),
-          quantity: Number(d.quantity),
-        })),
-      );
-    } else if (!open) {
-      setMovementItems([]);
-    }
-  }, [open, isEdit, existingMovement]);
+    if (!open) setMovementItems([]);
+  }, [open]);
 
   // ── Support data ────────────────────────────────────────────────────────────
   const { data: projects = [] } = trpc.movements.getProjects.useQuery();
@@ -108,15 +97,7 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
   const watchedType = form.watch('type');
 
   useEffect(() => {
-    if (isEdit && existingMovement && open) {
-      form.reset({
-        type: existingMovement.type,
-        destination: existingMovement.destination ?? '',
-        responsibleDeliveryId: existingMovement.responsibleDeliveryId ?? undefined,
-        responsibleReceiptId: existingMovement.responsibleReceiptId ?? undefined,
-        projectId: existingMovement.projectId ?? undefined,
-      });
-    } else if (!isEdit && open) {
+    if (open) {
       form.reset({
         type: 'EXIT',
         destination: '',
@@ -125,15 +106,11 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
         projectId: undefined,
       });
     }
-  }, [open, isEdit, existingMovement, form]);
+  }, [open, form]);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const createMutation = trpc.movements.create.useMutation({
     onError: (e) => toast.error(e.message ?? 'Error al registrar movimiento'),
-  });
-
-  const updateMutation = trpc.movements.update.useMutation({
-    onError: (e) => toast.error(e.message ?? 'Error al actualizar movimiento'),
   });
 
   function invalidateAll() {
@@ -165,65 +142,58 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
     );
   }, []);
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
-  const onSubmit = useCallback(
-    async (values: FormValues) => {
+  const isPending = createMutation.isPending;
+  const excludeIds: string[] = [];
+
+  // ── Confirm dialog state ────────────────────────────────────────────────────
+  const [pendingPayload, setPendingPayload] = useState<CreateMovementDto | null>(null);
+
+  // Called by react-hook-form on valid submission — shows confirm dialog
+  const onValidSubmit = useCallback(
+    (values: FormValues) => {
       if (movementItems.length === 0) {
         toast.error('Agrega al menos un ítem al movimiento');
         return;
       }
-
-      const payload = {
+      setPendingPayload({
         ...values,
         destination: values.destination || undefined,
         details: movementItems.map((i) => ({ itemId: i.componentId, quantity: i.quantity })),
-      };
-
-      try {
-        if (isEdit && movement) {
-          await updateMutation.mutateAsync({ id: movement.id, data: payload });
-          toast.success('Movimiento actualizado correctamente');
-        } else {
-          await createMutation.mutateAsync(payload);
-          toast.success('Movimiento registrado correctamente');
-        }
-        void invalidateAll();
-        onClose();
-      } catch {
-        // errors handled by mutation onError
-      }
+      });
     },
-    [movementItems, isEdit, movement, createMutation, updateMutation, onClose],
+    [movementItems],
   );
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
-  const excludeIds: string[] = [];
+  // Called when user confirms in the dialog
+  const onConfirm = useCallback(async () => {
+    if (!pendingPayload) return;
+    try {
+      await createMutation.mutateAsync(pendingPayload);
+      toast.success('Movimiento registrado correctamente');
+      void invalidateAll();
+      setPendingPayload(null);
+      onClose();
+    } catch {
+      // handled by mutation onError
+    }
+  }, [pendingPayload, createMutation, onClose]);
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col p-4">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {isEdit ? (
-              <>
-                <Pencil className="h-5 w-5" /> Editar Movimiento
-              </>
-            ) : (
-              <>
-                <PackagePlus className="h-5 w-5" /> Registrar Movimiento
-              </>
-            )}
-          </SheetTitle>
-          <SheetDescription>
-            {isEdit
-              ? `Editando movimiento #${movement?.id.slice(0, 8).toUpperCase()}`
-              : 'Registra una entrada o salida de material'}
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onClose}>
+        <SheetContent className="w-full sm:max-w-lg flex flex-col p-4">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <PackagePlus className="h-5 w-5" /> Registrar Movimiento
+            </SheetTitle>
+            <SheetDescription>
+              Registra una entrada o salida de material. Una vez confirmado, no podrá editarse.
+            </SheetDescription>
+          </SheetHeader>
 
-        <ScrollArea className="flex-1 mt-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 pr-4">
+          <ScrollArea className="flex-1 mt-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onValidSubmit)} className="space-y-5 pr-4">
               {/* Type */}
               <FormField
                 control={form.control}
@@ -401,7 +371,7 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Registrar movimiento'}
+                  {isPending ? 'Registrando...' : 'Revisar y confirmar'}
                 </Button>
               </div>
             </form>
@@ -409,5 +379,50 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    {/* Confirmation dialog — shown after form validation passes */}
+    <AlertDialog open={!!pendingPayload} onOpenChange={(v) => !v && setPendingPayload(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Confirmar registro del movimiento?</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Este movimiento <strong>no podrá editarse</strong> una vez registrado. Revisa los datos antes de continuar.
+              </p>
+              {pendingPayload && (
+                <div className="rounded-md border divide-y text-sm">
+                  <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+                    <span>Ítem</span>
+                    <span className="text-right">Cantidad</span>
+                  </div>
+                  {pendingPayload.details.map((d, i) => {
+                    const item = movementItems.find((m) => m.componentId === d.itemId);
+                    return (
+                      <div key={i} className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2 items-center">
+                        <div className="min-w-0">
+                          <p className="font-medium leading-tight truncate">{item?.name ?? d.itemId}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{item?.code}</p>
+                        </div>
+                        <span className="text-right font-mono text-xs whitespace-nowrap">
+                          {d.quantity} {item?.unit}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Volver a editar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={isPending}>
+            {isPending ? 'Registrando...' : 'Confirmar registro'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

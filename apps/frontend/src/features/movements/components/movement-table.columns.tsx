@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowDownCircle, ArrowUpCircle, CalendarIcon, Eye, MapPin, MoreHorizontal, Package, Pencil } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, CalendarIcon, Eye, MapPin, MoreHorizontal, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { MovementDetailSheet } from './movement-detail-sheet';
-import { MovementFormSheet } from './movement-form-sheet';
 import type { MovementRow } from './movement-table.types';
 
 export function TypeBadge({ type }: { type: 'ENTRY' | 'EXIT' }) {
@@ -37,7 +36,7 @@ export function TypeBadge({ type }: { type: 'ENTRY' | 'EXIT' }) {
 }
 
 function RowActions({ row }: { row: MovementRow }) {
-  const [view, setView] = useState<'details' | 'edit' | null>(null);
+  const [open, setOpen] = useState(false);
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -49,19 +48,14 @@ function RowActions({ row }: { row: MovementRow }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setView('details')}>
+          <DropdownMenuItem onClick={() => setOpen(true)}>
             <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
             Ver detalle
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setView('edit')}>
-            <Pencil className="h-4 w-4 mr-2 text-muted-foreground" />
-            Editar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <MovementDetailSheet movementId={row.id} open={view === 'details'} onClose={() => setView(null)} />
-      <MovementFormSheet mode="edit" movement={row} open={view === 'edit'} onClose={() => setView(null)} />
+      <MovementDetailSheet movementId={row.id} open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
