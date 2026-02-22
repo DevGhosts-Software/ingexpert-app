@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -118,27 +118,38 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
     onError: (err) => toast.error(err.message),
   });
 
-  const onAvatarSubmit = async (values: AvatarValues) => {
-    const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
-    let finalAvatarUrl = values.avatar ?? null;
+  const onAvatarSubmit = useCallback(
+    async (values: AvatarValues) => {
+      const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
+      let finalAvatarUrl = values.avatar ?? null;
 
-    if (pendingFile) {
-      try {
-        finalAvatarUrl = await uploadFile(pendingFile);
-      } catch {
-        return; // uploadFile toasts the error
-      }
-      // Delete old avatar if replaced
-      if (user.avatar && user.avatar !== finalAvatarUrl) {
+      if (pendingFile) {
+        try {
+          finalAvatarUrl = await uploadFile(pendingFile);
+        } catch {
+          return; // uploadFile toasts the error
+        }
+        // Delete old avatar if replaced
+        if (user.avatar && user.avatar !== finalAvatarUrl) {
+          void deleteFile(user.avatar);
+        }
+      } else if (finalAvatarUrl === null && user.avatar) {
+        // Avatar was explicitly removed — delete from storage
         void deleteFile(user.avatar);
       }
-    } else if (finalAvatarUrl === null && user.avatar) {
-      // Avatar was explicitly removed — delete from storage
-      void deleteFile(user.avatar);
-    }
 
-    updateMeMutation.mutate({ avatar: finalAvatarUrl });
-  };
+      updateMeMutation.mutate({ avatar: finalAvatarUrl });
+    },
+    [uploadFile, deleteFile, user.avatar, updateMeMutation],
+  );
+
+  const handleAvatarFormSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      void avatarForm.handleSubmit(onAvatarSubmit)(e);
+    },
+    [avatarForm, onAvatarSubmit],
+  );
 
   // ── Password form ──
   const passwordForm = useForm<PasswordValues>({
@@ -194,7 +205,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
         <div className="px-6 py-5">
           <p className="text-sm font-medium mb-4">Foto de perfil</p>
           <Form {...avatarForm}>
-            <form onSubmit={avatarForm.handleSubmit(onAvatarSubmit)} className="space-y-4">
+            <form onSubmit={handleAvatarFormSubmit} className="space-y-4">
               <FormField
                 control={avatarForm.control}
                 name="avatar"
