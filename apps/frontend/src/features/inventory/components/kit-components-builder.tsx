@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,10 +36,12 @@ export function AddComponentInput({
   const [highlighted, setHighlighted] = useState(-1);
   const debouncedQuery = useDebounce(query, 300);
 
-  const { data: results } = trpc.items.list.useQuery(
+  const { data: results, isFetching } = trpc.items.list.useQuery(
     { page: 1, limit: 8, search: debouncedQuery || undefined },
     { enabled: debouncedQuery.trim().length >= 2 },
   );
+
+  const isSearching = isFetching || (query.trim().length >= 2 && debouncedQuery !== query);
 
   const filtered = useMemo(
     () =>
@@ -49,7 +51,9 @@ export function AddComponentInput({
     [results, excludeIds],
   );
 
-  const showDropdown = open && debouncedQuery.trim().length >= 2 && filtered.length > 0;
+  const showDropdown = open && debouncedQuery.trim().length >= 2 && (filtered.length > 0 || isSearching);
+
+  const showEmpty = open && debouncedQuery.trim().length >= 2 && !isSearching && filtered.length === 0;
 
   const handleSelect = (item: (typeof filtered)[0]) => {
     onAdd({
@@ -83,36 +87,50 @@ export function AddComponentInput({
 
   return (
     <div className="relative">
-      <Input
-        placeholder="Buscar ítem para agregar..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          setHighlighted(-1);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        className="h-8 text-sm"
-      />
-      {showDropdown && (
+      <div className="relative">
+        <Input
+          placeholder="Buscar ítem para agregar..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            setHighlighted(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          className="h-8 text-sm pr-8"
+        />
+        {isSearching && (
+          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground pointer-events-none" />
+        )}
+      </div>
+      {(showDropdown || showEmpty) && (
         <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-          {filtered.map((item, i) => (
-            <li
-              key={item.id}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSelect(item)}
-              className={cn(
-                'px-3 py-2 text-sm cursor-pointer flex justify-between items-center gap-2',
-                i === highlighted && 'bg-accent',
-              )}
-            >
-              <span className="truncate">{item.name}</span>
-              <span className="text-xs text-muted-foreground font-mono shrink-0">{item.code}</span>
+          {isSearching && filtered.length === 0 ? (
+            <li className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Buscando...
             </li>
-          ))}
+          ) : showEmpty ? (
+            <li className="px-3 py-3 text-sm text-muted-foreground">Sin resultados</li>
+          ) : (
+            filtered.map((item, i) => (
+              <li
+                key={item.id}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleSelect(item)}
+                className={cn(
+                  'px-3 py-2 text-sm cursor-pointer flex justify-between items-center gap-2',
+                  i === highlighted && 'bg-accent',
+                )}
+              >
+                <span className="truncate">{item.name}</span>
+                <span className="text-xs text-muted-foreground font-mono shrink-0">{item.code}</span>
+              </li>
+            ))
+          )}
         </ul>
       )}
     </div>

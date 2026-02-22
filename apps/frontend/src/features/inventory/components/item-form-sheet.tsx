@@ -80,6 +80,15 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
   const watchedType = form.watch('type');
 
+  // Auto-fill hidden KIT fields so validation passes
+  useEffect(() => {
+    if (watchedType === 'KIT') {
+      form.setValue('unit', 'kit', { shouldValidate: false });
+      form.setValue('stock', 0, { shouldValidate: false });
+      form.setValue('imageUrl', undefined, { shouldValidate: false });
+    }
+  }, [watchedType, form]);
+
   // Prefill form when editing
   useEffect(() => {
     imageFieldRef.current?.reset();
@@ -229,28 +238,30 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
         <Form {...form}>
           <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
-            {/* Image upload */}
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
-                  </FormLabel>
-                  <FormControl>
-                    <ImageUploadField
-                      ref={imageFieldRef}
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={isPending}
-                      isUploading={isUploading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Image upload — hidden for KIT items */}
+            {watchedType !== 'KIT' && (
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <ImageUploadField
+                        ref={imageFieldRef}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isPending}
+                        isUploading={isUploading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -323,43 +334,46 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="stock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        placeholder="0"
-                        disabled={isPending}
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Stock + Unit — hidden for KIT items */}
+            {watchedType !== 'KIT' && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="any"
+                          placeholder="0"
+                          disabled={isPending}
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unidad</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidad</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* Kit components — shown only when type is KIT and creating */}
             {!isEdit && watchedType === 'KIT' && (

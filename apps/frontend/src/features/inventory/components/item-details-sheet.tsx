@@ -219,25 +219,27 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
-          {/* Image */}
-          {item.imageUrl ? (
-            <div className="w-full rounded-lg border overflow-hidden bg-muted/30">
-              <StorageImage
-                src={item.imageUrl}
-                alt={item.name}
-                className="w-full h-48 object-contain"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
-              <div className="flex flex-col items-center gap-1">
-                <ImageIcon className="h-8 w-8 opacity-50" />
-                <span className="text-xs">Sin imagen</span>
+          {/* Image — hidden for KIT items */}
+          {!isKit && (
+            item.imageUrl ? (
+              <div className="w-full rounded-lg border overflow-hidden bg-muted/30">
+                <StorageImage
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="w-full h-48 object-contain"
+                />
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center w-full h-32 rounded-lg border border-dashed bg-muted/30 text-muted-foreground">
+                <div className="flex flex-col items-center gap-1">
+                  <ImageIcon className="h-8 w-8 opacity-50" />
+                  <span className="text-xs">Sin imagen</span>
+                </div>
+              </div>
+            )
           )}
 
-          <Separator />
+          {!isKit && <Separator />}
 
           {/* Fields */}
           <div className="divide-y">
@@ -261,15 +263,20 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
                 </span>
               }
             />
-            <DetailRow
-              label="Stock"
-              value={
-                <span className="font-mono">
-                  {item.stock} {item.unit}
-                </span>
-              }
-            />
-            <DetailRow label="Estado" value={<StockBadge stock={item.stock} />} />
+            {/* Stock + unit — hidden for KIT items */}
+            {!isKit && (
+              <>
+                <DetailRow
+                  label="Stock"
+                  value={
+                    <span className="font-mono">
+                      {item.stock} {item.unit}
+                    </span>
+                  }
+                />
+                <DetailRow label="Estado" value={<StockBadge stock={item.stock} />} />
+              </>
+            )}
           </div>
 
           {/* Kit components */}
