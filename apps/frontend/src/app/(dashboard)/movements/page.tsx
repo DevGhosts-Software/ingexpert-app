@@ -34,7 +34,7 @@ export default function MovementsPage() {
     const preType = allMovements.filter((m) => {
       const matchesSearch =
         debouncedSearch === '' ||
-        m.personalName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (m.creatorName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
         (m.destination?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
         (m.projectName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false);
       const matchesProject = projectFilter === 'all' || m.projectId === projectFilter;

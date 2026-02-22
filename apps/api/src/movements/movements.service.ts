@@ -128,13 +128,6 @@ export class MovementsService {
     });
   }
 
-  async getStaff() {
-    return this.prisma.staff.findMany({
-      select: { id: true, user: { select: { name: true } } },
-      orderBy: { user: { name: 'asc' } },
-    });
-  }
-
   async update(id: string, input: UpdateMovementDto): Promise<MovementEntityWithDetails> {
     const movement = await this.prisma.$transaction(async (tx) => {
       // 1. Load original movement to reverse its stock effects

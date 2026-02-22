@@ -258,7 +258,6 @@ export function MovementFormSheet({ mode, movement, open, onClose }: MovementFor
                 )}
               />
 
-              {/* Personal name */}
               {/* Destination (EXIT only) */}
               {watchedType === 'EXIT' && (
                 <FormField

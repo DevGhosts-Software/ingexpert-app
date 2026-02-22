@@ -33,10 +33,6 @@ export class MovementsRouter {
                 return this.movementsService.getProjects();
             }),
 
-            getStaff: this.trpc.protectedProcedure.query(async () => {
-                return this.movementsService.getStaff();
-            }),
-
             create: this.trpc.protectedProcedure
                 .input(CreateMovementSchema)
                 .mutation(async ({ input, ctx }) => {
