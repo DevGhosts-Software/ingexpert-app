@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const metadata: Metadata = {
-  title: 'Ingexpert - Stock Management',
-  description: 'High-performance stock management system',
+  title: 'IngExpert - Manejo de inventario',
+  description: 'Sistema de manejo de inventario.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
