@@ -27,6 +27,10 @@ out/
 build
 dist
 
+# Tauri
+apps/frontend/src-tauri/target/
+apps/frontend/src-tauri/gen/
+
 
 # Debug
 npm-debug.log*

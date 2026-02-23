@@ -13,6 +13,11 @@
       "cache": false,
       "dependsOn": ["db:migrate"]
     },
+    "next:build": {
+      "dependsOn": ["^build", "db:generate"],
+      "inputs": ["$TURBO_DEFAULT", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**"]
+    },
     "build": {
       "dependsOn": ["^build", "db:generate"],
       "inputs": ["$TURBO_DEFAULT", ".env*"],

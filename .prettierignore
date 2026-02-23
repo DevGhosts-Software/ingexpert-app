@@ -6,6 +6,7 @@ node_modules
 dist
 build
 .next
+out
 .turbo
 
 # Generated
@@ -23,5 +24,8 @@ coverage
 
 # Ignored Components
 apps/frontend/src/components/ui/**
+
+# Tauri
+apps/frontend/src-tauri/
 
 pnpm-lock.yaml
