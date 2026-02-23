@@ -460,7 +460,7 @@ function RowActions({ user }: { user: UserEntity }) {
           {user.hasAuth ? (
             <DropdownMenuItem
               onClick={() => setRevokeOpen(true)}
-              disabled={user.id === currentId}
+              disabled={user.id === currentId || user.role === 'ADMIN'}
               className="text-orange-600 focus:text-orange-600"
             >
               <LockKeyhole className="h-4 w-4 mr-2" />
