@@ -6,8 +6,10 @@
   "license": "UNLICENSED",
   "author": "Alejandro Castro",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "next:dev": "next dev",
+    "next:build": "next build",
     "start": "next start",
     "lint": "eslint . --fix",
     "type-check": "tsc --noEmit",
