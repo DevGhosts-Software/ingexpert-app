@@ -69,14 +69,27 @@ This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://
     ```bash
     pnpm dev
     ```
+    This launches the API dev server and the Tauri desktop app (with the Next.js frontend embedded).
+
+## Pre-Push Checklist
+
+Before committing or pushing, always run the check pipeline:
+
+```bash
+pnpm format   # auto-fix formatting
+pnpm check    # format:check + lint + type-check + Next.js build
+```
+
+> **Note:** `pnpm build` compiles the full Tauri desktop bundle (Rust + Next.js). Use `pnpm check` for fast pre-push verification — it validates Next.js without the Rust compilation step.
 
 ## Scripts
 
-- `pnpm dev`: Start all apps in development mode.
-- `pnpm build`: Build all apps and packages.
-- `pnpm lint`: Lint code quality.
-- `pnpm format`: Applies prettier rules.
-- `pnpm type-check`: Runs typescript compiler checks.
+- `pnpm dev`: Start all apps in development mode (API + Tauri desktop app).
+- `pnpm build`: Build all apps and packages (API + Tauri desktop bundle).
+- `pnpm check`: **Pre-push pipeline** — format check + lint + type-check + Next.js compile. Run this before every push.
+- `pnpm format`: Auto-fix formatting with Prettier.
+- `pnpm lint`: Lint code quality across all packages.
+- `pnpm type-check`: Run TypeScript compiler checks across all packages.
 
 ## License
 

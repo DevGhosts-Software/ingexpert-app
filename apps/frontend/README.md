@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# @ingexpert/frontend
 
-## Getting Started
+The **Ingexpert** desktop application — built with [Next.js](https://nextjs.org) (App Router) and packaged as a native desktop app with [Tauri 2](https://tauri.app/).
 
-First, run the development server:
+## Stack
+
+- **UI Framework:** Next.js 15 (App Router, static export)
+- **Desktop Runtime:** Tauri 2
+- **Styling:** Tailwind CSS v4 + shadcn/ui
+- **Data Fetching:** tRPC + TanStack Query
+- **Auth:** Supabase Auth (client-side, cookie-based)
+
+## Development
+
+Start the Tauri desktop app (spawns the Next.js dev server automatically):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# from the repo root
 pnpm dev
-# or
-bun dev
+
+# or from this workspace directly
+pnpm --filter @ingexpert/frontend dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Tauri window opens pointing at `http://localhost:3000`. Hot-reload works as normal.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Building
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Produces the native desktop installer (runs `next build` internally, then compiles Rust):
 
-## Learn More
+```bash
+# from the repo root
+pnpm build
 
-To learn more about Next.js, take a look at the following resources:
+# or from this workspace directly
+pnpm --filter @ingexpert/frontend build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Output artifacts are in `src-tauri/target/release/bundle/`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Internal Scripts
 
-## Deploy on Vercel
+These are called automatically by Tauri — do not run them directly:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Script       | Purpose                                   |
+| ------------ | ----------------------------------------- |
+| `next:dev`   | Starts the Next.js dev server (port 3000) |
+| `next:build` | Produces the static export into `out/`    |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Pre-Push Checks
+
+Use the monorepo pipeline from the root — validates JS/TS only, no Rust compilation:
+
+```bash
+pnpm format   # auto-fix formatting
+pnpm check    # format:check + lint + type-check + next:build
+```
+
+## Architecture
+
+See [`AGENTS.md`](./AGENTS.md) for the Container/Presenter pattern, type rules, and feature structure.

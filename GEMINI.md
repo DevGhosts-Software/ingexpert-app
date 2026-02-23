@@ -23,7 +23,7 @@ For every task, adhere to this strict sequence:
 
 1.  **Context Check:** Briefly acknowledge which architectural patterns apply (e.g., "Implementing a Transaction service with ACID compliance").
 2.  **Implementation:** Write the code following the project's layered architecture.
-3.  **Safety Check:** Run `pnpm lint` or `pnpm type-check` to catch errors.
+3.  **Safety Check:** Run `pnpm lint` and `pnpm type-check` to catch errors, or `pnpm check` for the full pre-push pipeline (format check + lint + type-check + Next.js build).
 4.  **Formatting:** Run `pnpm format` to ensure consistency.
 
 ## 2. Coding Constraints
