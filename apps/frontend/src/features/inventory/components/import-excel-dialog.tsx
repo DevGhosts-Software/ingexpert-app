@@ -49,7 +49,7 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   return ItemType.PRODUCT;
 }
 
-// Expected columns (all-caps, no accents): CODIGO NOMBRE UBICACION STOCK UNIDAD OBSERVACION
+// Expected columns (all-caps, no accents): CODIGO NOMBRE UBICACION STOCK UNIDAD
 function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
   return rows
     .map(normalizeRow)
@@ -60,8 +60,6 @@ function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
       const location = String(row['UBICACION'] ?? '').trim();
       const stock = Number(row['STOCK'] ?? 0);
       const unit = String(row['UNIDAD'] ?? 'unidad').trim();
-      const observations =
-        row['OBSERVACION'] != null ? String(row['OBSERVACION']).trim() : undefined;
 
       return {
         code: code || name.slice(0, 20),
@@ -71,7 +69,6 @@ function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
         unit: unit || 'unidad',
         type: parseItemType(row['TIPO']),
         imageUrl: '',
-        observations: observations || undefined,
       };
     });
 }
@@ -189,7 +186,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
           <DialogDescription>
             Selecciona un archivo .xlsx. La primera fila debe tener los encabezados en mayusculas:{' '}
             <span className="font-mono font-medium text-foreground">
-              CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD · OBSERVACION
+              CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD
             </span>
             . Los items existentes (por nombre) seran actualizados.
           </DialogDescription>

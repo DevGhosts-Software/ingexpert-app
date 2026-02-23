@@ -71,7 +71,6 @@ export function InventoryTableToolbar({
         UBICACION: item.location,
         STOCK: item.stock,
         UNIDAD: item.unit,
-        OBSERVACION: item.observations ?? '',
       }));
       const ws = xlsxUtils.json_to_sheet(rows);
       const wb = xlsxUtils.book_new();

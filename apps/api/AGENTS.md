@@ -92,7 +92,6 @@ private mapItem(item: Item): ItemEntity {
     unit: item.unit,
     type: item.type,
     imageUrl: item.imageUrl,
-    observations: item.observations ?? null, // optional String? → null
   };
 }
 

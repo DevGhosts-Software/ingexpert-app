@@ -26,7 +26,6 @@ export class ItemsService {
       unit: item.unit,
       type: item.type,
       imageUrl: item.imageUrl,
-      observations: item.observations ?? null,
     };
   }
 
@@ -52,7 +51,6 @@ export class ItemsService {
         unit: createItemDto.unit,
         type: createItemDto.type,
         imageUrl: createItemDto.imageUrl ?? '',
-        observations: createItemDto.observations ?? null,
       },
     });
     return this.mapItem(item);
@@ -91,7 +89,6 @@ export class ItemsService {
         unit: item.unit,
         type: item.type,
         imageUrl: item.imageUrl ?? '',
-        observations: item.observations ?? null,
       })),
     });
   }
@@ -114,7 +111,6 @@ export class ItemsService {
       unit: item.unit,
       type: item.type,
       imageUrl: item.imageUrl ?? '',
-      observations: item.observations ?? null,
     });
 
     const toCreate = items.filter((i) => !existingMap.has(i.name));

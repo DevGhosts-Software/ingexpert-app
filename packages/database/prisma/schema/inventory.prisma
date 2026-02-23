@@ -12,9 +12,8 @@ model Item {
   location String   @map("location")
   stock    Decimal  @default(0) @map("stock") @db.Decimal(10, 2)
   unit     String   @map("unit")
-  type         ItemType @map("type")
-  imageUrl     String   @map("image_url")
-  observations String?  @map("observations")
+  type     ItemType @map("type")
+  imageUrl String   @map("image_url")
 
   // Relations
   disposal        Disposal?
