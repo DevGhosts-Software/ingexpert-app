@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { trpc } from '@/lib/trpc';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
   Sheet,
@@ -30,7 +29,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg p-4">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-4">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
@@ -50,8 +49,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
             Cargando movimiento...
           </div>
         ) : !movement ? null : (
-          <ScrollArea className="h-[calc(100vh-10rem)] mt-6">
-            <div className="space-y-6 pr-4">
+          <div className="mt-6 space-y-6 pr-1 pb-4">
               <div className="flex items-center justify-between">
                 <TypeBadge type={movement.type} />
                 <span className="text-sm text-muted-foreground">
@@ -148,8 +146,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                   </div>
                 )}
               </div>
-            </div>
-          </ScrollArea>
+          </div>
         )}
       </SheetContent>
     </Sheet>

@@ -40,7 +40,7 @@ export function ProjectDeleteSheet({ project, open, onClose }: ProjectDeleteShee
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-sm p-4">
+      <SheetContent className="w-full sm:max-w-sm overflow-y-auto p-4">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
