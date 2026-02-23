@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginDto, LoginSchema } from '@ingexpert/schema';
@@ -24,6 +24,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+
+  const { data: authenticatedUser } = trpc.users.me.useQuery(undefined, { retry: false });
+
+  useEffect(() => {
+    if (authenticatedUser) {
+      router.replace('/');
+    }
+  }, [authenticatedUser, router]);
 
   const form = useForm<LoginDto>({
     resolver: zodResolver(LoginSchema),
