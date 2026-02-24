@@ -38,6 +38,7 @@ export function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
+  const utils = trpc.useUtils();
   const loginMutation = trpc.auth.login.useMutation();
 
   function onSubmit(values: LoginDto) {
@@ -47,9 +48,10 @@ export function LoginForm() {
           access_token: data.access_token,
           refresh_token: data.refresh_token,
         });
+        // Reset the cached users.me error so the dashboard fetches fresh
+        void utils.users.me.reset();
         toast.success('Sesión iniciada correctamente');
         router.push('/');
-        router.refresh();
       },
       onError: (error) => {
         toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');

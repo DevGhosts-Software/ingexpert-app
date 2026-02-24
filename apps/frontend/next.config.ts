@@ -1,10 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'export', // TODO REPLACE MIDDLEWARE WITH CLIENTSIDE AUTHPROVIDER
+  output: 'export',
   reactCompiler: true,
   transpilePackages: ['@ingexpert/database'],
+  trailingSlash: true,
 };
 
 export default nextConfig;

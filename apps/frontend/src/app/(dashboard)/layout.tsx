@@ -36,12 +36,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     enabled: mounted,
   });
 
+  const utils = trpc.useUtils();
   const logoutMutation = trpc.auth.logout.useMutation();
 
   useEffect(() => {
     if (isError) {
       router.push('/login');
-      router.refresh();
     }
   }, [isError, router]);
 
@@ -62,8 +62,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
+        void utils.users.me.reset();
         router.push('/login');
-        router.refresh();
         toast.success('Logged out successfully');
       },
     });

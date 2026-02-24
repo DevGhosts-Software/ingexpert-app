@@ -18,6 +18,7 @@ async function bootstrap() {
       'tauri://localhost',       // Tauri webview on macOS/Linux
     ],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.use(cookieParser());
