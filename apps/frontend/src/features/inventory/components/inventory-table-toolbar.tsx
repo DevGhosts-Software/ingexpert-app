@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
-import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+import { utils as xlsxUtils, write as xlsxWrite, writeFile as xlsxWriteFile } from 'xlsx';
 import { toast } from 'sonner';
 
 import { ItemFormSheet } from './item-form-sheet';
@@ -76,9 +76,31 @@ export function InventoryTableToolbar({
       const wb = xlsxUtils.book_new();
       xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
       const date = new Date().toISOString().slice(0, 10);
-      xlsxWriteFile(wb, `inventario_${date}.xlsx`);
+      const fileName = `inventario_${date}.xlsx`;
+
+      if (typeof window.showSaveFilePicker === 'function') {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Excel Workbook',
+              accept: {
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+              },
+            },
+          ],
+        });
+        const buf = xlsxWrite(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+        const writable = await handle.createWritable();
+        await writable.write(buf);
+        await writable.close();
+      } else {
+        xlsxWriteFile(wb, fileName);
+      }
+
       toast.success('Inventario exportado correctamente');
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       toast.error('Error al exportar el inventario');
     } finally {
       setIsExporting(false);
