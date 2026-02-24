@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -141,6 +141,49 @@ export function AddComponentInput({
   );
 }
 
+// ─── Quantity input with free-form editing ────────────────────────────────────
+
+function QtyInput({
+  componentId,
+  value,
+  onQtyChange,
+  disabled,
+}: {
+  componentId: string;
+  value: number;
+  onQtyChange: (componentId: string, qty: number) => void;
+  disabled?: boolean;
+}) {
+  const [display, setDisplay] = useState(String(value));
+
+  // Sync when parent resets the value (e.g. sheet close)
+  useEffect(() => {
+    setDisplay(String(value));
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      value={display}
+      disabled={disabled}
+      className="h-7 w-16 text-xs text-right"
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDisplay(raw);
+        const n = parseInt(raw, 10);
+        if (!isNaN(n) && n >= 1) onQtyChange(componentId, n);
+      }}
+      onBlur={() => {
+        const n = parseInt(display, 10);
+        const safe = isNaN(n) || n < 1 ? 1 : n;
+        setDisplay(String(safe));
+        onQtyChange(componentId, safe);
+      }}
+    />
+  );
+}
+
 // ─── Components builder (presentational) ─────────────────────────────────────
 
 interface KitComponentsBuilderProps {
@@ -181,12 +224,10 @@ export function KitComponentsBuilder({
                 <p className="font-medium leading-tight truncate">{comp.name}</p>
                 <p className="text-xs text-muted-foreground font-mono">{comp.code}</p>
               </div>
-              <Input
-                type="number"
-                min={1}
+              <QtyInput
+                componentId={comp.componentId}
                 value={comp.quantity}
-                onChange={(e) => onQtyChange(comp.componentId, parseInt(e.target.value, 10))}
-                className="h-7 w-16 text-xs text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                onQtyChange={onQtyChange}
                 disabled={disabled}
               />
               <Button

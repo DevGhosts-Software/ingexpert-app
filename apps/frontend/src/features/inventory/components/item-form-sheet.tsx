@@ -40,6 +40,44 @@ import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-fi
 import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
+// ─── Stock input with free-form editing ──────────────────────────────────────
+
+function StockInput({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  disabled?: boolean;
+}) {
+  const [display, setDisplay] = useState(String(value));
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      placeholder="0"
+      disabled={disabled}
+      value={display}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDisplay(raw);
+        const n = Number(raw);
+        if (raw !== '' && !isNaN(n) && n >= 0) onChange(n);
+      }}
+      onBlur={() => {
+        const n = Number(display);
+        const safe = isNaN(n) || n < 0 ? 0 : n;
+        setDisplay(String(safe));
+        onChange(safe);
+      }}
+    />
+  );
+}
+
+// ─── Schema ───────────────────────────────────────────────────────────────────
+
 const ItemFormSchema = CreateItemSchema.extend({
   name: z.string().min(1, 'Nombre requerido'),
   code: z.string().min(1, 'Código requerido'),
@@ -270,11 +308,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
   const handleKitQtyChange = useCallback((componentId: string, qty: number) => {
     setKitComponents((prev) =>
-      prev.map((c) =>
-        c.componentId === componentId
-          ? { ...c, quantity: Number.isNaN(qty) ? 1 : Math.max(1, qty) }
-          : c,
-      ),
+      prev.map((c) => (c.componentId === componentId ? { ...c, quantity: qty } : c)),
     );
   }, []);
 
@@ -406,14 +440,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                     <FormItem>
                       <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="any"
-                          placeholder="0"
+                        <StockInput
+                          value={field.value}
+                          onChange={field.onChange}
                           disabled={isPending}
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
