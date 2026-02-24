@@ -77,6 +77,7 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 - `pnpm db:studio` - View database content.
 
 > **Frontend-specific internals** (called by Tauri automatically — do not run directly):
+>
 > - `pnpm --filter @ingexpert/frontend next:dev` — starts the Next.js dev server (Tauri's `beforeDevCommand`).
 > - `pnpm --filter @ingexpert/frontend next:build` — runs the Next.js static export (Tauri's `beforeBuildCommand`).
 

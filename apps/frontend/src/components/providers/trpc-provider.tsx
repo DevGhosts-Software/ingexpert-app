@@ -45,9 +45,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
             const {
               data: { session },
             } = await supabase.auth.getSession();
-            return session?.access_token
-              ? { Authorization: `Bearer ${session.access_token}` }
-              : {};
+            return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
           },
           fetch(url, options) {
             return fetch(url, {
