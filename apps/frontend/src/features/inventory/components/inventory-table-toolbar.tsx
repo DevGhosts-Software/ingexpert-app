@@ -77,6 +77,7 @@ export function InventoryTableToolbar({
       xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
       const date = new Date().toISOString().slice(0, 10);
       xlsxWriteFile(wb, `inventario_${date}.xlsx`);
+      toast.success('Inventario exportado correctamente');
     } catch {
       toast.error('Error al exportar el inventario');
     } finally {
