@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeftRight, Boxes, FolderOpen, LayoutDashboard, Package, Users } from 'lucide-react';
 
 import {
@@ -53,6 +52,7 @@ const adminNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const isAdmin = useIsAdmin();
 
   return (
@@ -61,15 +61,15 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
+              <button onClick={() => router.push('/')}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Boxes className="size-4" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 min-w-0 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Ingexpert</span>
                   <span className="truncate text-xs text-muted-foreground">Gestión de Stock</span>
                 </div>
-              </Link>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -83,10 +83,10 @@ export function AppSidebar() {
               {mainNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname === item.href}>
-                    <Link href={item.href}>
+                    <button onClick={() => router.push(item.href)}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </Link>
+                    </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -105,10 +105,10 @@ export function AppSidebar() {
                   {adminNavItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={pathname === item.href}>
-                        <Link href={item.href}>
+                        <button onClick={() => router.push(item.href)}>
                           <item.icon />
                           <span>{item.title}</span>
-                        </Link>
+                        </button>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}

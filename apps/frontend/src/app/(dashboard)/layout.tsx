@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -36,12 +37,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     enabled: mounted,
   });
 
+  const utils = trpc.useUtils();
   const logoutMutation = trpc.auth.logout.useMutation();
 
   useEffect(() => {
     if (isError) {
       router.push('/login');
-      router.refresh();
     }
   }, [isError, router]);
 
@@ -61,9 +62,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitle = pageTitles[pathname] ?? 'Ingexpert';
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        await supabase.auth.signOut();
+        void utils.users.me.reset();
         router.push('/login');
-        router.refresh();
         toast.success('Logged out successfully');
       },
     });

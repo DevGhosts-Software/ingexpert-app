@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginDto, LoginSchema } from '@ingexpert/schema';
@@ -25,11 +25,20 @@ export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
+  const { data: authenticatedUser } = trpc.users.me.useQuery(undefined, { retry: false });
+
+  useEffect(() => {
+    if (authenticatedUser) {
+      router.replace('/');
+    }
+  }, [authenticatedUser, router]);
+
   const form = useForm<LoginDto>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: '', password: '' },
   });
 
+  const utils = trpc.useUtils();
   const loginMutation = trpc.auth.login.useMutation();
 
   function onSubmit(values: LoginDto) {
@@ -39,9 +48,10 @@ export function LoginForm() {
           access_token: data.access_token,
           refresh_token: data.refresh_token,
         });
+        // Reset the cached users.me error so the dashboard fetches fresh
+        void utils.users.me.reset();
         toast.success('Sesión iniciada correctamente');
         router.push('/');
-        router.refresh();
       },
       onError: (error) => {
         toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');

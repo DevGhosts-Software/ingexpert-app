@@ -136,7 +136,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   }, []);
 
   const handleQtyChange = useCallback((componentId: string, qty: number) => {
-    if (!qty || qty < 1) return;
     setMovementItems((prev) =>
       prev.map((i) => (i.componentId === componentId ? { ...i, quantity: qty } : i)),
     );

@@ -66,11 +66,20 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 
 ## 4. Commands Reference
 
-- `pnpm dev` - Start dev servers.
-- `pnpm build` - Build production artifacts.
+- `pnpm dev` - Start all dev servers (API + Tauri desktop app with embedded Next.js frontend).
+- `pnpm build` - Build all apps — compiles the API and produces the full Tauri desktop bundle.
+- `pnpm check` - **Pre-push pipeline**: format check → lint → type-check → Next.js compile. Fast; no Rust compilation.
+- `pnpm format` - Auto-fix formatting with Prettier across the monorepo.
+- `pnpm lint` - Run ESLint across all packages.
+- `pnpm type-check` - Run TypeScript compiler checks across all packages.
+- `pnpm db:generate` - Regenerate Prisma Client after schema edits (required before `build`).
 - `pnpm db:migrate` - Apply schema changes.
 - `pnpm db:studio` - View database content.
-- `pnpm db:generate` - Regenerate Prisma Client after schema edits (required before `build`).
+
+> **Frontend-specific internals** (called by Tauri automatically — do not run directly):
+>
+> - `pnpm --filter @ingexpert/frontend next:dev` — starts the Next.js dev server (Tauri's `beforeDevCommand`).
+> - `pnpm --filter @ingexpert/frontend next:build` — runs the Next.js static export (Tauri's `beforeBuildCommand`).
 
 ## 4b. Domain Inventory
 

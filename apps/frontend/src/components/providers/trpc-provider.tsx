@@ -26,12 +26,27 @@ function AuthSync() {
 }
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
           url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/trpc',
+          async headers() {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+          },
           fetch(url, options) {
             return fetch(url, {
               ...options,
