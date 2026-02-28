@@ -10,6 +10,14 @@ export const MovementDetailSchema = z.object({
   quantity: z.number().positive(),
 });
 
+export const MovementFiltersSchema = z.object({
+  createdById: z.string().uuid().optional(),
+  dateFrom: z.string().optional(), // ISO date string
+  dateTo: z.string().optional(), // ISO date string
+});
+
+export type MovementFiltersDto = z.infer<typeof MovementFiltersSchema>;
+
 export const CreateMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
   destination: z.string().optional(),

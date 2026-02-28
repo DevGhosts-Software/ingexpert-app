@@ -6,6 +6,7 @@ import {
   UpdateMovementDto,
   MovementEntityWithDetails,
   MovementHeaderEntity,
+  MovementFiltersDto,
   MovementStats,
 } from '@ingexpert/schema';
 
@@ -75,8 +76,24 @@ export class MovementsService {
     };
   }
 
-  async findAll(): Promise<MovementHeaderEntity[]> {
+  async findAll(filters?: MovementFiltersDto): Promise<MovementHeaderEntity[]> {
+    const where: Prisma.MovementWhereInput = {};
+
+    if (filters?.createdById) {
+      where.createdById = filters.createdById;
+    }
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo);
+        end.setHours(23, 59, 59, 999);
+        where.date.lte = end;
+      }
+    }
+
     const movements = await this.prisma.movement.findMany({
+      where,
       orderBy: { date: 'desc' },
       include: {
         _count: { select: { details: true } },
@@ -106,17 +123,30 @@ export class MovementsService {
     return this.mapMovementWithDetails(movement);
   }
 
-  async getStats(): Promise<MovementStats> {
+  async getStats(filters?: MovementFiltersDto): Promise<MovementStats> {
     const firstOfMonth = new Date();
     firstOfMonth.setDate(1);
     firstOfMonth.setHours(0, 0, 0, 0);
 
+    const baseWhere: Prisma.MovementWhereInput = {};
+    if (filters?.createdById) baseWhere.createdById = filters.createdById;
+    if (filters?.dateFrom || filters?.dateTo) {
+      baseWhere.date = {};
+      if (filters.dateFrom)
+        (baseWhere.date as Prisma.DateTimeFilter).gte = new Date(filters.dateFrom);
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo);
+        end.setHours(23, 59, 59, 999);
+        (baseWhere.date as Prisma.DateTimeFilter).lte = end;
+      }
+    }
+
     const [total, purchases, returns, exits, thisMonth] = await Promise.all([
-      this.prisma.movement.count(),
-      this.prisma.movement.count({ where: { type: MovementType.PURCHASE } }),
-      this.prisma.movement.count({ where: { type: MovementType.RETURN } }),
-      this.prisma.movement.count({ where: { type: MovementType.EXIT } }),
-      this.prisma.movement.count({ where: { date: { gte: firstOfMonth } } }),
+      this.prisma.movement.count({ where: baseWhere }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.PURCHASE } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.RETURN } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.EXIT } }),
+      this.prisma.movement.count({ where: { ...baseWhere, date: { gte: firstOfMonth } } }),
     ]);
 
     return { total, purchases, returns, exits, thisMonth };

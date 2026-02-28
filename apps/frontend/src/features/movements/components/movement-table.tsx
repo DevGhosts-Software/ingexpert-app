@@ -10,7 +10,17 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Filter, Plus, Search } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CalendarIcon,
+  ChevronDown,
+  Filter,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -28,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -45,6 +57,7 @@ import { MovementFormSheet } from './movement-form-sheet';
 import type { ActiveTab, MovementRow, TypeCounts } from './movement-table.types';
 
 type ProjectOption = { id: string; name: string };
+type UserOption = { id: string; name: string | null; email: string };
 
 interface MovementTableProps {
   movements: MovementRow[];
@@ -62,6 +75,15 @@ interface MovementTableProps {
   typeCounts: TypeCounts;
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
+  // Role-aware filter props
+  isAdmin: boolean;
+  users: UserOption[];
+  creatorFilter: string;
+  onCreatorFilterChange: (v: string) => void;
+  dateFrom: string;
+  onDateFromChange: (v: string) => void;
+  dateTo: string;
+  onDateToChange: (v: string) => void;
 }
 
 const TAB_ITEMS: Array<{ value: ActiveTab; label: string }> = [
@@ -87,6 +109,14 @@ export function MovementTable({
   typeCounts,
   sorting,
   onSortingChange,
+  isAdmin,
+  users,
+  creatorFilter,
+  onCreatorFilterChange,
+  dateFrom,
+  onDateFromChange,
+  dateTo,
+  onDateToChange,
 }: MovementTableProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -105,6 +135,21 @@ export function MovementTable({
     onPaginationChange,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  // Count active filters for badge
+  const activeFilterCount = [
+    projectFilter !== 'all',
+    isAdmin && creatorFilter !== 'all',
+    !!dateFrom,
+    !!dateTo,
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    onProjectFilterChange('all');
+    if (isAdmin) onCreatorFilterChange('all');
+    onDateFromChange('');
+    onDateToChange('');
+  };
 
   return (
     <div className="space-y-4">
@@ -126,16 +171,46 @@ export function MovementTable({
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Filter className="h-4 w-4" />
                 Filtros
-                {projectFilter !== 'all' && (
+                {activeFilterCount > 0 && (
                   <Badge variant="secondary" className="h-4 px-1 text-xs font-mono">
-                    1
+                    {activeFilterCount}
                   </Badge>
                 )}
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-52 p-3" align="start">
-              <div className="space-y-3">
+            <DropdownMenuContent className="w-64 p-3" align="start">
+              <div className="space-y-4">
+                {/* Date range */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                    <CalendarIcon className="h-3 w-3" /> Rango de fechas
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Desde</Label>
+                    <Input
+                      type="date"
+                      className="h-8 text-sm"
+                      value={dateFrom}
+                      max={dateTo || undefined}
+                      onChange={(e) => onDateFromChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Hasta</Label>
+                    <Input
+                      type="date"
+                      className="h-8 text-sm"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => onDateToChange(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Project */}
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Proyecto
@@ -154,15 +229,41 @@ export function MovementTable({
                     </SelectContent>
                   </Select>
                 </div>
-                {projectFilter !== 'all' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-7 text-xs"
-                    onClick={() => onProjectFilterChange('all')}
-                  >
-                    Limpiar filtros
-                  </Button>
+
+                {/* Creator — admin only */}
+                {isAdmin && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Creado por
+                    </p>
+                    <Select value={creatorFilter} onValueChange={onCreatorFilterChange}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Todos los usuarios" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los usuarios</SelectItem>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name ?? u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {activeFilterCount > 0 && (
+                  <>
+                    <Separator />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-7 text-xs gap-1"
+                      onClick={clearFilters}
+                    >
+                      <X className="h-3 w-3" /> Limpiar filtros
+                    </Button>
+                  </>
                 )}
               </div>
             </DropdownMenuContent>

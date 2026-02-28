@@ -5,6 +5,7 @@ import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-
 import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 import { MovementStats } from '@/features/movements/components/movement-stats';
 import { MovementTable } from '@/features/movements/components/movement-table';
 import type { ActiveTab, TypeCounts } from '@/features/movements/components/movement-table.types';
@@ -19,6 +20,8 @@ const DEFAULT_STATS: MovementStatsType = {
 const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0 };
 
 export default function MovementsPage() {
+  const isAdmin = useIsAdmin();
+
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
@@ -26,9 +29,25 @@ export default function MovementsPage() {
   const [projectFilter, setProjectFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }]);
 
-  const { data: allMovements = [], isLoading } = trpc.movements.getAll.useQuery();
-  const { data: stats = DEFAULT_STATS } = trpc.movements.getStats.useQuery();
+  // Server-side filters
+  const [creatorFilter, setCreatorFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+
+  const serverFilters = useMemo(
+    () => ({
+      createdById: isAdmin && creatorFilter !== 'all' ? creatorFilter : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    }),
+    [isAdmin, creatorFilter, dateFrom, dateTo],
+  );
+
+  const { data: allMovements = [], isLoading } = trpc.movements.getAll.useQuery(serverFilters);
+  const { data: stats = DEFAULT_STATS } = trpc.movements.getStats.useQuery(serverFilters);
   const { data: projects = [] } = trpc.movements.getProjects.useQuery();
+  // Only admins fetch the user list for the creator filter
+  const { data: users = [] } = trpc.users.listNames.useQuery(undefined, { enabled: isAdmin });
 
   const { tableData, pageCount, typeCounts } = useMemo(() => {
     const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | undefined> = {
@@ -78,29 +97,67 @@ export default function MovementsPage() {
     };
   }, [allMovements, debouncedSearch, projectFilter, typeFilter, sorting, pagination]);
 
+  const resetPage = useCallback(() => setPagination((p) => ({ ...p, pageIndex: 0 })), []);
+
   const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
     setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, []);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
-    setSorting((prev) => (typeof updater === 'function' ? updater(prev) : updater));
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, []);
+  const handleSortingChange: OnChangeFn<SortingState> = useCallback(
+    (updater) => {
+      setSorting((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleTypeFilterChange = useCallback((value: ActiveTab) => {
-    setTypeFilter(value);
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, []);
+  const handleTypeFilterChange = useCallback(
+    (value: ActiveTab) => {
+      setTypeFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
-  const handleProjectFilterChange = useCallback((value: string) => {
-    setProjectFilter(value);
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, []);
+  const handleProjectFilterChange = useCallback(
+    (value: string) => {
+      setProjectFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleCreatorFilterChange = useCallback(
+    (value: string) => {
+      setCreatorFilter(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleDateFromChange = useCallback(
+    (value: string) => {
+      setDateFrom(value);
+      resetPage();
+    },
+    [resetPage],
+  );
+
+  const handleDateToChange = useCallback(
+    (value: string) => {
+      setDateTo(value);
+      resetPage();
+    },
+    [resetPage],
+  );
 
   return (
     <div className="space-y-6">
@@ -128,6 +185,15 @@ export default function MovementsPage() {
         typeCounts={typeCounts ?? DEFAULT_COUNTS}
         sorting={sorting}
         onSortingChange={handleSortingChange}
+        // Admin-only filters
+        isAdmin={isAdmin}
+        users={users}
+        creatorFilter={creatorFilter}
+        onCreatorFilterChange={handleCreatorFilterChange}
+        dateFrom={dateFrom}
+        onDateFromChange={handleDateFromChange}
+        dateTo={dateTo}
+        onDateToChange={handleDateToChange}
       />
     </div>
   );
