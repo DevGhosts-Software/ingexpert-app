@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { FolderOpen, FolderPlus, Pencil } from 'lucide-react';
+import { FolderOpen, FolderPlus, Pencil, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateProjectSchema, type CreateProjectDto } from '@ingexpert/schema';
@@ -19,6 +19,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Sheet,
   SheetContent,
@@ -36,7 +43,7 @@ const ProjectFormSchema = CreateProjectSchema.extend({
   name: z.string().min(1, 'Nombre requerido'),
   contact: z.string().min(1, 'Contacto requerido'),
   address: z.string().min(1, 'Dirección requerida'),
-  manager: z.string().min(1, 'Responsable requerido'),
+  managerId: z.string().uuid('Selecciona un responsable'),
 });
 type FormValues = CreateProjectDto;
 
@@ -55,9 +62,11 @@ export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSh
   const utils = trpc.useUtils();
   const isEdit = mode === 'edit';
 
+  const { data: users = [] } = trpc.users.listNames.useQuery();
+
   const form = useForm<FormValues>({
     resolver: zodResolver(ProjectFormSchema),
-    defaultValues: { name: '', contact: '', address: '', manager: '' },
+    defaultValues: { name: '', contact: '', address: '', managerId: '' },
   });
 
   // Populate form when editing
@@ -67,10 +76,10 @@ export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSh
         name: project.name,
         contact: project.contact,
         address: project.address,
-        manager: project.manager,
+        managerId: project.managerId,
       });
     } else if (!open) {
-      form.reset({ name: '', contact: '', address: '', manager: '' });
+      form.reset({ name: '', contact: '', address: '', managerId: '' });
     }
   }, [open, isEdit, project, form]);
 
@@ -155,13 +164,27 @@ export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSh
 
               <FormField
                 control={form.control}
-                name="manager"
+                name="managerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Responsable</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nombre del responsable" {...field} />
-                    </FormControl>
+                    <FormLabel>
+                      <User className="inline h-3.5 w-3.5 mr-1" />
+                      Responsable
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un responsable" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name ?? u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
