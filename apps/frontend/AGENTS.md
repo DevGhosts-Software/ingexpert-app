@@ -280,13 +280,13 @@ The movement creation form (`movement-form-sheet.tsx`) uses a **card picker** in
 
 Fields shown per type (all optional except items):
 
-| Type        | Fields displayed                                         |
-| ----------- | -------------------------------------------------------- |
-| `PURCHASE`  | Quien recibe                                             |
-| `RETURN`    | Proyecto de origen · Quien devuelve el material          |
-| `EXIT`      | Destino · Proyecto destino · Responsable de entrega      |
-| `WRITEOFF`  | Warning banner (no project/people fields)                |
-| All         | Observaciones (always shown, adaptive placeholder)       |
+| Type       | Fields displayed                                    |
+| ---------- | --------------------------------------------------- |
+| `PURCHASE` | Quien recibe                                        |
+| `RETURN`   | Proyecto de origen · Quien devuelve el material     |
+| `EXIT`     | Destino · Proyecto destino · Responsable de entrega |
+| `WRITEOFF` | Warning banner (no project/people fields)           |
+| All        | Observaciones (always shown, adaptive placeholder)  |
 
 Switching type clears all irrelevant field values via `form.setValue` to prevent stale data from being submitted.
 

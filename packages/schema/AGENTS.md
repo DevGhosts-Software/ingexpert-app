@@ -48,14 +48,14 @@ export type UserEntity = User & { workArea: string | null };
 
 ## 3. Modules
 
-| File                   | DTOs                                                                                                      | Entities                                                                     |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `auth.schema.ts`       | `LoginSchema` / `LoginDto`                                                                                | —                                                                            |
-| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema`                  | `UserEntity`, `UserStats`                                                    |
-| `item.schema.ts`       | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema`                                            | `ItemEntity`, `ItemStats`, `ItemCounts`                                      |
-| `project.schema.ts`    | `CreateProjectSchema`, `UpdateProjectSchema`, `ProjectPaginationSchema`                                   | `ProjectEntity`                                                              |
-| `movement.schema.ts`   | `CreateMovementSchema`, `UpdateMovementSchema`, `MovementFiltersSchema`                                   | `MovementHeaderEntity`, `MovementEntityWithDetails`, `MovementStats`         |
-| `pagination.schema.ts` | `BasePaginationSchema`                                                                                     | —                                                                            |
+| File                   | DTOs                                                                                     | Entities                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `auth.schema.ts`       | `LoginSchema` / `LoginDto`                                                               | —                                                                    |
+| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema` | `UserEntity`, `UserStats`                                            |
+| `item.schema.ts`       | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema`                           | `ItemEntity`, `ItemStats`, `ItemCounts`                              |
+| `project.schema.ts`    | `CreateProjectSchema`, `UpdateProjectSchema`, `ProjectPaginationSchema`                  | `ProjectEntity`                                                      |
+| `movement.schema.ts`   | `CreateMovementSchema`, `UpdateMovementSchema`, `MovementFiltersSchema`                  | `MovementHeaderEntity`, `MovementEntityWithDetails`, `MovementStats` |
+| `pagination.schema.ts` | `BasePaginationSchema`                                                                   | —                                                                    |
 
 ## 4. Naming Conventions
 
