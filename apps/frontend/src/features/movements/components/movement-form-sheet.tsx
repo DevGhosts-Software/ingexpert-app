@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner';
 
 import { z } from 'zod';
+import { cn } from '@/lib/utils';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,54 @@ import {
   type LocalComponent,
 } from '@/features/inventory/components/kit-components-builder';
 
-// ─── Form schema ──────────────────────────────────────────────────────────────
+// ─── Type card config ─────────────────────────────────────────────────────────
+
+const TYPE_CARDS = [
+  {
+    value: 'PURCHASE' as const,
+    icon: ArrowDownCircle,
+    styles: {
+      selected: 'border-blue-500 bg-blue-50 dark:bg-blue-950/30',
+      icon: 'text-blue-600 dark:text-blue-400',
+      label: 'text-blue-700 dark:text-blue-300',
+    },
+    label: 'Compra',
+    description: 'Nuevo material ingresando al almacén',
+  },
+  {
+    value: 'RETURN' as const,
+    icon: RotateCcw,
+    styles: {
+      selected: 'border-green-500 bg-green-50 dark:bg-green-950/30',
+      icon: 'text-green-600 dark:text-green-400',
+      label: 'text-green-700 dark:text-green-300',
+    },
+    label: 'Devolución',
+    description: 'Material que regresa de un proyecto',
+  },
+  {
+    value: 'EXIT' as const,
+    icon: ArrowUpCircle,
+    styles: {
+      selected: 'border-orange-500 bg-orange-50 dark:bg-orange-950/30',
+      icon: 'text-orange-600 dark:text-orange-400',
+      label: 'text-orange-700 dark:text-orange-300',
+    },
+    label: 'Salida',
+    description: 'Material que sale hacia un proyecto o destino',
+  },
+  {
+    value: 'WRITEOFF' as const,
+    icon: Trash2,
+    styles: {
+      selected: 'border-red-500 bg-red-50 dark:bg-red-950/30',
+      icon: 'text-red-600 dark:text-red-400',
+      label: 'text-red-700 dark:text-red-300',
+    },
+    label: 'Baja',
+    description: 'Material perdido, dañado o dado de baja',
+  },
+] as const;
 
 const MovementFormSchema = CreateMovementSchema.omit({ details: true });
 type FormValues = z.infer<typeof MovementFormSchema>;
@@ -104,6 +152,18 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   });
 
   const watchedType = form.watch('type');
+
+  const handleTypeSelect = useCallback(
+    (type: FormValues['type']) => {
+      form.setValue('type', type, { shouldValidate: true });
+      // Clear fields irrelevant to the new type
+      form.setValue('destination', '');
+      form.setValue('responsibleDeliveryId', undefined);
+      form.setValue('responsibleReceiptId', undefined);
+      form.setValue('projectId', undefined);
+    },
+    [form],
+  );
 
   useEffect(() => {
     if (open) {
@@ -239,68 +299,246 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           <ScrollArea className="flex-1 min-h-0 mt-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onValidSubmit)} className="space-y-5 pr-4">
-                {/* Type */}
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de movimiento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="EXIT">
-                            <span className="flex items-center gap-2">
-                              <ArrowUpCircle className="h-4 w-4 text-orange-500" /> Salida
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="PURCHASE">
-                            <span className="flex items-center gap-2">
-                              <ArrowDownCircle className="h-4 w-4 text-blue-500" /> Compra
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="RETURN">
-                            <span className="flex items-center gap-2">
-                              <RotateCcw className="h-4 w-4 text-green-500" /> Devolución
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="WRITEOFF">
-                            <span className="flex items-center gap-2">
-                              <Trash2 className="h-4 w-4 text-red-500" /> Baja
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Type card picker */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Tipo de movimiento</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TYPE_CARDS.map((card) => {
+                      const Icon = card.icon;
+                      const selected = watchedType === card.value;
+                      return (
+                        <button
+                          key={card.value}
+                          type="button"
+                          onClick={() => handleTypeSelect(card.value)}
+                          className={cn(
+                            'flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            selected
+                              ? card.styles.selected
+                              : 'border-border hover:border-muted-foreground/40',
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              'h-4 w-4',
+                              selected ? card.styles.icon : 'text-muted-foreground',
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'text-sm font-semibold',
+                              selected ? card.styles.label : '',
+                            )}
+                          >
+                            {card.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground leading-tight">
+                            {card.description}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                {/* Destination (EXIT only) */}
-                {watchedType === 'EXIT' && (
+                {/* PURCHASE: who receives it */}
+                {watchedType === 'PURCHASE' && (
                   <FormField
                     control={form.control}
-                    name="destination"
+                    name="responsibleReceiptId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Destino{' '}
+                          Quien recibe{' '}
                           <span className="text-muted-foreground font-normal">(opcional)</span>
                         </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej: Sitio de Obra Norte" {...field} />
-                        </FormControl>
+                        <Select
+                          onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                          value={field.value ?? 'none'}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sin asignar" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {users.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.name ?? u.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
 
-                {/* Observations */}
+                {/* RETURN: project of origin + who returned it */}
+                {watchedType === 'RETURN' && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="projectId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <ClipboardList className="inline h-3.5 w-3.5 mr-1" />
+                            Proyecto de origen{' '}
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                            value={field.value ?? 'none'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sin proyecto" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Sin proyecto</SelectItem>
+                              {projects.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="responsibleReceiptId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Quien devuelve el material{' '}
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                            value={field.value ?? 'none'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sin asignar" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Sin asignar</SelectItem>
+                              {users.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.name ?? u.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* EXIT: destination + project + who delivers */}
+                {watchedType === 'EXIT' && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="destination"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Destino{' '}
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: Sitio de Obra Norte" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="projectId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <ClipboardList className="inline h-3.5 w-3.5 mr-1" />
+                            Proyecto destino{' '}
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                            value={field.value ?? 'none'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sin proyecto" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Sin proyecto</SelectItem>
+                              {projects.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="responsibleDeliveryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Responsable de entrega{' '}
+                            <span className="text-muted-foreground font-normal">(opcional)</span>
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
+                            value={field.value ?? 'none'}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Sin asignar</SelectItem>
+                              {users.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.name ?? u.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* WRITEOFF: observations is the key field */}
+                {watchedType === 'WRITEOFF' && (
+                  <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 p-3 text-sm text-red-700 dark:text-red-400">
+                    Esta baja descontará el stock seleccionado de forma permanente. Usa las
+                    observaciones para registrar el motivo.
+                  </div>
+                )}
+
+                {/* Observations — all types */}
                 <FormField
                   control={form.control}
                   name="observations"
@@ -312,112 +550,16 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Notas adicionales sobre el movimiento..."
+                          placeholder={
+                            watchedType === 'WRITEOFF'
+                              ? 'Motivo de la baja (pérdida, daño, venta, etc.)...'
+                              : 'Notas adicionales sobre el movimiento...'
+                          }
                           className="resize-none"
                           rows={2}
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Project */}
-                <FormField
-                  control={form.control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <ClipboardList className="inline h-3.5 w-3.5 mr-1" />
-                        Proyecto{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                        value={field.value ?? 'none'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sin proyecto" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin proyecto</SelectItem>
-                          {projects.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Responsible delivery */}
-                <FormField
-                  control={form.control}
-                  name="responsibleDeliveryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Responsable de entrega{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                        value={field.value ?? 'none'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {users.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name ?? u.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Responsible receipt */}
-                <FormField
-                  control={form.control}
-                  name="responsibleReceiptId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Responsable de recepción{' '}
-                        <span className="text-muted-foreground font-normal">(opcional)</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === 'none' ? undefined : v)}
-                        value={field.value ?? 'none'}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin asignar</SelectItem>
-                          {users.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              {u.name ?? u.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
