@@ -192,7 +192,7 @@ export function MovementTable({
                       value={dateFrom}
                       onChange={onDateFromChange}
                       placeholder="Fecha inicio"
-                      maxDate={dateTo ? new Date(dateTo + 'T23:59:59') : undefined}
+                      maxDate={dateTo ? new Date(dateTo + 'T12:00:00') : undefined}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -201,7 +201,7 @@ export function MovementTable({
                       value={dateTo}
                       onChange={onDateToChange}
                       placeholder="Fecha fin"
-                      minDate={dateFrom ? new Date(dateFrom) : undefined}
+                      minDate={dateFrom ? new Date(dateFrom + 'T12:00:00') : undefined}
                     />
                   </div>
                 </div>

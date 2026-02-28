@@ -34,12 +34,15 @@ export function DatePicker({
     onChange(date ? format(date, 'yyyy-MM-dd') : '');
   };
 
-  const disabledMatcher = React.useMemo(() => {
-    if (minDate && maxDate) return { before: minDate, after: maxDate };
-    if (minDate) return { before: minDate };
-    if (maxDate) return { after: maxDate };
-    return undefined;
-  }, [minDate, maxDate]);
+  const disabledMatcher = React.useCallback(
+    (day: Date) => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      if (minDate && dayStr < format(minDate, 'yyyy-MM-dd')) return true;
+      if (maxDate && dayStr > format(maxDate, 'yyyy-MM-dd')) return true;
+      return false;
+    },
+    [minDate, maxDate],
+  );
 
   return (
     <Popover>
