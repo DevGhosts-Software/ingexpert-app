@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ItemType, Prisma } from '@ingexpert/database';
 import { PrismaService } from '../prisma/prisma.service';
 import { SetKitComponentsDto } from '@ingexpert/schema';
 
@@ -13,6 +14,29 @@ export class KitsService {
         component: true,
       },
     });
+  }
+
+  async getAllWithComponents() {
+    const kits = await this.prisma.item.findMany({
+      where: { type: ItemType.KIT },
+      orderBy: { name: 'asc' },
+      include: {
+        kitDetails: {
+          include: { component: true },
+        },
+      },
+    });
+    return kits.map((kit) => ({
+      id: kit.id,
+      code: kit.code,
+      name: kit.name,
+      components: kit.kitDetails.map((kd) => ({
+        name: kd.component.name,
+        code: kd.component.code,
+        quantity: new Prisma.Decimal(kd.quantity).toNumber(),
+        unit: kd.component.unit,
+      })),
+    }));
   }
 
   async setComponents(data: SetKitComponentsDto) {

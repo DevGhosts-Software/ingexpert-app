@@ -64,17 +64,39 @@ export function InventoryTableToolbar({
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      const items = await utils.items.getAll.fetch();
-      const rows = items.map((item) => ({
-        CODIGO: item.code,
-        NOMBRE: item.name,
-        UBICACION: item.location,
-        STOCK: item.stock,
-        UNIDAD: item.unit,
-      }));
-      const ws = xlsxUtils.json_to_sheet(rows);
+      const [items, kitsData] = await Promise.all([
+        utils.items.getAll.fetch(),
+        utils.kits.getAllWithComponents.fetch(),
+      ]);
+
+      // Sheet 1: all items except kits
+      const inventoryRows = items
+        .filter((item) => item.type !== 'KIT')
+        .map((item) => ({
+          CODIGO: item.code,
+          NOMBRE: item.name,
+          UBICACION: item.location,
+          STOCK: item.stock,
+          UNIDAD: item.unit,
+          TIPO: item.type,
+        }));
+
+      // Sheet 2: kit compositions (one row per component)
+      const kitRows = kitsData.flatMap((kit) =>
+        kit.components.map((comp) => ({
+          KIT: kit.name,
+          CODIGO_KIT: kit.code,
+          COMPONENTE: comp.name,
+          CODIGO_COMPONENTE: comp.code,
+          CANTIDAD: comp.quantity,
+          UNIDAD: comp.unit,
+        })),
+      );
+
       const wb = xlsxUtils.book_new();
-      xlsxUtils.book_append_sheet(wb, ws, 'Inventario');
+      xlsxUtils.book_append_sheet(wb, xlsxUtils.json_to_sheet(inventoryRows), 'Inventario');
+      xlsxUtils.book_append_sheet(wb, xlsxUtils.json_to_sheet(kitRows), 'Kits');
+
       const date = new Date().toISOString().slice(0, 10);
       const fileName = `inventario_${date}.xlsx`;
 

@@ -19,6 +19,10 @@ export class KitsRouter {
           return this.kitsService.getComponents(input);
         }),
 
+      getAllWithComponents: this.trpc.protectedProcedure.query(async () => {
+        return this.kitsService.getAllWithComponents();
+      }),
+
       setComponents: this.trpc.protectedProcedure
         .input(SetKitComponentsSchema)
         .mutation(async ({ input }) => {
