@@ -26,7 +26,7 @@ import {
 import { MovementDetailSheet } from './movement-detail-sheet';
 import type { MovementRow } from './movement-table.types';
 
-export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' }) {
+export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' }) {
   if (type === 'PURCHASE') {
     return (
       <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
@@ -40,6 +40,14 @@ export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' }) {
       <Badge className="gap-1.5 bg-green-100 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
         <ArrowDownCircle className="h-3 w-3" />
         Devolución
+      </Badge>
+    );
+  }
+  if (type === 'WRITEOFF') {
+    return (
+      <Badge className="gap-1.5 bg-red-100 text-red-800 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
+        <ArrowUpCircle className="h-3 w-3" />
+        Baja
       </Badge>
     );
   }

@@ -15,9 +15,10 @@ const DEFAULT_STATS: MovementStatsType = {
   purchases: 0,
   returns: 0,
   exits: 0,
+  writeoffs: 0,
   thisMonth: 0,
 };
-const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0 };
+const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0, writeoff: 0 };
 
 export default function MovementsPage() {
   const isAdmin = useIsAdmin();
@@ -50,11 +51,12 @@ export default function MovementsPage() {
   const { data: users = [] } = trpc.users.listNames.useQuery(undefined, { enabled: isAdmin });
 
   const { tableData, pageCount, typeCounts } = useMemo(() => {
-    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | undefined> = {
+    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
       all: undefined,
       purchase: 'PURCHASE',
       return: 'RETURN',
       exit: 'EXIT',
+      writeoff: 'WRITEOFF',
     };
 
     const preType = allMovements.filter((m) => {
@@ -93,6 +95,7 @@ export default function MovementsPage() {
         purchase: preType.filter((m) => m.type === 'PURCHASE').length,
         return: preType.filter((m) => m.type === 'RETURN').length,
         exit: preType.filter((m) => m.type === 'EXIT').length,
+        writeoff: preType.filter((m) => m.type === 'WRITEOFF').length,
       } satisfies TypeCounts,
     };
   }, [allMovements, debouncedSearch, projectFilter, typeFilter, sorting, pagination]);

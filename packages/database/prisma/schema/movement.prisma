@@ -2,6 +2,7 @@ enum MovementType {
   EXIT
   PURCHASE
   RETURN
+  WRITEOFF
 }
 
 model Movement {
@@ -9,6 +10,7 @@ model Movement {
   type                  MovementType @map("type")
   createdById           String       @map("created_by_id")
   destination           String?      @map("destination")
+  observations          String?      @map("observations")
   responsibleDeliveryId String?      @map("responsible_delivery_id")
   responsibleReceiptId  String?      @map("responsible_receipt_id")
   date                  DateTime     @map("date")

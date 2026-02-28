@@ -16,7 +16,6 @@ model Item {
   imageUrl String   @map("image_url")
 
   // Relations
-  disposal        Disposal?
   kitDetails      KitDetail[]      @relation("KitToComponent")
   asComponentOf   KitDetail[]      @relation("ComponentToKit")
   movementDetails MovementDetail[]
@@ -35,18 +34,4 @@ model KitDetail {
 
   @@unique([kitId, componentId])
   @@map("kit_details")
-}
-
-model Disposal {
-  id            String   @id @map("id")
-  item          Item     @relation(fields: [id], references: [id])
-  date          DateTime @map("date")
-  reason        String   @map("reason")
-  status        String   @map("status")
-  responsibleId String   @map("responsible_id")
-  responsible   Staff    @relation(fields: [responsibleId], references: [id])
-  observations  String?  @map("observations")
-  actions       String?  @map("actions")
-
-  @@map("disposals")
 }

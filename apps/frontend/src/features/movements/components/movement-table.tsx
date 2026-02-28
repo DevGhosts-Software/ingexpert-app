@@ -91,6 +91,7 @@ const TAB_ITEMS: Array<{ value: ActiveTab; label: string }> = [
   { value: 'purchase', label: 'Compras' },
   { value: 'return', label: 'Devoluciones' },
   { value: 'exit', label: 'Salidas' },
+  { value: 'writeoff', label: 'Bajas' },
 ];
 
 export function MovementTable({

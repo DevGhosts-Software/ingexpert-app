@@ -30,6 +30,7 @@ export class MovementsService {
       type: m.type,
       createdById: m.createdById,
       destination: m.destination,
+      observations: m.observations,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
       projectId: m.projectId,
@@ -66,6 +67,7 @@ export class MovementsService {
       type: m.type,
       createdById: m.createdById,
       destination: m.destination,
+      observations: m.observations,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
       projectId: m.projectId,
@@ -141,15 +143,16 @@ export class MovementsService {
       }
     }
 
-    const [total, purchases, returns, exits, thisMonth] = await Promise.all([
+    const [total, purchases, returns, exits, writeoffs, thisMonth] = await Promise.all([
       this.prisma.movement.count({ where: baseWhere }),
       this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.PURCHASE } }),
       this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.RETURN } }),
       this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.EXIT } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.WRITEOFF } }),
       this.prisma.movement.count({ where: { ...baseWhere, date: { gte: firstOfMonth } } }),
     ]);
 
-    return { total, purchases, returns, exits, thisMonth };
+    return { total, purchases, returns, exits, writeoffs, thisMonth };
   }
 
   async getProjects() {
@@ -181,9 +184,10 @@ export class MovementsService {
         newQuantities.set(d.itemId, (newQuantities.get(d.itemId) ?? 0) + d.quantity);
       }
 
-      if (input.type === MovementType.EXIT) {
+      if (input.type === MovementType.EXIT || input.type === MovementType.WRITEOFF) {
         const originalQuantities = new Map<string, number>();
-        const originalWasExit = original.type === MovementType.EXIT;
+        const originalDeductsStock =
+          original.type === MovementType.EXIT || original.type === MovementType.WRITEOFF;
         for (const d of original.details) {
           originalQuantities.set(
             d.itemId,
@@ -195,7 +199,7 @@ export class MovementsService {
           if (!item) throw new BadRequestException(`El ítem con ID ${itemId} no existe.`);
           const currentStock = item.stock.toNumber();
           const originalQty = originalQuantities.get(itemId) ?? 0;
-          const stockAfterReverse = originalWasExit
+          const stockAfterReverse = originalDeductsStock
             ? currentStock + originalQty
             : currentStock - originalQty;
           if (stockAfterReverse < needed) {
@@ -207,7 +211,10 @@ export class MovementsService {
       }
 
       // 3. Reverse original stock changes
-      const reverseOp = original.type === MovementType.EXIT ? 'increment' : 'decrement';
+      const reverseOp =
+        original.type === MovementType.EXIT || original.type === MovementType.WRITEOFF
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         original.details.map((d) =>
           tx.item.update({
@@ -225,6 +232,7 @@ export class MovementsService {
         data: {
           type: input.type,
           destination: input.destination ?? null,
+          observations: input.observations ?? null,
           responsibleDeliveryId: input.responsibleDeliveryId ?? null,
           responsibleReceiptId: input.responsibleReceiptId ?? null,
           projectId: input.projectId ?? null,
@@ -245,7 +253,10 @@ export class MovementsService {
       });
 
       // 5. Apply new stock changes
-      const applyOp = input.type !== MovementType.EXIT ? 'increment' : 'decrement';
+      const applyOp =
+        input.type === MovementType.PURCHASE || input.type === MovementType.RETURN
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({
@@ -284,7 +295,7 @@ export class MovementsService {
         if (!currentItem)
           throw new BadRequestException(`El ítem con ID ${itemId} no existe en la base de datos.`);
 
-        if (input.type === MovementType.EXIT) {
+        if (input.type === MovementType.EXIT || input.type === MovementType.WRITEOFF) {
           const currentStock = currentItem.stock.toNumber();
           if (currentStock < totalRequired) {
             throw new BadRequestException(
@@ -299,6 +310,7 @@ export class MovementsService {
           type: input.type,
           createdById,
           destination: input.destination,
+          observations: input.observations,
           responsibleDeliveryId: input.responsibleDeliveryId,
           responsibleReceiptId: input.responsibleReceiptId,
           projectId: input.projectId,
@@ -319,7 +331,10 @@ export class MovementsService {
         },
       });
 
-      const qtyOp = input.type !== MovementType.EXIT ? 'increment' : 'decrement';
+      const qtyOp =
+        input.type === MovementType.PURCHASE || input.type === MovementType.RETURN
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({

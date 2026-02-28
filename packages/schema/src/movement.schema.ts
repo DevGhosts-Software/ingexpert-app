@@ -21,6 +21,7 @@ export type MovementFiltersDto = z.infer<typeof MovementFiltersSchema>;
 export const CreateMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
   destination: z.string().optional(),
+  observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),
   responsibleReceiptId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
@@ -32,6 +33,7 @@ export type CreateMovementDto = z.infer<typeof CreateMovementSchema>;
 export const UpdateMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
   destination: z.string().optional(),
+  observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),
   responsibleReceiptId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
@@ -52,6 +54,7 @@ export type MovementStats = {
   purchases: number;
   returns: number;
   exits: number;
+  writeoffs: number;
   thisMonth: number;
 };
 

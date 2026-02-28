@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarIcon, ClipboardList, Loader2, MapPin, User } from 'lucide-react';
+import { CalendarIcon, ClipboardList, FileText, Loader2, MapPin, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -106,6 +106,13 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                         locale: es,
                       })}
                     </span>
+                  </div>
+                )}
+                {movement.observations && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">Observaciones:</span>
+                    <span className="font-medium">{movement.observations}</span>
                   </div>
                 )}
               </div>

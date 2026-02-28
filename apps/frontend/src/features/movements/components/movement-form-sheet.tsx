@@ -9,6 +9,7 @@ import {
   ClipboardList,
   PackagePlus,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,6 +36,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -94,6 +96,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     defaultValues: {
       type: 'EXIT',
       destination: '',
+      observations: '',
       responsibleDeliveryId: undefined,
       responsibleReceiptId: undefined,
       projectId: undefined,
@@ -107,6 +110,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
       form.reset({
         type: 'EXIT',
         destination: '',
+        observations: '',
         responsibleDeliveryId: undefined,
         responsibleReceiptId: undefined,
         projectId: undefined,
@@ -264,6 +268,11 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                               <RotateCcw className="h-4 w-4 text-green-500" /> Devolución
                             </span>
                           </SelectItem>
+                          <SelectItem value="WRITEOFF">
+                            <span className="flex items-center gap-2">
+                              <Trash2 className="h-4 w-4 text-red-500" /> Baja
+                            </span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -290,6 +299,29 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                     )}
                   />
                 )}
+
+                {/* Observations */}
+                <FormField
+                  control={form.control}
+                  name="observations"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Observaciones{' '}
+                        <span className="text-muted-foreground font-normal">(opcional)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Notas adicionales sobre el movimiento..."
+                          className="resize-none"
+                          rows={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Project */}
                 <FormField
