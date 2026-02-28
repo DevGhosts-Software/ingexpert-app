@@ -25,13 +25,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -187,23 +187,21 @@ export function MovementTable({
                     <CalendarIcon className="h-3 w-3" /> Rango de fechas
                   </p>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Desde</Label>
-                    <Input
-                      type="date"
-                      className="h-8 text-sm"
+                    <p className="text-xs text-muted-foreground">Desde</p>
+                    <DatePicker
                       value={dateFrom}
-                      max={dateTo || undefined}
-                      onChange={(e) => onDateFromChange(e.target.value)}
+                      onChange={onDateFromChange}
+                      placeholder="Fecha inicio"
+                      maxDate={dateTo ? new Date(dateTo + 'T23:59:59') : undefined}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Hasta</Label>
-                    <Input
-                      type="date"
-                      className="h-8 text-sm"
+                    <p className="text-xs text-muted-foreground">Hasta</p>
+                    <DatePicker
                       value={dateTo}
-                      min={dateFrom || undefined}
-                      onChange={(e) => onDateToChange(e.target.value)}
+                      onChange={onDateToChange}
+                      placeholder="Fecha fin"
+                      minDate={dateFrom ? new Date(dateFrom) : undefined}
                     />
                   </div>
                 </div>
