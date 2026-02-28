@@ -83,14 +83,14 @@ The project uses **pnpm** workspaces and **Turbo** for build orchestration.
 
 ## 4b. Domain Inventory
 
-| Domain    | API module   | Frontend feature       | Notes                                                |
-| --------- | ------------ | ---------------------- | ---------------------------------------------------- |
-| Auth      | `auth/`      | `features/auth/`       | Login only. No public registration.                  |
-| Items     | `items/`     | `features/inventory/`  | PRODUCT, EQUIPMENT, TOOL, KIT. Stock via Decimal.    |
-| Kits      | `kits/`      | (part of inventory UI) | Kit composition — items inside a kit.                |
-| Movements | `movements/` | `features/movements/`  | CREATE-ONLY. EXIT validates stock. Tracks creatorId. |
-| Projects  | `projects/`  | `features/projects/`   | Cannot delete if linked movements exist.             |
-| Users     | `users/`     | `features/users/`      | Two-router architecture. `hasAuth` flag.             |
+| Domain    | API module   | Frontend feature       | Notes                                                                                                   |
+| --------- | ------------ | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| Auth      | `auth/`      | `features/auth/`       | Login only. No public registration.                                                                     |
+| Items     | `items/`     | `features/inventory/`  | PRODUCT, EQUIPMENT, TOOL, KIT. Stock via Decimal. KITs have no stock or location.                      |
+| Kits      | `kits/`      | (part of inventory UI) | Kit composition — items inside a kit. Only PRODUCT and TOOL can be kit components.                     |
+| Movements | `movements/` | `features/movements/`  | CREATE-ONLY. Types: PURCHASE, RETURN, EXIT, WRITEOFF. EXIT & WRITEOFF validate stock. Optional `observations` field. Role-based filters: admins see all, users see their own. |
+| Projects  | `projects/`  | `features/projects/`   | Cannot delete if linked movements exist. `manager` is a FK to `Staff` (not a plain string).            |
+| Users     | `users/`     | `features/users/`      | Two-router architecture. `hasAuth` flag.                                                                |
 
 ## 5. Shared Types in `packages/schema`
 

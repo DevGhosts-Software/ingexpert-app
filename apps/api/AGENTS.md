@@ -121,9 +121,23 @@ export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 Movements are **create-only** by design. Once a movement is created:
 
 - No `update` mutation is exposed on the frontend (the `update()` method exists in the service but is not reachable via the UI).
-- Stock changes are applied atomically in a `$transaction` on creation (EXIT decrements, ENTRY increments).
-- EXIT movements validate that item stock is sufficient **before** committing — throws `BadRequestException` with the item name and available/requested quantities.
-- The `creatorId` is set from `ctx.user.id` at the router level — it cannot be overridden by the client.
+- Stock changes are applied atomically in a `$transaction` on creation.
+- **Stock direction:**
+  - `PURCHASE` and `RETURN` → **increment** stock.
+  - `EXIT` and `WRITEOFF` → **decrement** stock.
+- `EXIT` and `WRITEOFF` validate that item stock is sufficient **before** committing — throws `BadRequestException` with the item name and available/requested quantities.
+- **Kit expansion:** When a movement detail references a `KIT` item, the service expands it into its components and checks/adjusts stock for each component individually. All-or-nothing: if any component is short on stock, the entire transaction is rejected.
+- The `createdById` is set from `ctx.user.id` at the router level — it cannot be overridden by the client.
+- The optional `observations` field accepts free text for notes, reasons, or references on any movement type. It is especially important for `WRITEOFF` movements to document the reason.
+
+### Movement Filters & Role-Based Access
+
+The `getAll` and `getStats` procedures accept an optional `MovementFiltersDto` (`createdById`, `dateFrom`, `dateTo`). Role enforcement is **server-side**:
+
+- **Admins:** May filter by any `createdById`, date range, and project.
+- **Non-admins:** The router **forces** `createdById = ctx.user.id` regardless of what the client sends. Users can only ever see their own movements.
+
+The frontend respects this by hiding the creator filter UI for non-admins, but the server constraint is the security boundary.
 
 ### Authentication & Authorization
 

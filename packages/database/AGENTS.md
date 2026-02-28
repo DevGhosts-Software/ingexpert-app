@@ -11,11 +11,10 @@ This package manages the persistence layer for the Ingexpert application using P
 - **User:** System users with roles (`ADMIN`, `USER`). Has `hasAuth: Boolean` — tracks whether the user has a corresponding Supabase Auth account (can log in).
 - **Staff:** Extended user information. Relates to `WorkArea` via `workAreaId` FK (`onDelete: SetNull`). Used for movement responsibility tracking.
 - **WorkArea:** Normalized area/department model (`id`, `name @unique`). One WorkArea → many Staff records (1-N). Was previously a denormalized `String?` on Staff.
-- **Item:** Inventory items (`PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT`) with stock (`Decimal`) and location.
-- **Movement:** Log of stock entries and exits. Has `creatorId` (FK to `User`, the session user who created the movement), plus `deliveryResponsibleId` and `receiptResponsibleId` (FK to `Staff`). Also linked optionally to `Project` (`onDelete: Restrict` — cannot delete a project if movements reference it). Has a `date: DateTime` field.
+- **Item:** Inventory items (`PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT`) with stock (`Decimal`) and optional location. `KIT` items have no meaningful stock or location — they are logical groupings only.
+- **Movement:** Log of stock operations. `MovementType` enum: `PURCHASE` (entry/purchase), `RETURN` (entry/return from project), `EXIT` (exit to project/destination), `WRITEOFF` (exit/write-off — loss, damage, or disposal). Has `creatorId` (FK to `User`), `responsibleDeliveryId` and `responsibleReceiptId` (FK to `Staff`), optional `projectId` (FK to `Project`), `destination: String?`, `observations: String?`, and `date: DateTime`. PURCHASE and RETURN **increment** stock; EXIT and WRITEOFF **decrement** stock. EXIT and WRITEOFF validate sufficient stock before committing.
 - **MovementDetail:** Line items of a Movement. Has a `quantity: Decimal` field.
-- **Project:** Projects where materials are destined. Has `name`, `manager`, `contact`, `address`.
-- **Disposal:** Log of items permanently removed from inventory.
+- **Project:** Projects where materials are destined. Has `name`, `contact`, `address`. `managerId` is a FK to `Staff` (nullable) — the manager must be a registered user in the system.
 
 ## 3. Technology Stack
 
@@ -45,5 +44,5 @@ This package manages the persistence layer for the Ingexpert application using P
 ## 5. Exports
 
 - **`prisma`:** Singleton `PrismaClient` instance.
-- **Prisma model types:** `User`, `Staff`, `WorkArea`, `Item`, `Movement`, `MovementDetail`, `Project`, `Disposal` — used as bases for entity types in `@ingexpert/schema`.
-- **Enums:** `UserRole`, `ItemType`, `MovementType` (re-exported from `@prisma/client`).
+- **Prisma model types:** `User`, `Staff`, `WorkArea`, `Item`, `Movement`, `MovementDetail`, `Project` — used as bases for entity types in `@ingexpert/schema`.
+- **Enums:** `UserRole`, `ItemType`, `MovementType` (re-exported from `@prisma/client`). `MovementType` values: `PURCHASE`, `RETURN`, `EXIT`, `WRITEOFF`.
