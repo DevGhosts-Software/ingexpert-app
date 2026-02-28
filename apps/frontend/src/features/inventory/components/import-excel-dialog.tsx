@@ -5,7 +5,7 @@ import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import { AlertCircle, FileUp, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
-import type { CreateItemDto } from '@ingexpert/schema';
+import type { CreateItemDto, KitImportRow } from '@ingexpert/schema';
 import { ItemType } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
@@ -49,8 +49,9 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   return ItemType.PRODUCT;
 }
 
-// Expected columns (all-caps, no accents): CODIGO NOMBRE UBICACION STOCK UNIDAD
-function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
+// Expected columns: CODIGO NOMBRE UBICACION STOCK UNIDAD [TIPO]
+// KIT rows are excluded — they are handled via the Kits sheet
+function parseInventoryRows(rows: RawExcelRow[]): CreateItemDto[] {
   return rows
     .map(normalizeRow)
     .filter((row) => row['NOMBRE'] || row['CODIGO'])
@@ -70,7 +71,26 @@ function parseRows(rows: RawExcelRow[]): CreateItemDto[] {
         type: parseItemType(row['TIPO']),
         imageUrl: '',
       };
-    });
+    })
+    .filter((item) => item.type !== ItemType.KIT); // kits handled separately
+}
+
+// Expected columns: KIT CODIGO_KIT COMPONENTE CODIGO_COMPONENTE CANTIDAD UNIDAD
+function parseKitRows(rows: RawExcelRow[]): KitImportRow[] {
+  return rows
+    .map(normalizeRow)
+    .filter((row) => row['CODIGO_KIT'] && row['CODIGO_COMPONENTE'])
+    .map(
+      (row): KitImportRow => ({
+        kitCode: String(row['CODIGO_KIT'] ?? '').trim(),
+        kitName: String(row['KIT'] ?? '').trim() || String(row['CODIGO_KIT'] ?? '').trim(),
+        componentCode: String(row['CODIGO_COMPONENTE'] ?? '').trim(),
+        componentName:
+          String(row['COMPONENTE'] ?? '').trim() || String(row['CODIGO_COMPONENTE'] ?? '').trim(),
+        quantity: Math.max(Number(row['CANTIDAD'] ?? 1), 0.001),
+        unit: String(row['UNIDAD'] ?? 'unidad').trim(),
+      }),
+    );
 }
 
 interface ImportExcelDialogProps {
@@ -82,15 +102,17 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedRows, setParsedRows] = useState<CreateItemDto[]>([]);
+  const [parsedKitRows, setParsedKitRows] = useState<KitImportRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
 
   const [isImporting, setIsImporting] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
-  const progress =
-    parsedRows.length > 0 ? Math.round((importedCount / parsedRows.length) * 100) : 0;
+  const totalCount = parsedRows.length + parsedKitRows.length;
+  const progress = totalCount > 0 ? Math.round((importedCount / totalCount) * 100) : 0;
 
   const upsertMutation = trpc.items.importMany.useMutation();
+  const kitImportMutation = trpc.kits.importMany.useMutation();
 
   const invalidateAll = useCallback(
     () =>
@@ -99,6 +121,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         utils.items.getStats.invalidate(),
         utils.items.getCounts.invalidate(),
         utils.items.getLocations.invalidate(),
+        utils.kits.getAllWithComponents.invalidate(),
       ]),
     [utils],
   );
@@ -106,6 +129,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const handleClose = useCallback(() => {
     if (isImporting) return;
     setParsedRows([]);
+    setParsedKitRows([]);
     setFileName('');
     setParseError('');
     setImportedCount(0);
@@ -116,6 +140,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setParseError('');
     setParsedRows([]);
+    setParsedKitRows([]);
     setImportedCount(0);
     const file = e.target.files?.[0];
     if (!file) return;
@@ -126,14 +151,29 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
       try {
         const data = ev.target?.result;
         const workbook = xlsxRead(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rawRows = xlsxUtils.sheet_to_json<RawExcelRow>(sheet, { defval: '' });
-        const items = parseRows(rawRows);
-        if (items.length === 0) {
+
+        // Sheet 1: Inventario (inventory items, kits excluded)
+        const inventorySheetName =
+          workbook.SheetNames.find((n) => n.toLowerCase().startsWith('inv')) ??
+          workbook.SheetNames[0];
+        const inventorySheet = workbook.Sheets[inventorySheetName];
+        const inventoryRaw = xlsxUtils.sheet_to_json<RawExcelRow>(inventorySheet, { defval: '' });
+        const items = parseInventoryRows(inventoryRaw);
+
+        // Sheet 2: Kits (optional)
+        const kitsSheetName = workbook.SheetNames.find((n) => n.toLowerCase().startsWith('kit'));
+        const kitRows: KitImportRow[] = kitsSheetName
+          ? parseKitRows(
+              xlsxUtils.sheet_to_json<RawExcelRow>(workbook.Sheets[kitsSheetName], { defval: '' }),
+            )
+          : [];
+
+        if (items.length === 0 && kitRows.length === 0) {
           setParseError('No se encontraron filas validas en el archivo.');
           return;
         }
         setParsedRows(items);
+        setParsedKitRows(kitRows);
       } catch {
         setParseError('Error al leer el archivo. Asegurate de que sea un .xlsx valido.');
       }
@@ -142,25 +182,45 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   }, []);
 
   const handleImport = useCallback(async () => {
-    if (parsedRows.length === 0) return;
+    if (parsedRows.length === 0 && parsedKitRows.length === 0) return;
     setIsImporting(true);
     setImportedCount(0);
 
-    const chunks: CreateItemDto[][] = [];
-    for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
-      chunks.push(parsedRows.slice(i, i + CHUNK_SIZE));
-    }
-
     try {
-      let done = 0;
-      for (const chunk of chunks) {
-        await upsertMutation.mutateAsync(chunk);
-        done += chunk.length;
-        setImportedCount(done);
+      // ── Items (in chunks) ────────────────────────────────────────────────────
+      if (parsedRows.length > 0) {
+        const chunks: CreateItemDto[][] = [];
+        for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
+          chunks.push(parsedRows.slice(i, i + CHUNK_SIZE));
+        }
+        let done = 0;
+        for (const chunk of chunks) {
+          await upsertMutation.mutateAsync(chunk);
+          done += chunk.length;
+          setImportedCount(done);
+        }
       }
-      toast.success(`${parsedRows.length} items importados correctamente`);
+
+      // ── Kits (in chunks) ─────────────────────────────────────────────────────
+      if (parsedKitRows.length > 0) {
+        const kitChunks: KitImportRow[][] = [];
+        for (let i = 0; i < parsedKitRows.length; i += CHUNK_SIZE) {
+          kitChunks.push(parsedKitRows.slice(i, i + CHUNK_SIZE));
+        }
+        let done = parsedRows.length;
+        for (const chunk of kitChunks) {
+          await kitImportMutation.mutateAsync(chunk);
+          done += chunk.length;
+          setImportedCount(done);
+        }
+      }
+
+      toast.success(
+        `Importación completada: ${parsedRows.length} items, ${parsedKitRows.length} filas de kits`,
+      );
       void invalidateAll();
       setParsedRows([]);
+      setParsedKitRows([]);
       setFileName('');
       setImportedCount(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -170,9 +230,11 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
     } finally {
       setIsImporting(false);
     }
-  }, [parsedRows, upsertMutation, invalidateAll, onClose]);
+  }, [parsedRows, parsedKitRows, upsertMutation, kitImportMutation, invalidateAll, onClose]);
 
-  const chunkCount = Math.ceil(parsedRows.length / CHUNK_SIZE);
+  const itemChunkCount = Math.ceil(parsedRows.length / CHUNK_SIZE);
+  const kitChunkCount = Math.ceil(parsedKitRows.length / CHUNK_SIZE);
+  const chunkCount = itemChunkCount + kitChunkCount;
   const currentChunk = Math.min(Math.ceil(importedCount / CHUNK_SIZE) + 1, chunkCount);
 
   return (
@@ -184,11 +246,15 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             Importar desde Excel
           </DialogTitle>
           <DialogDescription>
-            Selecciona un archivo .xlsx. La primera fila debe tener los encabezados en mayusculas:{' '}
-            <span className="font-mono font-medium text-foreground">
+            Hoja <span className="font-mono font-medium text-foreground">Inventario</span>:{' '}
+            <span className="font-mono text-foreground">
               CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD
             </span>
-            Los items existentes (por codigo) tendran su stock incrementado.
+            . Hoja <span className="font-mono font-medium text-foreground">Kits</span> (opcional):{' '}
+            <span className="font-mono text-foreground">
+              KIT · CODIGO_KIT · COMPONENTE · CODIGO_COMPONENTE · CANTIDAD
+            </span>
+            .
           </DialogDescription>
         </DialogHeader>
 
@@ -221,11 +287,22 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
           {parseError && <p className="text-sm text-destructive">{parseError}</p>}
 
-          {parsedRows.length > 0 && !isImporting && (
-            <div className="rounded-md bg-muted px-4 py-3 text-sm">
-              <span className="font-medium">{parsedRows.length}</span> items detectados en{' '}
-              <span className="font-medium">{chunkCount}</span>{' '}
-              {chunkCount === 1 ? 'lote' : 'lotes'}.
+          {(parsedRows.length > 0 || parsedKitRows.length > 0) && !isImporting && (
+            <div className="rounded-md bg-muted px-4 py-3 text-sm space-y-0.5">
+              {parsedRows.length > 0 && (
+                <p>
+                  <span className="font-medium">{parsedRows.length}</span> items de inventario en{' '}
+                  <span className="font-medium">{itemChunkCount}</span>{' '}
+                  {itemChunkCount === 1 ? 'lote' : 'lotes'}.
+                </p>
+              )}
+              {parsedKitRows.length > 0 && (
+                <p>
+                  <span className="font-medium">{parsedKitRows.length}</span> filas de kits en{' '}
+                  <span className="font-medium">{kitChunkCount}</span>{' '}
+                  {kitChunkCount === 1 ? 'lote' : 'lotes'}.
+                </p>
+              )}
             </div>
           )}
 
@@ -236,7 +313,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                   Lote {currentChunk} de {chunkCount}
                 </span>
                 <span className="font-medium tabular-nums">
-                  {importedCount} / {parsedRows.length} items
+                  {importedCount} / {totalCount} filas
                 </span>
               </div>
               <Progress value={progress} />
@@ -259,13 +336,10 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
           <Button variant="outline" onClick={handleClose} disabled={isImporting}>
             {isImporting ? 'Procesando...' : 'Cancelar'}
           </Button>
-          <Button
-            onClick={() => void handleImport()}
-            disabled={parsedRows.length === 0 || isImporting}
-          >
+          <Button onClick={() => void handleImport()} disabled={totalCount === 0 || isImporting}>
             {isImporting
               ? `${progress}% completado`
-              : `Importar ${parsedRows.length > 0 ? parsedRows.length : ''} items`}
+              : `Importar ${totalCount > 0 ? totalCount : ''} filas`}
           </Button>
         </DialogFooter>
       </DialogContent>

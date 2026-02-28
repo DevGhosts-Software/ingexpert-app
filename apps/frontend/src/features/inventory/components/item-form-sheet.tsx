@@ -145,6 +145,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   // Auto-fill hidden KIT fields so validation passes
   useEffect(() => {
     if (watchedType === 'KIT') {
+      form.setValue('location', '-', { shouldValidate: false });
       form.setValue('unit', 'kit', { shouldValidate: false });
       form.setValue('stock', 0, { shouldValidate: false });
       form.setValue('imageUrl', undefined, { shouldValidate: false });
@@ -416,19 +417,22 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ubicación</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: Taller A" disabled={isPending} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Location — hidden for KIT items */}
+            {watchedType !== 'KIT' && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ubicación</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: Taller A" disabled={isPending} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Stock + Unit — hidden for KIT items */}
             {watchedType !== 'KIT' && (
