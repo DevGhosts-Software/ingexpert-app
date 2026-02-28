@@ -87,7 +87,7 @@ export class MovementsService {
       if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
       if (filters.dateTo) {
         const end = new Date(filters.dateTo);
-        end.setHours(23, 59, 59, 999);
+        end.setUTCHours(23, 59, 59, 999);
         where.date.lte = end;
       }
     }
@@ -136,7 +136,7 @@ export class MovementsService {
         (baseWhere.date as Prisma.DateTimeFilter).gte = new Date(filters.dateFrom);
       if (filters.dateTo) {
         const end = new Date(filters.dateTo);
-        end.setHours(23, 59, 59, 999);
+        end.setUTCHours(23, 59, 59, 999);
         (baseWhere.date as Prisma.DateTimeFilter).lte = end;
       }
     }
