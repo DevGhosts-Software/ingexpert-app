@@ -90,7 +90,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const progress =
     parsedRows.length > 0 ? Math.round((importedCount / parsedRows.length) * 100) : 0;
 
-  const upsertMutation = trpc.items.upsertManyByName.useMutation();
+  const upsertMutation = trpc.items.importMany.useMutation();
 
   const invalidateAll = useCallback(
     () =>
@@ -188,7 +188,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             <span className="font-mono font-medium text-foreground">
               CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD
             </span>
-            . Los items existentes (por nombre) seran actualizados.
+            Los items existentes (por codigo) tendran su stock incrementado.
           </DialogDescription>
         </DialogHeader>
 

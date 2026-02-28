@@ -46,11 +46,11 @@ export class ItemsRouter {
           await this.itemsService.createBatch(input);
           return { success: true };
         }),
-      // Batch upsert (para import desde Excel)
-      upsertManyByName: this.trpc.adminProcedure
+      // Batch import from Excel — creates new items or increments stock for existing ones (matched by code)
+      importMany: this.trpc.adminProcedure
         .input(z.array(CreateItemSchema))
         .mutation(async ({ input }) => {
-          await this.itemsService.upsertManyByName(input);
+          await this.itemsService.importMany(input);
           return { success: true };
         }),
 

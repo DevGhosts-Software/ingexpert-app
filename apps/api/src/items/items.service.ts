@@ -93,41 +93,47 @@ export class ItemsService {
     });
   }
 
-  async upsertManyByName(items: CreateItemDto[]): Promise<void> {
-    const names = items.map((i) => i.name);
+  async importMany(items: CreateItemDto[]): Promise<void> {
+    const codes = items.map((i) => i.code);
 
-    // Single query to find all items that already exist by name
+    // Find all items that already exist by code
     const existing = await this.prisma.item.findMany({
-      where: { name: { in: names } },
-      select: { id: true, name: true },
+      where: { code: { in: codes } },
+      select: { id: true, code: true },
     });
-    const existingMap = new Map(existing.map((e) => [e.name, e.id]));
+    const existingMap = new Map(existing.map((e) => [e.code, e.id]));
 
-    const mapData = (item: CreateItemDto) => ({
-      name: item.name,
-      code: item.code,
-      location: item.location,
-      stock: new Prisma.Decimal(item.stock),
-      unit: item.unit,
-      type: item.type,
-      imageUrl: item.imageUrl ?? '',
-    });
+    const toCreate = items.filter((i) => !existingMap.has(i.code));
+    const toUpdate = items.filter((i) => existingMap.has(i.code));
 
-    const toCreate = items.filter((i) => !existingMap.has(i.name));
-    const toUpdate = items.filter((i) => existingMap.has(i.name));
-
-    // Batch-insert all new items in one query
     if (toCreate.length > 0) {
-      await this.prisma.item.createMany({ data: toCreate.map(mapData) });
+      await this.prisma.item.createMany({
+        data: toCreate.map((item) => ({
+          name: item.name,
+          code: item.code,
+          location: item.location,
+          stock: new Prisma.Decimal(item.stock),
+          unit: item.unit,
+          type: item.type,
+          imageUrl: item.imageUrl ?? '',
+        })),
+      });
     }
 
-    // Update existing items in parallel
+    // For existing items, increment stock instead of replacing it
     if (toUpdate.length > 0) {
       await Promise.all(
         toUpdate.map((item) =>
           this.prisma.item.update({
-            where: { id: existingMap.get(item.name)! },
-            data: mapData(item),
+            where: { id: existingMap.get(item.code)! },
+            data: {
+              name: item.name,
+              location: item.location,
+              unit: item.unit,
+              type: item.type,
+              imageUrl: item.imageUrl ?? '',
+              stock: { increment: new Prisma.Decimal(item.stock) },
+            },
           }),
         ),
       );
