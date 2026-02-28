@@ -41,7 +41,8 @@ export type StaffEntity = {
 
 export type MovementStats = {
   total: number;
-  entries: number;
+  purchases: number;
+  returns: number;
   exits: number;
   thisMonth: number;
 };

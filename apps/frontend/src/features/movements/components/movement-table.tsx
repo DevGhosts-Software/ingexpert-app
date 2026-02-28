@@ -66,7 +66,8 @@ interface MovementTableProps {
 
 const TAB_ITEMS: Array<{ value: ActiveTab; label: string }> = [
   { value: 'all', label: 'Todos' },
-  { value: 'entry', label: 'Entradas' },
+  { value: 'purchase', label: 'Compras' },
+  { value: 'return', label: 'Devoluciones' },
   { value: 'exit', label: 'Salidas' },
 ];
 

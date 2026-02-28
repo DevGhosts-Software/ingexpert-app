@@ -111,14 +111,15 @@ export class MovementsService {
     firstOfMonth.setDate(1);
     firstOfMonth.setHours(0, 0, 0, 0);
 
-    const [total, entries, exits, thisMonth] = await Promise.all([
+    const [total, purchases, returns, exits, thisMonth] = await Promise.all([
       this.prisma.movement.count(),
-      this.prisma.movement.count({ where: { type: MovementType.ENTRY } }),
+      this.prisma.movement.count({ where: { type: MovementType.PURCHASE } }),
+      this.prisma.movement.count({ where: { type: MovementType.RETURN } }),
       this.prisma.movement.count({ where: { type: MovementType.EXIT } }),
       this.prisma.movement.count({ where: { date: { gte: firstOfMonth } } }),
     ]);
 
-    return { total, entries, exits, thisMonth };
+    return { total, purchases, returns, exits, thisMonth };
   }
 
   async getProjects() {
@@ -214,7 +215,7 @@ export class MovementsService {
       });
 
       // 5. Apply new stock changes
-      const applyOp = input.type === MovementType.ENTRY ? 'increment' : 'decrement';
+      const applyOp = input.type !== MovementType.EXIT ? 'increment' : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({
@@ -288,7 +289,7 @@ export class MovementsService {
         },
       });
 
-      const qtyOp = input.type === MovementType.ENTRY ? 'increment' : 'decrement';
+      const qtyOp = input.type !== MovementType.EXIT ? 'increment' : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({

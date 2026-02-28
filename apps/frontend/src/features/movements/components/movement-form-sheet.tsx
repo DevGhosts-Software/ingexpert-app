@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowDownCircle, ArrowUpCircle, ClipboardList, PackagePlus } from 'lucide-react';
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  ClipboardList,
+  PackagePlus,
+  RotateCcw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { z } from 'zod';
@@ -248,9 +254,14 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                               <ArrowUpCircle className="h-4 w-4 text-orange-500" /> Salida
                             </span>
                           </SelectItem>
-                          <SelectItem value="ENTRY">
+                          <SelectItem value="PURCHASE">
                             <span className="flex items-center gap-2">
-                              <ArrowDownCircle className="h-4 w-4 text-green-500" /> Entrada
+                              <ArrowDownCircle className="h-4 w-4 text-blue-500" /> Compra
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="RETURN">
+                            <span className="flex items-center gap-2">
+                              <RotateCcw className="h-4 w-4 text-green-500" /> Devolución
                             </span>
                           </SelectItem>
                         </SelectContent>

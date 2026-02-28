@@ -1,6 +1,7 @@
 enum MovementType {
-  ENTRY
   EXIT
+  PURCHASE
+  RETURN
 }
 
 model Movement {

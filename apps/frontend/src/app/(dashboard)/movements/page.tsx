@@ -9,8 +9,14 @@ import { MovementStats } from '@/features/movements/components/movement-stats';
 import { MovementTable } from '@/features/movements/components/movement-table';
 import type { ActiveTab, TypeCounts } from '@/features/movements/components/movement-table.types';
 
-const DEFAULT_STATS: MovementStatsType = { total: 0, entries: 0, exits: 0, thisMonth: 0 };
-const DEFAULT_COUNTS: TypeCounts = { all: 0, entry: 0, exit: 0 };
+const DEFAULT_STATS: MovementStatsType = {
+  total: 0,
+  purchases: 0,
+  returns: 0,
+  exits: 0,
+  thisMonth: 0,
+};
+const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0 };
 
 export default function MovementsPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -25,9 +31,10 @@ export default function MovementsPage() {
   const { data: projects = [] } = trpc.movements.getProjects.useQuery();
 
   const { tableData, pageCount, typeCounts } = useMemo(() => {
-    const typeMap: Record<ActiveTab, 'ENTRY' | 'EXIT' | undefined> = {
+    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | undefined> = {
       all: undefined,
-      entry: 'ENTRY',
+      purchase: 'PURCHASE',
+      return: 'RETURN',
       exit: 'EXIT',
     };
 
@@ -64,7 +71,8 @@ export default function MovementsPage() {
       pageCount: Math.ceil(sorted.length / pageSize),
       typeCounts: {
         all: preType.length,
-        entry: preType.filter((m) => m.type === 'ENTRY').length,
+        purchase: preType.filter((m) => m.type === 'PURCHASE').length,
+        return: preType.filter((m) => m.type === 'RETURN').length,
         exit: preType.filter((m) => m.type === 'EXIT').length,
       } satisfies TypeCounts,
     };
