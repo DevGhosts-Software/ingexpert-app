@@ -196,9 +196,15 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
-                    <TrendingUp className="h-3.5 w-3.5 text-green-600" /> Entradas
+                    <TrendingUp className="h-3.5 w-3.5 text-blue-500" /> Compras
                   </span>
-                  <span className="font-medium">{movStats?.entries ?? 0}</span>
+                  <span className="font-medium">{movStats?.purchases ?? 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5 text-green-600" /> Devoluciones
+                  </span>
+                  <span className="font-medium">{movStats?.returns ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">

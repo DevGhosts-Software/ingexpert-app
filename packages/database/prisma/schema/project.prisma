@@ -3,8 +3,9 @@ model Project {
   name    String @map("name")
   contact String @map("contact")
   address String @map("address")
-  manager String @map("manager")
+  managerId String @map("manager_id")
 
+  manager   User       @relation("ProjectManager", fields: [managerId], references: [id])
   movements Movement[]
 
   @@map("projects")

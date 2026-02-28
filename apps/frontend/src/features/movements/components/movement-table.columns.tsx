@@ -1,37 +1,49 @@
 'use client';
 
-import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  CalendarIcon,
-  Eye,
+  Briefcase,
+  FileText,
   MapPin,
-  MoreHorizontal,
   Package,
+  RotateCcw,
+  Trash2,
+  User,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { MovementDetailSheet } from './movement-detail-sheet';
 import type { MovementRow } from './movement-table.types';
 
-export function TypeBadge({ type }: { type: 'ENTRY' | 'EXIT' }) {
-  if (type === 'ENTRY') {
+// ─── TypeBadge ────────────────────────────────────────────────────────────────
+
+export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' }) {
+  if (type === 'PURCHASE') {
+    return (
+      <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+        <ArrowDownCircle className="h-3 w-3" />
+        Compra
+      </Badge>
+    );
+  }
+  if (type === 'RETURN') {
     return (
       <Badge className="gap-1.5 bg-green-100 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
-        <ArrowDownCircle className="h-3 w-3" />
-        Entrada
+        <RotateCcw className="h-3 w-3" />
+        Devolución
+      </Badge>
+    );
+  }
+  if (type === 'WRITEOFF') {
+    return (
+      <Badge className="gap-1.5 bg-red-100 text-red-800 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
+        <Trash2 className="h-3 w-3" />
+        Baja
       </Badge>
     );
   }
@@ -43,30 +55,120 @@ export function TypeBadge({ type }: { type: 'ENTRY' | 'EXIT' }) {
   );
 }
 
-function RowActions({ row }: { row: MovementRow }) {
-  const [open, setOpen] = useState(false);
+// ─── ContextCell ──────────────────────────────────────────────────────────────
+// 2-line smart cell: primary context (project/destination) + secondary (responsible)
+
+function ContextCell({ row }: { row: MovementRow }) {
+  const { type, projectName, destination, responsibleDeliveryName, responsibleReceiptName } = row;
+
+  if (type === 'PURCHASE') {
+    return responsibleReceiptName ? (
+      <div className="flex items-center gap-1.5 text-sm">
+        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+          {responsibleReceiptName}
+        </span>
+      </div>
+    ) : (
+      <span className="text-muted-foreground text-sm">—</span>
+    );
+  }
+
+  if (type === 'RETURN') {
+    return (
+      <div className="space-y-0.5">
+        {projectName ? (
+          <div className="flex items-center gap-1.5 text-sm">
+            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate max-w-[180px] font-medium" title={projectName}>
+              {projectName}
+            </span>
+          </div>
+        ) : null}
+        {responsibleReceiptName ? (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+              Devuelve: {responsibleReceiptName}
+            </span>
+          </div>
+        ) : null}
+        {!projectName && !responsibleReceiptName && (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </div>
+    );
+  }
+
+  if (type === 'EXIT') {
+    const primary = projectName ?? destination;
+    const isPrimProject = !!projectName;
+    return (
+      <div className="space-y-0.5">
+        {primary ? (
+          <div className="flex items-center gap-1.5 text-sm">
+            {isPrimProject ? (
+              <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            ) : (
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            )}
+            <span className="truncate max-w-[180px] font-medium" title={primary}>
+              {primary}
+            </span>
+          </div>
+        ) : null}
+        {projectName && destination ? (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[180px]" title={destination}>
+              {destination}
+            </span>
+          </div>
+        ) : null}
+        {responsibleDeliveryName ? (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[180px]" title={responsibleDeliveryName}>
+              Entrega: {responsibleDeliveryName}
+            </span>
+          </div>
+        ) : null}
+        {!primary && !responsibleDeliveryName && (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </div>
+    );
+  }
+
+  // WRITEOFF — no project/destination/responsible, show nothing meaningful
+  return <span className="text-muted-foreground text-sm">—</span>;
+}
+
+// ─── NotesCell ────────────────────────────────────────────────────────────────
+
+function NotesCell({ observations }: { observations: string | null }) {
+  if (!observations) return <span className="text-muted-foreground text-sm">—</span>;
+
+  const preview = observations.length > 50 ? observations.slice(0, 50) + '…' : observations;
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Abrir menú</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setOpen(true)}>
-            <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
-            Ver detalle
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <MovementDetailSheet movementId={row.id} open={open} onClose={() => setOpen(false)} />
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-start gap-1.5 text-sm cursor-default max-w-[200px]">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <span className="truncate text-muted-foreground">{preview}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-xs whitespace-pre-wrap">
+          {observations}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
+
+// ─── Column definitions ───────────────────────────────────────────────────────
 
 export function getColumns(): ColumnDef<MovementRow>[] {
   return [
@@ -80,52 +182,34 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       accessorKey: 'date',
       header: 'Fecha',
       cell: ({ row }) => (
-        <div className="flex items-center gap-1.5 text-sm whitespace-nowrap">
-          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-sm whitespace-nowrap tabular-nums">
           {format(new Date(row.original.date), 'dd/MM/yyyy', { locale: es })}
-        </div>
+        </span>
       ),
     },
     {
       accessorKey: 'creatorName',
-      header: 'Creado por',
+      header: 'Registrado por',
       cell: ({ row }) => (
         <span
-          className="font-medium block max-w-[160px] truncate"
+          className="text-sm font-medium block max-w-[150px] truncate"
           title={row.original.creatorName ?? ''}
         >
           {row.original.creatorName ?? '—'}
         </span>
       ),
-    },
-    {
-      accessorKey: 'projectName',
-      header: 'Proyecto',
-      cell: ({ row }) =>
-        row.original.projectName ? (
-          <span className="text-sm block max-w-[160px] truncate" title={row.original.projectName}>
-            {row.original.projectName}
-          </span>
-        ) : (
-          <span className="text-muted-foreground text-sm">—</span>
-        ),
       enableSorting: false,
     },
     {
-      accessorKey: 'destination',
-      header: 'Destino',
-      cell: ({ row }) =>
-        row.original.destination ? (
-          <span
-            className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
-            title={row.original.destination}
-          >
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{row.original.destination}</span>
-          </span>
-        ) : (
-          <span className="text-muted-foreground text-sm">—</span>
-        ),
+      id: 'context',
+      header: 'Contexto',
+      cell: ({ row }) => <ContextCell row={row.original} />,
+      enableSorting: false,
+    },
+    {
+      id: 'notes',
+      header: 'Notas',
+      cell: ({ row }) => <NotesCell observations={row.original.observations ?? null} />,
       enableSorting: false,
     },
     {
@@ -139,12 +223,6 @@ export function getColumns(): ColumnDef<MovementRow>[] {
           </Badge>
         </div>
       ),
-      enableSorting: false,
-    },
-    {
-      id: 'actions',
-      header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <RowActions row={row.original} />,
       enableSorting: false,
     },
   ];

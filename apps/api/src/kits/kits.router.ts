@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { TrpcService } from '../trpc/trpc.service';
 import { KitsService } from './kits.service';
-import { SetKitComponentsSchema } from '@ingexpert/schema';
+import { KitImportRowSchema, SetKitComponentsSchema } from '@ingexpert/schema';
 
 @Injectable()
 export class KitsRouter {
@@ -19,6 +19,10 @@ export class KitsRouter {
           return this.kitsService.getComponents(input);
         }),
 
+      getAllWithComponents: this.trpc.protectedProcedure.query(async () => {
+        return this.kitsService.getAllWithComponents();
+      }),
+
       setComponents: this.trpc.protectedProcedure
         .input(SetKitComponentsSchema)
         .mutation(async ({ input }) => {
@@ -29,6 +33,13 @@ export class KitsRouter {
         .input(z.string().uuid())
         .mutation(async ({ input }) => {
           await this.kitsService.clearKit(input);
+          return { success: true };
+        }),
+
+      importMany: this.trpc.adminProcedure
+        .input(z.array(KitImportRowSchema))
+        .mutation(async ({ input }) => {
+          await this.kitsService.importMany(input);
           return { success: true };
         }),
     });

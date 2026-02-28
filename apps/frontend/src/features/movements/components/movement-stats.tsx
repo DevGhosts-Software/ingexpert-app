@@ -1,4 +1,11 @@
-import { ArrowDownCircle, ArrowUpCircle, Activity, TrendingUp } from 'lucide-react';
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Activity,
+  TrendingUp,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
@@ -9,7 +16,7 @@ interface MovementStatsProps {
 
 export function MovementStats({ stats }: MovementStatsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total de Movimientos</CardTitle>
@@ -23,12 +30,23 @@ export function MovementStats({ stats }: MovementStatsProps) {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Entradas</CardTitle>
-          <ArrowDownCircle className="h-4 w-4 text-green-500" />
+          <CardTitle className="text-sm font-medium">Compras</CardTitle>
+          <ArrowDownCircle className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.entries}</div>
-          <p className="text-xs text-muted-foreground">Ingresos de material</p>
+          <div className="text-2xl font-bold">{stats.purchases}</div>
+          <p className="text-xs text-muted-foreground">Ingresos por compra</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Devoluciones</CardTitle>
+          <RotateCcw className="h-4 w-4 text-green-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.returns}</div>
+          <p className="text-xs text-muted-foreground">Material devuelto</p>
         </CardContent>
       </Card>
 
@@ -40,6 +58,17 @@ export function MovementStats({ stats }: MovementStatsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.exits}</div>
           <p className="text-xs text-muted-foreground">Egresos de material</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Bajas</CardTitle>
+          <Trash2 className="h-4 w-4 text-red-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.writeoffs}</div>
+          <p className="text-xs text-muted-foreground">Bajas de inventario</p>
         </CardContent>
       </Card>
 

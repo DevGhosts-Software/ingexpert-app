@@ -9,7 +9,6 @@ import {
   ItemStats,
   UpdateItemDto,
 } from '@ingexpert/schema';
-import { paginatePrisma } from '../utils/paginatePrisma';
 
 @Injectable()
 export class ItemsService {
@@ -30,14 +29,53 @@ export class ItemsService {
   }
 
   async findPaginated(input: ItemPaginationDto) {
-    const result = await paginatePrisma<Item>(this.prisma.item, input, [
-      'name',
-      'code',
-      'location',
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const conditions: Prisma.ItemWhereInput[] = [];
+
+    // Type allowlist (multi-type) takes precedence over single-type filter
+    if (input.filters?.types?.length) {
+      conditions.push({ type: { in: input.filters.types } });
+    } else if (input.filters?.type) {
+      conditions.push({ type: input.filters.type as ItemType });
+    }
+
+    if (input.filters?.location) {
+      conditions.push({ location: input.filters.location });
+    }
+
+    if (input.search) {
+      conditions.push({
+        OR: [
+          { name: { contains: input.search, mode: 'insensitive' } },
+          { code: { contains: input.search, mode: 'insensitive' } },
+          { location: { contains: input.search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    const where: Prisma.ItemWhereInput = conditions.length > 0 ? { AND: conditions } : {};
+    const orderBy = input.orderBy
+      ? { [input.orderBy]: input.orderDir ?? 'asc' }
+      : { id: 'desc' as const };
+
+    const [total, data] = await Promise.all([
+      this.prisma.item.count({ where }),
+      this.prisma.item.findMany({ where, take: limit, skip, orderBy }),
     ]);
+
     return {
-      data: result.data.map((item) => this.mapItem(item)),
-      meta: result.meta,
+      data: data.map((item) => this.mapItem(item)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPreviousPage: page > 1,
+      },
     };
   }
 
@@ -93,41 +131,47 @@ export class ItemsService {
     });
   }
 
-  async upsertManyByName(items: CreateItemDto[]): Promise<void> {
-    const names = items.map((i) => i.name);
+  async importMany(items: CreateItemDto[]): Promise<void> {
+    const codes = items.map((i) => i.code);
 
-    // Single query to find all items that already exist by name
+    // Find all items that already exist by code
     const existing = await this.prisma.item.findMany({
-      where: { name: { in: names } },
-      select: { id: true, name: true },
+      where: { code: { in: codes } },
+      select: { id: true, code: true },
     });
-    const existingMap = new Map(existing.map((e) => [e.name, e.id]));
+    const existingMap = new Map(existing.map((e) => [e.code, e.id]));
 
-    const mapData = (item: CreateItemDto) => ({
-      name: item.name,
-      code: item.code,
-      location: item.location,
-      stock: new Prisma.Decimal(item.stock),
-      unit: item.unit,
-      type: item.type,
-      imageUrl: item.imageUrl ?? '',
-    });
+    const toCreate = items.filter((i) => !existingMap.has(i.code));
+    const toUpdate = items.filter((i) => existingMap.has(i.code));
 
-    const toCreate = items.filter((i) => !existingMap.has(i.name));
-    const toUpdate = items.filter((i) => existingMap.has(i.name));
-
-    // Batch-insert all new items in one query
     if (toCreate.length > 0) {
-      await this.prisma.item.createMany({ data: toCreate.map(mapData) });
+      await this.prisma.item.createMany({
+        data: toCreate.map((item) => ({
+          name: item.name,
+          code: item.code,
+          location: item.location,
+          stock: new Prisma.Decimal(item.stock),
+          unit: item.unit,
+          type: item.type,
+          imageUrl: item.imageUrl ?? '',
+        })),
+      });
     }
 
-    // Update existing items in parallel
+    // For existing items, increment stock instead of replacing it
     if (toUpdate.length > 0) {
       await Promise.all(
         toUpdate.map((item) =>
           this.prisma.item.update({
-            where: { id: existingMap.get(item.name)! },
-            data: mapData(item),
+            where: { id: existingMap.get(item.code)! },
+            data: {
+              name: item.name,
+              location: item.location,
+              unit: item.unit,
+              type: item.type,
+              imageUrl: item.imageUrl ?? '',
+              stock: { increment: new Prisma.Decimal(item.stock) },
+            },
           }),
         ),
       );

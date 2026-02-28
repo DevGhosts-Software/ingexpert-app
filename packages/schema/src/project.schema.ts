@@ -8,7 +8,7 @@ export const CreateProjectSchema = z.object({
   name: z.string().min(1),
   contact: z.string().min(1),
   address: z.string().min(1),
-  manager: z.string().min(1),
+  managerId: z.string().uuid(),
 });
 export type CreateProjectDto = z.infer<typeof CreateProjectSchema>;
 
@@ -22,6 +22,6 @@ export type ProjectPaginationInput = z.infer<typeof ProjectPaginationSchema>;
 
 /**
  * Wire representation of a Project returned by the API.
- * Derived from the Prisma `Project` model (scalar fields only — no relations).
+ * `manager` is a flattened name from the related User — mapped in the service.
  */
-export type ProjectEntity = Project;
+export type ProjectEntity = Project & { manager: string | null };

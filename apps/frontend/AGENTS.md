@@ -274,7 +274,39 @@ Key rules:
 - `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
 - The component must be a named function (not inline) to use `useState`.
 
-## 16. Conditional Forms Inside Sheets/Dialogs
+## 15. Movement Form — Dynamic Type Card Picker
+
+The movement creation form (`movement-form-sheet.tsx`) uses a **card picker** instead of a dropdown for the movement type. Each card shows an icon, label, and short description. The selected card gets a color-coded border/background per type.
+
+Fields shown per type (all optional except items):
+
+| Type       | Fields displayed                                    |
+| ---------- | --------------------------------------------------- |
+| `PURCHASE` | Quien recibe                                        |
+| `RETURN`   | Proyecto de origen · Quien devuelve el material     |
+| `EXIT`     | Destino · Proyecto destino · Responsable de entrega |
+| `WRITEOFF` | Warning banner (no project/people fields)           |
+| All        | Observaciones (always shown, adaptive placeholder)  |
+
+Switching type clears all irrelevant field values via `form.setValue` to prevent stale data from being submitted.
+
+## 16. Movement Detail Sheet — Type-Aware Layout
+
+`movement-detail-sheet.tsx` renders a colored header banner (blue/green/orange/red) matching the movement type, with the type badge, movement ID hash, and full date/time.
+
+The metadata section below is fully type-aware — only the fields relevant to the type are rendered. `observations` is rendered as a distinct highlighted block (not an inline field row) so it stands out, particularly for `WRITEOFF` movements.
+
+The `ItemType` enum is stored in the DB and sent over tRPC in English (`PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT`). For Excel files (Ingexpert is a Spanish-language company), the `TIPO` column is always written and read in Spanish:
+
+| DB / tRPC value | Excel label   |
+| --------------- | ------------- |
+| `PRODUCT`       | `PRODUCTO`    |
+| `EQUIPMENT`     | `EQUIPO`      |
+| `TOOL`          | `HERRAMIENTA` |
+| `KIT`           | `KIT`         |
+
+**Export** (`inventory-table-toolbar.tsx`): use a `TYPE_ES` lookup map to convert before writing the cell.  
+**Import** (`import-excel-dialog.tsx`): `parseItemType()` accepts both the Spanish label _and_ the English name so that manually edited files still work. Anything unrecognised defaults to `PRODUCT`.
 
 **Never conditionally swap two different `<Form>` (or any large component tree) inside a Radix `Sheet` or `Dialog`.** Radix's `FocusScope` re-initializes its focus trap when large DOM subtrees are unmounted and remounted, temporarily blocking pointer events on all inputs.
 

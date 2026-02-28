@@ -26,6 +26,8 @@ export const ItemPaginationSchema = BasePaginationSchema.extend({
   filters: z
     .object({
       type: z.string().optional(),
+      /** Allowlist of types — server uses `{ type: { in: types } }`. Takes precedence over `type`. */
+      types: z.array(z.nativeEnum(ItemType)).optional(),
       unit: z.string().optional(),
       location: z.string().optional(),
     })

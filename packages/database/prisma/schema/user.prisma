@@ -17,6 +17,7 @@ model User {
 
   staff Staff?
 
+  managedProjects       Project[]  @relation("ProjectManager")
   createdMovements      Movement[] @relation("MovementCreator")
   deliveredMovements    Movement[] @relation("MovementDelivery")
   receivedMovements     Movement[] @relation("MovementReceipt")
@@ -38,11 +39,9 @@ model Staff {
   id         String  @id
   workAreaId String? @map("work_area_id")
 
+  // Relations
   user     User      @relation(fields: [id], references: [id], onDelete: Cascade)
   workArea WorkArea? @relation(fields: [workAreaId], references: [id], onDelete: SetNull)
-
-  // Relations
-  disposals Disposal[]
 
   @@map("staff")
 }

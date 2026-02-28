@@ -13,6 +13,17 @@ export const SetKitComponentsSchema = z.object({
 
 export type SetKitComponentsDto = z.infer<typeof SetKitComponentsSchema>;
 
+/** One row from the "Kits" sheet of an exported workbook. */
+export const KitImportRowSchema = z.object({
+  kitCode: z.string().min(1),
+  kitName: z.string().min(1),
+  componentCode: z.string().min(1),
+  componentName: z.string().min(1),
+  quantity: z.number().positive(),
+  unit: z.string().min(1),
+});
+export type KitImportRow = z.infer<typeof KitImportRowSchema>;
+
 // ─── Entities ────────────────────────────────────────────────────────────────
 
 /** Wire representation of a KitDetail row with its nested component Item. */

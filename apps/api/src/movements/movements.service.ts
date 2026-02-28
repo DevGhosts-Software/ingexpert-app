@@ -6,6 +6,7 @@ import {
   UpdateMovementDto,
   MovementEntityWithDetails,
   MovementHeaderEntity,
+  MovementFiltersDto,
   MovementStats,
 } from '@ingexpert/schema';
 
@@ -29,6 +30,7 @@ export class MovementsService {
       type: m.type,
       createdById: m.createdById,
       destination: m.destination,
+      observations: m.observations,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
       projectId: m.projectId,
@@ -57,6 +59,8 @@ export class MovementsService {
         _count: { select: { details: true } };
         project: { select: { name: true } };
         createdBy: { select: { name: true; email: true } };
+        responsibleDelivery: { select: { name: true } };
+        responsibleReceipt: { select: { name: true } };
       };
     }>,
   ): MovementHeaderEntity {
@@ -65,6 +69,7 @@ export class MovementsService {
       type: m.type,
       createdById: m.createdById,
       destination: m.destination,
+      observations: m.observations,
       responsibleDeliveryId: m.responsibleDeliveryId,
       responsibleReceiptId: m.responsibleReceiptId,
       projectId: m.projectId,
@@ -72,16 +77,36 @@ export class MovementsService {
       itemsCount: m._count.details,
       projectName: m.project?.name ?? null,
       creatorName: m.createdBy.name ?? m.createdBy.email,
+      responsibleDeliveryName: m.responsibleDelivery?.name ?? null,
+      responsibleReceiptName: m.responsibleReceipt?.name ?? null,
     };
   }
 
-  async findAll(): Promise<MovementHeaderEntity[]> {
+  async findAll(filters?: MovementFiltersDto): Promise<MovementHeaderEntity[]> {
+    const where: Prisma.MovementWhereInput = {};
+
+    if (filters?.createdById) {
+      where.createdById = filters.createdById;
+    }
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo);
+        end.setUTCHours(23, 59, 59, 999);
+        where.date.lte = end;
+      }
+    }
+
     const movements = await this.prisma.movement.findMany({
+      where,
       orderBy: { date: 'desc' },
       include: {
         _count: { select: { details: true } },
         project: { select: { name: true } },
         createdBy: { select: { name: true, email: true } },
+        responsibleDelivery: { select: { name: true } },
+        responsibleReceipt: { select: { name: true } },
       },
     });
     return movements.map((m) => this.mapMovementHeader(m));
@@ -106,19 +131,34 @@ export class MovementsService {
     return this.mapMovementWithDetails(movement);
   }
 
-  async getStats(): Promise<MovementStats> {
+  async getStats(filters?: MovementFiltersDto): Promise<MovementStats> {
     const firstOfMonth = new Date();
     firstOfMonth.setDate(1);
     firstOfMonth.setHours(0, 0, 0, 0);
 
-    const [total, entries, exits, thisMonth] = await Promise.all([
-      this.prisma.movement.count(),
-      this.prisma.movement.count({ where: { type: MovementType.ENTRY } }),
-      this.prisma.movement.count({ where: { type: MovementType.EXIT } }),
-      this.prisma.movement.count({ where: { date: { gte: firstOfMonth } } }),
+    const baseWhere: Prisma.MovementWhereInput = {};
+    if (filters?.createdById) baseWhere.createdById = filters.createdById;
+    if (filters?.dateFrom || filters?.dateTo) {
+      baseWhere.date = {};
+      if (filters.dateFrom)
+        (baseWhere.date as Prisma.DateTimeFilter).gte = new Date(filters.dateFrom);
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo);
+        end.setUTCHours(23, 59, 59, 999);
+        (baseWhere.date as Prisma.DateTimeFilter).lte = end;
+      }
+    }
+
+    const [total, purchases, returns, exits, writeoffs, thisMonth] = await Promise.all([
+      this.prisma.movement.count({ where: baseWhere }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.PURCHASE } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.RETURN } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.EXIT } }),
+      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.WRITEOFF } }),
+      this.prisma.movement.count({ where: { ...baseWhere, date: { gte: firstOfMonth } } }),
     ]);
 
-    return { total, entries, exits, thisMonth };
+    return { total, purchases, returns, exits, writeoffs, thisMonth };
   }
 
   async getProjects() {
@@ -150,9 +190,10 @@ export class MovementsService {
         newQuantities.set(d.itemId, (newQuantities.get(d.itemId) ?? 0) + d.quantity);
       }
 
-      if (input.type === MovementType.EXIT) {
+      if (input.type === MovementType.EXIT || input.type === MovementType.WRITEOFF) {
         const originalQuantities = new Map<string, number>();
-        const originalWasExit = original.type === MovementType.EXIT;
+        const originalDeductsStock =
+          original.type === MovementType.EXIT || original.type === MovementType.WRITEOFF;
         for (const d of original.details) {
           originalQuantities.set(
             d.itemId,
@@ -164,7 +205,7 @@ export class MovementsService {
           if (!item) throw new BadRequestException(`El ítem con ID ${itemId} no existe.`);
           const currentStock = item.stock.toNumber();
           const originalQty = originalQuantities.get(itemId) ?? 0;
-          const stockAfterReverse = originalWasExit
+          const stockAfterReverse = originalDeductsStock
             ? currentStock + originalQty
             : currentStock - originalQty;
           if (stockAfterReverse < needed) {
@@ -176,7 +217,10 @@ export class MovementsService {
       }
 
       // 3. Reverse original stock changes
-      const reverseOp = original.type === MovementType.EXIT ? 'increment' : 'decrement';
+      const reverseOp =
+        original.type === MovementType.EXIT || original.type === MovementType.WRITEOFF
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         original.details.map((d) =>
           tx.item.update({
@@ -194,6 +238,7 @@ export class MovementsService {
         data: {
           type: input.type,
           destination: input.destination ?? null,
+          observations: input.observations ?? null,
           responsibleDeliveryId: input.responsibleDeliveryId ?? null,
           responsibleReceiptId: input.responsibleReceiptId ?? null,
           projectId: input.projectId ?? null,
@@ -214,7 +259,10 @@ export class MovementsService {
       });
 
       // 5. Apply new stock changes
-      const applyOp = input.type === MovementType.ENTRY ? 'increment' : 'decrement';
+      const applyOp =
+        input.type === MovementType.PURCHASE || input.type === MovementType.RETURN
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({
@@ -253,7 +301,7 @@ export class MovementsService {
         if (!currentItem)
           throw new BadRequestException(`El ítem con ID ${itemId} no existe en la base de datos.`);
 
-        if (input.type === MovementType.EXIT) {
+        if (input.type === MovementType.EXIT || input.type === MovementType.WRITEOFF) {
           const currentStock = currentItem.stock.toNumber();
           if (currentStock < totalRequired) {
             throw new BadRequestException(
@@ -268,6 +316,7 @@ export class MovementsService {
           type: input.type,
           createdById,
           destination: input.destination,
+          observations: input.observations,
           responsibleDeliveryId: input.responsibleDeliveryId,
           responsibleReceiptId: input.responsibleReceiptId,
           projectId: input.projectId,
@@ -288,7 +337,10 @@ export class MovementsService {
         },
       });
 
-      const qtyOp = input.type === MovementType.ENTRY ? 'increment' : 'decrement';
+      const qtyOp =
+        input.type === MovementType.PURCHASE || input.type === MovementType.RETURN
+          ? 'increment'
+          : 'decrement';
       await Promise.all(
         input.details.map((d) =>
           tx.item.update({

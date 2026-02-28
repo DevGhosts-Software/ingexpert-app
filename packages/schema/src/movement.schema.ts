@@ -10,9 +10,18 @@ export const MovementDetailSchema = z.object({
   quantity: z.number().positive(),
 });
 
+export const MovementFiltersSchema = z.object({
+  createdById: z.string().uuid().optional(),
+  dateFrom: z.string().optional(), // ISO date string
+  dateTo: z.string().optional(), // ISO date string
+});
+
+export type MovementFiltersDto = z.infer<typeof MovementFiltersSchema>;
+
 export const CreateMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
   destination: z.string().optional(),
+  observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),
   responsibleReceiptId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
@@ -24,6 +33,7 @@ export type CreateMovementDto = z.infer<typeof CreateMovementSchema>;
 export const UpdateMovementSchema = z.object({
   type: z.nativeEnum(MovementType),
   destination: z.string().optional(),
+  observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),
   responsibleReceiptId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
@@ -41,8 +51,10 @@ export type StaffEntity = {
 
 export type MovementStats = {
   total: number;
-  entries: number;
+  purchases: number;
+  returns: number;
   exits: number;
+  writeoffs: number;
   thisMonth: number;
 };
 
@@ -52,6 +64,8 @@ export type MovementHeaderEntity = Omit<Movement, 'date'> & {
   itemsCount: number;
   projectName: string | null;
   creatorName: string | null;
+  responsibleDeliveryName: string | null;
+  responsibleReceiptName: string | null;
 };
 
 /** Full entity returned by getById — includes item details and responsible person names. */

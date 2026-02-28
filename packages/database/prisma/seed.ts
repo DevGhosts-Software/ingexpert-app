@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { ItemType, PrismaClient } from '@prisma/client';
+import { type ItemType, PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,9 +26,45 @@ const SEED_USERS = [
   },
 ];
 
+// ─── Seed projects ────────────────────────────────────────────────────────────
+
+const SEED_PROJECTS = [
+  {
+    name: 'Planta Industrial Norte',
+    contact: '+54 11 4500-1234',
+    address: 'Av. Constituyentes 1200, CABA',
+  },
+  {
+    name: 'Obra Vial Ruta 40',
+    contact: '+54 261 420-5678',
+    address: 'Km 1200, Mendoza',
+  },
+  {
+    name: 'Mantenimiento Refinería Sur',
+    contact: '+54 297 480-9012',
+    address: 'Parque Industrial, Comodoro Rivadavia',
+  },
+  {
+    name: 'Torre Corporativa Centro',
+    contact: '+54 11 5300-3456',
+    address: 'Av. Corrientes 900, CABA',
+  },
+  {
+    name: 'Proyecto Minero Puna',
+    contact: '+54 388 422-7890',
+    address: 'Ruta Provincial 52, Jujuy',
+  },
+];
+
 // ─── Item generation helpers ─────────────────────────────────────────────────
 
-const ITEM_TYPES: ItemType[] = ['PRODUCT', 'EQUIPMENT', 'TOOL', 'KIT'];
+// How many of each type to generate (total = 90)
+const ITEM_DISTRIBUTION: Array<{ type: ItemType; count: number }> = [
+  { type: 'PRODUCT', count: 40 },
+  { type: 'EQUIPMENT', count: 15 },
+  { type: 'TOOL', count: 25 },
+  { type: 'KIT', count: 10 },
+];
 
 const LOCATIONS = [
   'Taller A',
@@ -71,6 +107,22 @@ const ITEM_NAMES: Record<ItemType, string[]> = {
     'Grasa Industrial',
     'Filtro de Aire',
     'Filtro de Aceite',
+    'Electrodo Rutílico 3.2mm',
+    'Electrodo Básico 4mm',
+    'Hilo de Soldadura MIG 0.9mm',
+    'Disco de Corte 4.5"',
+    'Disco de Desbaste 7"',
+    'Broca HSS 8mm',
+    'Broca HSS 10mm',
+    'Clavija Eléctrica 16A',
+    'Interruptor Térmica 20A',
+    'Caja de Pase 10x10',
+    'Manga Termorretráctil 6mm',
+    'Espiga Metálica 10x80',
+    'Silicona Estructural 300ml',
+    'Empaque de Goma 1/2"',
+    'Válvula de Paso 3/4"',
+    'Niple de Acero 1"',
   ],
   EQUIPMENT: [
     'Taladradora Industrial 750W',
@@ -110,6 +162,11 @@ const ITEM_NAMES: Record<ItemType, string[]> = {
     'Lima Plana Media',
     'Segueta Manual',
     'Escuadra 30cm',
+    'Espátula 10cm',
+    'Llave Allen 5mm',
+    'Llave Allen 8mm',
+    'Juego de Llaves Allen',
+    'Sierra de Mano 12"',
   ],
   KIT: [
     'Kit de Herramientas Básicas',
@@ -126,31 +183,53 @@ const ITEM_NAMES: Record<ItemType, string[]> = {
 };
 
 function pick<T>(arr: T[]): T {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
-function randomStock(): number {
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+function randomStock(type: ItemType): number {
+  if (type === 'KIT') return 0;
+  if (type === 'EQUIPMENT') return Math.floor(Math.random() * 3) + 1; // 1–3 units
   const roll = Math.random();
-  if (roll < 0.1) return 0; // 10% sin stock
-  if (roll < 0.25) return Math.floor(Math.random() * 9) + 1; // 15% stock bajo
+  if (roll < 0.1) return 0; // 10% out-of-stock
+  if (roll < 0.25) return Math.floor(Math.random() * 9) + 1; // 15% low stock
   return Math.floor(Math.random() * 200) + 10; // 75% normal
 }
 
-function generateItems(count: number) {
-  const usedCodes = new Set<string>();
+function generateItemsOfType(
+  type: ItemType,
+  count: number,
+  usedCodes: Set<string>,
+): Array<{
+  name: string;
+  code: string;
+  type: ItemType;
+  location: string;
+  stock: number;
+  unit: string;
+  imageUrl: string;
+}> {
   const items = [];
+  const namePool = ITEM_NAMES[type];
+  const prefix = type.slice(0, 3).toUpperCase();
 
   for (let i = 0; i < count; i++) {
-    const type = pick(ITEM_TYPES);
-    const namePool = ITEM_NAMES[type];
-    const baseName = pick(namePool);
-    // Append a suffix to avoid duplicate names
-    const name = `${baseName} ${String(i + 1).padStart(3, '0')}`;
+    const baseName = namePool[i % namePool.length]!;
+    // Add a numeric suffix when we cycle through names more than once
+    const cycle = Math.floor(i / namePool.length);
+    const name = cycle > 0 ? `${baseName} (${cycle + 1})` : baseName;
+
     let code: string;
     do {
-      const prefix = type.slice(0, 3);
       code = `${prefix}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
     } while (usedCodes.has(code));
     usedCodes.add(code);
@@ -159,14 +238,51 @@ function generateItems(count: number) {
       name,
       code,
       type,
-      location: pick(LOCATIONS),
-      stock: randomStock(),
-      unit: pick(UNITS),
+      location: type === 'KIT' ? '' : pick(LOCATIONS),
+      stock: randomStock(type),
+      unit: type === 'KIT' ? 'kit' : pick(UNITS),
       imageUrl: '',
     });
   }
 
   return items;
+}
+
+// ─── SQL statement splitter (handles dollar-quoted function bodies) ───────────
+
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inDollarQuote = false;
+  let dollarTag = '';
+
+  for (const line of sql.split('\n')) {
+    // Track entry/exit of dollar-quoted strings (e.g. $$ or $tag$)
+    const tags = line.match(/\$\w*\$/g) ?? [];
+    for (const tag of tags) {
+      if (!inDollarQuote) {
+        inDollarQuote = true;
+        dollarTag = tag;
+      } else if (tag === dollarTag) {
+        inDollarQuote = false;
+        dollarTag = '';
+      }
+    }
+
+    current += line + '\n';
+
+    // A statement ends at a semicolon on a line, but only outside dollar-quotes
+    if (!inDollarQuote && line.trimEnd().endsWith(';')) {
+      const trimmed = current.trim();
+      if (trimmed) {
+        statements.push(trimmed);
+      }
+      current = '';
+    }
+  }
+
+  if (current.trim()) statements.push(current.trim());
+  return statements;
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -194,9 +310,12 @@ async function main() {
     throw listError;
   }
 
-  // ── Seed users ──
+  // ── 1. Seed users ───────────────────────────────────────────────────────────
+  console.log('\n── Users ──────────────────────────────────────');
+  let adminId: string | null = null;
+
   for (const seedUser of SEED_USERS) {
-    console.log(`\nChecking user: ${seedUser.email}...`);
+    console.log(`Checking: ${seedUser.email}...`);
     const existing = existingAuthUsers.find((u) => u.email === seedUser.email);
     let userId: string;
 
@@ -224,38 +343,142 @@ async function main() {
       update: { role: seedUser.role },
       create: { id: userId, email: seedUser.email, name: seedUser.name, role: seedUser.role },
     });
-    console.log(`  Ensured consistency in local DB.`);
+    console.log(`  Ensured in local DB.`);
+
+    if (seedUser.role === 'ADMIN') adminId = userId;
   }
 
-  // ── Seed items ──
+  // ── 2. Seed items ────────────────────────────────────────────────────────────
+  console.log('\n── Items ──────────────────────────────────────');
+  const totalTarget = ITEM_DISTRIBUTION.reduce((s, d) => s + d.count, 0);
   const existingCount = await prisma.item.count();
-  if (existingCount >= 100) {
-    console.log(`\nItems already seeded (${existingCount} found). Skipping item generation.`);
+
+  if (existingCount >= totalTarget) {
+    console.log(`Items already seeded (${existingCount} found). Skipping.`);
   } else {
-    const needed = 100 - existingCount;
-    console.log(`\nGenerating ${needed} items (${existingCount} already exist)...`);
-    const items = generateItems(needed);
-    await prisma.item.createMany({ data: items });
-    console.log(`  Created ${needed} items successfully.`);
+    const usedCodes = new Set<string>();
+
+    // Pre-load existing codes so we don't collide
+    const existingCodes = await prisma.item.findMany({ select: { code: true } });
+    existingCodes.forEach((i) => usedCodes.add(i.code));
+
+    for (const { type, count } of ITEM_DISTRIBUTION) {
+      const existingOfType = await prisma.item.count({ where: { type } });
+      const needed = count - existingOfType;
+      if (needed <= 0) {
+        console.log(`  ${type}: already have ${existingOfType}. Skipping.`);
+        continue;
+      }
+      const items = generateItemsOfType(type, needed, usedCodes);
+      await prisma.item.createMany({ data: items });
+      console.log(`  ${type}: created ${needed} items.`);
+    }
   }
 
-  // ── Run SQL script ──
+  // ── 3. Seed kit compositions ─────────────────────────────────────────────────
+  console.log('\n── Kit Compositions ───────────────────────────');
+  const emptyKits = await prisma.item.findMany({
+    where: { type: 'KIT' },
+    include: { _count: { select: { kitDetails: true } } },
+  });
+  const kitsNeedingComponents = emptyKits.filter((k) => k._count.kitDetails === 0);
+
+  if (kitsNeedingComponents.length === 0) {
+    console.log('All kits already have components. Skipping.');
+  } else {
+    // Fetch eligible components: PRODUCT and TOOL only
+    const eligibleComponents = await prisma.item.findMany({
+      where: { type: { in: ['PRODUCT', 'TOOL'] } },
+      select: { id: true, name: true, type: true },
+    });
+
+    if (eligibleComponents.length === 0) {
+      console.warn(
+        'No PRODUCT or TOOL items found to assign as kit components. Skipping kit composition.',
+      );
+    } else {
+      for (const kit of kitsNeedingComponents) {
+        // Pick 3–6 unique components per kit
+        const componentCount = Math.floor(Math.random() * 4) + 3;
+        const chosen = shuffle(eligibleComponents).slice(0, componentCount);
+
+        const kitDetails = chosen.map((c) => ({
+          kitId: kit.id,
+          componentId: c.id,
+          quantity: Math.floor(Math.random() * 5) + 1, // 1–5 units per component
+        }));
+
+        await prisma.kitDetail.createMany({ data: kitDetails });
+        console.log(
+          `  "${kit.name}": assigned ${kitDetails.length} components (${chosen.map((c) => c.name).join(', ')}).`,
+        );
+      }
+    }
+  }
+
+  // ── 4. Seed projects ─────────────────────────────────────────────────────────
+  console.log('\n── Projects ────────────────────────────────────');
+  if (!adminId) {
+    console.warn('No admin user found — skipping project seed.');
+  } else {
+    const existingProjects = await prisma.project.count();
+    if (existingProjects >= SEED_PROJECTS.length) {
+      console.log(`Projects already seeded (${existingProjects} found). Skipping.`);
+    } else {
+      for (const p of SEED_PROJECTS) {
+        const exists = await prisma.project.findFirst({ where: { name: p.name } });
+        if (exists) {
+          console.log(`  "${p.name}": already exists. Skipping.`);
+          continue;
+        }
+        await prisma.project.create({
+          data: { ...p, managerId: adminId },
+        });
+        console.log(`  Created: "${p.name}".`);
+      }
+    }
+  }
+
+  // ── 5. SQL bucket policies ────────────────────────────────────────────────────
   const sqlPath = path.join(__dirname, 'app-data bucket policies.sql');
-  if (fs.existsSync(sqlPath)) {
-    console.log('\nRunning SQL script: app-data bucket policies.sql...');
+  if (!fs.existsSync(sqlPath)) {
+    console.warn('\nSQL script not found, skipping.');
+  } else {
+    console.log('\n── SQL Policies ────────────────────────────────');
     const sql = fs.readFileSync(sqlPath, 'utf-8');
+    const statements = splitSqlStatements(sql);
+    console.log(`Found ${statements.length} SQL statements.`);
+
     const dbClient = new Client({
       connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
     });
     await dbClient.connect();
-    try {
-      await dbClient.query(sql);
-      console.log('  SQL script executed successfully.');
-    } finally {
-      await dbClient.end();
+
+    let ok = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const stmt of statements) {
+      const preview = stmt.slice(0, 60).replace(/\n/g, ' ');
+      try {
+        await dbClient.query(stmt);
+        console.log(`  ✓ ${preview}...`);
+        ok++;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Duplicate policy / already exists → skip gracefully
+        if (msg.includes('already exists') || msg.includes('duplicate')) {
+          console.log(`  ⊘ Already exists, skipping: ${preview}...`);
+          skipped++;
+        } else {
+          console.warn(`  ✗ Failed: ${preview}...\n    ${msg}`);
+          failed++;
+        }
+      }
     }
-  } else {
-    console.warn('\nSQL script not found, skipping.');
+
+    await dbClient.end();
+    console.log(`  Done: ${ok} applied, ${skipped} skipped, ${failed} failed.`);
   }
 
   console.log('\n✅ Seed complete.');

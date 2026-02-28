@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 
+import { type ItemType } from '@ingexpert/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
+import { TYPE_CONFIG } from './inventory-table.types';
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -18,6 +20,7 @@ export type LocalComponent = {
   unit: string;
   stock: number;
   quantity: number;
+  type: ItemType;
 };
 
 // ─── Search input ─────────────────────────────────────────────────────────────
@@ -26,10 +29,13 @@ export function AddComponentInput({
   excludeIds,
   onAdd,
   disabled,
+  allowedTypes,
 }: {
   excludeIds: string[];
   onAdd: (item: LocalComponent) => void;
   disabled?: boolean;
+  /** If provided, only items of these types are returned from the server. */
+  allowedTypes?: ItemType[];
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -37,7 +43,12 @@ export function AddComponentInput({
   const debouncedQuery = useDebounce(query, 300);
 
   const { data: results, isFetching } = trpc.items.list.useQuery(
-    { page: 1, limit: 8, search: debouncedQuery || undefined },
+    {
+      page: 1,
+      limit: 10,
+      search: debouncedQuery || undefined,
+      filters: allowedTypes?.length ? { types: allowedTypes } : undefined,
+    },
     { enabled: debouncedQuery.trim().length >= 2 },
   );
 
@@ -65,6 +76,7 @@ export function AddComponentInput({
       unit: item.unit,
       stock: item.stock,
       quantity: 1,
+      type: item.type as ItemType,
     });
     setQuery('');
     setOpen(false);
@@ -91,7 +103,11 @@ export function AddComponentInput({
     <div className="relative">
       <div className="relative">
         <Input
-          placeholder="Buscar ítem para agregar..."
+          placeholder={
+            allowedTypes?.length
+              ? `Buscar ${allowedTypes.map((t) => TYPE_CONFIG[t].label.toLowerCase()).join(' o ')}...`
+              : 'Buscar ítem para agregar...'
+          }
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -109,7 +125,7 @@ export function AddComponentInput({
         )}
       </div>
       {(showDropdown || showEmpty) && (
-        <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+        <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-56 overflow-y-auto">
           {isSearching && filtered.length === 0 ? (
             <li className="px-3 py-3 text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -118,22 +134,56 @@ export function AddComponentInput({
           ) : showEmpty ? (
             <li className="px-3 py-3 text-sm text-muted-foreground">Sin resultados</li>
           ) : (
-            filtered.map((item, i) => (
-              <li
-                key={item.id}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleSelect(item)}
-                className={cn(
-                  'px-3 py-2 text-sm cursor-pointer flex justify-between items-center gap-2',
-                  i === highlighted && 'bg-accent',
-                )}
-              >
-                <span className="truncate">{item.name}</span>
-                <span className="text-xs text-muted-foreground font-mono shrink-0">
-                  {item.code}
-                </span>
-              </li>
-            ))
+            filtered.map((item, i) => {
+              const config = TYPE_CONFIG[item.type as ItemType];
+              const TypeIcon = config.icon;
+              const isKit = item.type === 'KIT';
+              return (
+                <li
+                  key={item.id}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelect(item)}
+                  className={cn(
+                    'px-3 py-2 text-sm cursor-pointer flex items-center gap-2',
+                    i === highlighted && 'bg-accent',
+                  )}
+                >
+                  {/* Icon */}
+                  <TypeIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+
+                  {/* Name + code */}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium leading-tight truncate">{item.name}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{item.code}</p>
+                  </div>
+
+                  {/* Type + stock */}
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    <span className="text-[11px] text-muted-foreground leading-tight">
+                      {config.label}
+                    </span>
+                    {isKit ? (
+                      <span className="text-[11px] text-primary font-medium leading-tight">
+                        → expandir
+                      </span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'text-[11px] font-mono leading-tight',
+                          item.stock === 0
+                            ? 'text-destructive'
+                            : item.stock <= 5
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400',
+                        )}
+                      >
+                        {item.stock} {item.unit}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })
           )}
         </ul>
       )}
@@ -193,6 +243,8 @@ interface KitComponentsBuilderProps {
   onRemove: (componentId: string) => void;
   onQtyChange: (componentId: string, qty: number) => void;
   disabled?: boolean;
+  /** If provided, search is restricted to these types (server-side). */
+  allowedTypes?: ItemType[];
 }
 
 export function KitComponentsBuilder({
@@ -202,46 +254,58 @@ export function KitComponentsBuilder({
   onRemove,
   onQtyChange,
   disabled,
+  allowedTypes,
 }: KitComponentsBuilderProps) {
   return (
     <div className="space-y-2">
       {/* Search first so dropdown opens downward over the list, not off-screen */}
-      <AddComponentInput excludeIds={excludeIds} onAdd={onAdd} disabled={disabled} />
+      <AddComponentInput
+        excludeIds={excludeIds}
+        onAdd={onAdd}
+        disabled={disabled}
+        allowedTypes={allowedTypes}
+      />
 
       {components.length > 0 && (
         <div className="border rounded-md divide-y text-sm">
-          <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <span />
             <span>Componente</span>
             <span className="text-right">Cantidad</span>
             <span />
           </div>
-          {components.map((comp) => (
-            <div
-              key={comp.componentId}
-              className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 items-center"
-            >
-              <div className="min-w-0">
-                <p className="font-medium leading-tight truncate">{comp.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{comp.code}</p>
-              </div>
-              <QtyInput
-                componentId={comp.componentId}
-                value={comp.quantity}
-                onQtyChange={onQtyChange}
-                disabled={disabled}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onRemove(comp.componentId)}
-                disabled={disabled}
+          {components.map((comp) => {
+            const config = TYPE_CONFIG[comp.type];
+            const TypeIcon = config.icon;
+            return (
+              <div
+                key={comp.componentId}
+                className="grid grid-cols-[auto_1fr_auto_auto] gap-2 px-3 py-2 items-center"
               >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
+                <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight truncate">{comp.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{comp.code}</p>
+                </div>
+                <QtyInput
+                  componentId={comp.componentId}
+                  value={comp.quantity}
+                  onQtyChange={onQtyChange}
+                  disabled={disabled}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onRemove(comp.componentId)}
+                  disabled={disabled}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
 
