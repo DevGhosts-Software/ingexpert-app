@@ -120,6 +120,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
           unit: c.component.unit,
           stock: Number(c.component.stock),
           quantity: Number(c.quantity),
+          type: c.component.type,
         })),
       );
     } else if (!open) {
@@ -488,6 +489,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                     onRemove={handleKitRemove}
                     onQtyChange={handleKitQtyChange}
                     disabled={isPending}
+                    allowedTypes={['PRODUCT', 'TOOL']}
                   />
                 </div>
               </>

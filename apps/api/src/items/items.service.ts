@@ -9,7 +9,6 @@ import {
   ItemStats,
   UpdateItemDto,
 } from '@ingexpert/schema';
-import { paginatePrisma } from '../utils/paginatePrisma';
 
 @Injectable()
 export class ItemsService {
@@ -30,14 +29,53 @@ export class ItemsService {
   }
 
   async findPaginated(input: ItemPaginationDto) {
-    const result = await paginatePrisma<Item>(this.prisma.item, input, [
-      'name',
-      'code',
-      'location',
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const conditions: Prisma.ItemWhereInput[] = [];
+
+    // Type allowlist (multi-type) takes precedence over single-type filter
+    if (input.filters?.types?.length) {
+      conditions.push({ type: { in: input.filters.types } });
+    } else if (input.filters?.type) {
+      conditions.push({ type: input.filters.type as ItemType });
+    }
+
+    if (input.filters?.location) {
+      conditions.push({ location: input.filters.location });
+    }
+
+    if (input.search) {
+      conditions.push({
+        OR: [
+          { name: { contains: input.search, mode: 'insensitive' } },
+          { code: { contains: input.search, mode: 'insensitive' } },
+          { location: { contains: input.search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    const where: Prisma.ItemWhereInput = conditions.length > 0 ? { AND: conditions } : {};
+    const orderBy = input.orderBy
+      ? { [input.orderBy]: input.orderDir ?? 'asc' }
+      : { id: 'desc' as const };
+
+    const [total, data] = await Promise.all([
+      this.prisma.item.count({ where }),
+      this.prisma.item.findMany({ where, take: limit, skip, orderBy }),
     ]);
+
     return {
-      data: result.data.map((item) => this.mapItem(item)),
-      meta: result.meta,
+      data: data.map((item) => this.mapItem(item)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPreviousPage: page > 1,
+      },
     };
   }
 

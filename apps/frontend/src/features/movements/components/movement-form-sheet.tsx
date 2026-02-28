@@ -123,13 +123,49 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   }
 
   // ── Item list helpers ───────────────────────────────────────────────────────
-  const handleAddItem = useCallback((item: MovementItem) => {
-    setMovementItems((prev) => {
-      const exists = prev.find((i) => i.componentId === item.componentId);
-      if (exists) return prev; // already added
-      return [...prev, item];
-    });
-  }, []);
+  const handleAddItem = useCallback(
+    (item: MovementItem) => {
+      if (item.type === 'KIT') {
+        // Expand kit: fetch its components and add/increment each one atomically on server
+        void (async () => {
+          const comps = await utils.kits.getComponents.fetch(item.componentId);
+          if (comps.length === 0) {
+            toast.error(`El kit "${item.name}" no tiene componentes configurados`);
+            return;
+          }
+          setMovementItems((prev) => {
+            const updated = [...prev];
+            for (const c of comps) {
+              const qty = Number(c.quantity);
+              const idx = updated.findIndex((i) => i.componentId === c.componentId);
+              if (idx >= 0) {
+                // Component already in list — increment quantity
+                updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + qty };
+              } else {
+                updated.push({
+                  componentId: c.componentId,
+                  name: c.component.name,
+                  code: c.component.code,
+                  unit: c.component.unit,
+                  stock: Number(c.component.stock),
+                  quantity: qty,
+                  type: c.component.type,
+                });
+              }
+            }
+            return updated;
+          });
+        })();
+        return;
+      }
+      setMovementItems((prev) => {
+        const exists = prev.find((i) => i.componentId === item.componentId);
+        if (exists) return prev;
+        return [...prev, item];
+      });
+    },
+    [utils],
+  );
 
   const handleRemoveItem = useCallback((componentId: string) => {
     setMovementItems((prev) => prev.filter((i) => i.componentId !== componentId));
@@ -348,14 +384,19 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
 
                 {/* Items */}
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">
-                    Ítems del movimiento
-                    {movementItems.length > 0 && (
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        ({movementItems.length})
-                      </span>
-                    )}
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium">
+                      Ítems del movimiento
+                      {movementItems.length > 0 && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          ({movementItems.length})
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Los kits se expanden en sus componentes — sale todo o nada.
+                    </p>
+                  </div>
                   <KitComponentsBuilder
                     components={movementItems}
                     excludeIds={excludeIds}
