@@ -69,6 +69,13 @@ export function InventoryTableToolbar({
         utils.kits.getAllWithComponents.fetch(),
       ]);
 
+      const TYPE_ES: Record<string, string> = {
+        PRODUCT: 'PRODUCTO',
+        EQUIPMENT: 'EQUIPO',
+        TOOL: 'HERRAMIENTA',
+        KIT: 'KIT',
+      };
+
       // Sheet 1: all items except kits
       const inventoryRows = items
         .filter((item) => item.type !== 'KIT')
@@ -78,7 +85,7 @@ export function InventoryTableToolbar({
           UBICACION: item.location,
           STOCK: item.stock,
           UNIDAD: item.unit,
-          TIPO: item.type,
+          TIPO: TYPE_ES[item.type] ?? item.type,
         }));
 
       // Sheet 2: kit compositions (one row per component)

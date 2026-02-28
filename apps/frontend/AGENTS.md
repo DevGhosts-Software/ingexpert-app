@@ -274,7 +274,19 @@ Key rules:
 - `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
 - The component must be a named function (not inline) to use `useState`.
 
-## 16. Conditional Forms Inside Sheets/Dialogs
+## 18. Excel Import / Export — Spanish Enum Labels
+
+The `ItemType` enum is stored in the DB and sent over tRPC in English (`PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT`). For Excel files (Ingexpert is a Spanish-language company), the `TIPO` column is always written and read in Spanish:
+
+| DB / tRPC value | Excel label   |
+| --------------- | ------------- |
+| `PRODUCT`       | `PRODUCTO`    |
+| `EQUIPMENT`     | `EQUIPO`      |
+| `TOOL`          | `HERRAMIENTA` |
+| `KIT`           | `KIT`         |
+
+**Export** (`inventory-table-toolbar.tsx`): use a `TYPE_ES` lookup map to convert before writing the cell.  
+**Import** (`import-excel-dialog.tsx`): `parseItemType()` accepts both the Spanish label _and_ the English name so that manually edited files still work. Anything unrecognised defaults to `PRODUCT`.
 
 **Never conditionally swap two different `<Form>` (or any large component tree) inside a Radix `Sheet` or `Dialog`.** Radix's `FocusScope` re-initializes its focus trap when large DOM subtrees are unmounted and remounted, temporarily blocking pointer events on all inputs.
 

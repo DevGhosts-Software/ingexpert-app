@@ -46,6 +46,7 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   if (str === 'EQUIPMENT' || str === 'EQUIPO') return ItemType.EQUIPMENT;
   if (str === 'TOOL' || str === 'HERRAMIENTA') return ItemType.TOOL;
   if (str === 'KIT') return ItemType.KIT;
+  // 'PRODUCT' (English) and 'PRODUCTO' (Spanish) both map to PRODUCT
   return ItemType.PRODUCT;
 }
 
