@@ -59,6 +59,8 @@ export class MovementsService {
         _count: { select: { details: true } };
         project: { select: { name: true } };
         createdBy: { select: { name: true; email: true } };
+        responsibleDelivery: { select: { name: true } };
+        responsibleReceipt: { select: { name: true } };
       };
     }>,
   ): MovementHeaderEntity {
@@ -75,6 +77,8 @@ export class MovementsService {
       itemsCount: m._count.details,
       projectName: m.project?.name ?? null,
       creatorName: m.createdBy.name ?? m.createdBy.email,
+      responsibleDeliveryName: m.responsibleDelivery?.name ?? null,
+      responsibleReceiptName: m.responsibleReceipt?.name ?? null,
     };
   }
 
@@ -101,6 +105,8 @@ export class MovementsService {
         _count: { select: { details: true } },
         project: { select: { name: true } },
         createdBy: { select: { name: true, email: true } },
+        responsibleDelivery: { select: { name: true } },
+        responsibleReceipt: { select: { name: true } },
       },
     });
     return movements.map((m) => this.mapMovementHeader(m));

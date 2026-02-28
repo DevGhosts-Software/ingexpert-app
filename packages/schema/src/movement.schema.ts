@@ -64,6 +64,8 @@ export type MovementHeaderEntity = Omit<Movement, 'date'> & {
   itemsCount: number;
   projectName: string | null;
   creatorName: string | null;
+  responsibleDeliveryName: string | null;
+  responsibleReceiptName: string | null;
 };
 
 /** Full entity returned by getById — includes item details and responsible person names. */
