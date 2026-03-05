@@ -113,7 +113,7 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
         <div className={`px-6 pt-6 pb-5 border-b ${colors.bg} ${colors.border}`}>
           <SheetHeader className="space-y-3">
             <div className="flex items-center justify-between">
-              <Badge className={`gap-1.5 text-sm px-3 py-1 font-medium border ${colors.badge}`}>
+              <Badge className={`gap-1.5 text-sm px-3 py-1 font-medium ${colors.badge}`}>
                 <TypeIcon className="h-4 w-4" />
                 {typeLabel}
               </Badge>

@@ -41,7 +41,7 @@ function ItemTypeBadge({ type }: { type: ItemType }) {
   const { label, icon: Icon } = TYPE_CONFIG[type];
   const { badge } = TYPE_COLORS[type];
   return (
-    <Badge className={`gap-1 font-normal border ${badge}`}>
+    <Badge className={`gap-1.5 font-normal ${badge}`}>
       <Icon className="h-3 w-3" />
       {label}
     </Badge>
