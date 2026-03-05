@@ -39,14 +39,14 @@ export function InventoryTable({
   onSortingChange,
   onRowClick,
 }: InventoryTableProps) {
-  const [stockLevelFilter, setStockLevelFilter] = useState('all');
+  const [imageFilter, setImageFilter] = useState('all');
 
   const filteredItems = useMemo(() => {
-    if (stockLevelFilter === 'all') return items;
-    if (stockLevelFilter === 'out') return items.filter((i) => i.stock === 0);
-    if (stockLevelFilter === 'ok') return items.filter((i) => i.stock > 0);
-    return items;
-  }, [items, stockLevelFilter]);
+    let result = [...items];
+    if (imageFilter === 'has') result = result.filter((i) => !!i.imageUrl);
+    if (imageFilter === 'missing') result = result.filter((i) => !i.imageUrl);
+    return result;
+  }, [items, imageFilter]);
 
   const pageLocations = useMemo(
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
@@ -90,8 +90,8 @@ export function InventoryTable({
         locationFilter={locationFilter}
         onLocationFilterChange={onLocationFilterChange}
         locationOptions={locationOptions}
-        stockLevelFilter={stockLevelFilter}
-        onStockLevelFilterChange={setStockLevelFilter}
+        imageFilter={imageFilter}
+        onImageFilterChange={setImageFilter}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         typeCounts={typeCounts}

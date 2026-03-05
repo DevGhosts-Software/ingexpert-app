@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
+import { ChevronDown, Download, Filter, ImageOff, Plus, Search, Upload } from 'lucide-react';
 import { utils as xlsxUtils, write as xlsxWrite, writeFile as xlsxWriteFile } from 'xlsx';
 import { toast } from 'sonner';
 
@@ -35,8 +35,8 @@ interface InventoryTableToolbarProps {
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
   locationOptions: string[];
-  stockLevelFilter: string;
-  onStockLevelFilterChange: (value: string) => void;
+  imageFilter: string;
+  onImageFilterChange: (value: string) => void;
   activeTab: string;
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
@@ -49,8 +49,8 @@ export function InventoryTableToolbar({
   locationFilter,
   onLocationFilterChange,
   locationOptions,
-  stockLevelFilter,
-  onStockLevelFilterChange,
+  imageFilter,
+  onImageFilterChange,
   activeTab,
   onTabChange,
   typeCounts,
@@ -158,11 +158,11 @@ export function InventoryTableToolbar({
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 p-3" align="start">
+            <DropdownMenuContent className="w-60 p-3" align="start">
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Ubicacion
+                    Ubicación
                   </p>
                   <Select value={locationFilter} onValueChange={onLocationFilterChange}>
                     <SelectTrigger className="h-8 text-sm">
@@ -180,27 +180,32 @@ export function InventoryTableToolbar({
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Nivel de Stock
+                    Imagen
                   </p>
-                  <Select value={stockLevelFilter} onValueChange={onStockLevelFilterChange}>
+                  <Select value={imageFilter} onValueChange={onImageFilterChange}>
                     <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Todos los niveles" />
+                      <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos los niveles</SelectItem>
-                      <SelectItem value="ok">En stock</SelectItem>
-                      <SelectItem value="out">Sin stock</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="has">Con imagen</SelectItem>
+                      <SelectItem value="missing">
+                        <span className="flex items-center gap-1.5">
+                          <ImageOff className="h-3.5 w-3.5 text-muted-foreground" />
+                          Sin imagen
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {(locationFilter !== 'all' || stockLevelFilter !== 'all') && (
+                {(locationFilter !== 'all' || imageFilter !== 'all') && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={() => {
                       onLocationFilterChange('all');
-                      onStockLevelFilterChange('all');
+                      onImageFilterChange('all');
                     }}
                   >
                     Limpiar filtros
