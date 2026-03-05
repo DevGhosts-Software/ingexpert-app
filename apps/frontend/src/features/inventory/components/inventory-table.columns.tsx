@@ -142,7 +142,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         const url = row.original.imageUrl;
         if (isKit) {
           return (
-            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground text-xs">
+            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground/50 text-xs">
               {EM_DASH}
             </div>
           );
@@ -229,7 +229,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm">
-          {row.original.type === 'KIT' ? EM_DASH : row.getValue('stock')}
+          {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('stock')}
         </span>
       ),
     },
@@ -244,7 +244,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm">
-          {row.original.type === 'KIT' ? EM_DASH : row.getValue('unit')}
+          {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('unit')}
         </span>
       ),
     },
