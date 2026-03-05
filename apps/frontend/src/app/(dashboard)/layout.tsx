@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { DashboardNavbar } from '@/components/dashboard-navbar';
 
@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
+          <p className="text-sm text-muted-foreground">Cargando la aplicación...</p>
         </div>
       </div>
     );
@@ -59,7 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  const pageTitle = pageTitles[pathname] ?? 'Ingexpert';
+  const rawPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+  const pageTitle = pageTitles[rawPath] ?? 'Ingexpert';
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: async () => {
@@ -72,11 +73,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-screen">
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <DashboardNavbar title={pageTitle} user={user} onLogout={handleLogout} />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6 min-h-0">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

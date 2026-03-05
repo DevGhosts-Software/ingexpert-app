@@ -1,7 +1,6 @@
-import { AlertTriangle, Boxes, Hammer, Package, Wrench } from 'lucide-react';
+import { Boxes, Hammer, LayoutGrid, Package, Wrench } from 'lucide-react';
 import type { ItemStats } from '@ingexpert/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 export type { ItemStats } from '@ingexpert/schema';
 
@@ -44,6 +43,13 @@ const statCards: Array<{
     description: 'Herramientas manuales y eléctricas',
     colorClass: 'text-orange-500',
   },
+  {
+    key: 'kits',
+    label: 'Kits',
+    icon: LayoutGrid,
+    description: 'Conjuntos de ítems agrupados',
+    colorClass: 'text-cyan-500',
+  },
 ];
 
 export function InventoryStats({ stats }: InventoryStatsProps) {
@@ -61,24 +67,6 @@ export function InventoryStats({ stats }: InventoryStatsProps) {
           </CardContent>
         </Card>
       ))}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Stock Bajo</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-destructive" />
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold">{stats.lowStock}</div>
-            {stats.lowStock > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                Alerta
-              </Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">Ítems que necesitan reabastecimiento</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

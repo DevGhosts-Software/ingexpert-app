@@ -6,17 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Package,
   ArrowLeftRight,
+  Boxes,
+  Container,
   FolderKanban,
-  Users,
-  AlertTriangle,
+  LayoutGrid,
+  Package,
   TrendingDown,
   TrendingUp,
-  Boxes,
+  Users,
   Wrench,
-  Container,
-  LayoutGrid,
 } from 'lucide-react';
 
 function StatCard({
@@ -72,13 +71,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Panel Principal</h2>
+        <p className="text-muted-foreground">Resumen general del sistema de inventario.</p>
+      </div>
+
       {/* Summary row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total de Ítems"
           value={itemStats?.total}
           icon={Package}
-          description={itemStats ? `${itemStats.lowStock} con stock bajo` : undefined}
           loading={loadingItems}
         />
         <StatCard
@@ -129,6 +132,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
               </div>
             ) : (
               <>
@@ -156,22 +160,15 @@ export default function DashboardPage() {
                   </span>
                   <span className="font-medium">{itemStats?.kits ?? 0}</span>
                 </div>
-                {(itemStats?.lowStock ?? 0) > 0 && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-amber-600">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Stock bajo
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20"
-                      >
-                        {itemStats?.lowStock}
-                      </Badge>
-                    </div>
-                  </>
-                )}
+                <Separator />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total items (Sin kits)</span>
+                  <span className="font-semibold">
+                    {(itemStats?.products ?? 0) +
+                      (itemStats?.equipment ?? 0) +
+                      (itemStats?.tools ?? 0)}
+                  </span>
+                </div>
               </>
             )}
           </CardContent>
@@ -188,6 +185,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {loadingMov ? (
               <div className="space-y-2">
+                <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
@@ -211,6 +209,12 @@ export default function DashboardPage() {
                     <TrendingDown className="h-3.5 w-3.5 text-red-500" /> Salidas
                   </span>
                   <span className="font-medium">{movStats?.exits ?? 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingDown className="h-3.5 w-3.5 text-amber-500" /> Bajas
+                  </span>
+                  <span className="font-medium">{movStats?.writeoffs ?? 0}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-sm">

@@ -52,7 +52,6 @@ export type ItemStats = {
   equipment: number;
   tools: number;
   kits: number;
-  lowStock: number;
 };
 
 /** Per-type item counts, optionally filtered by search/location (for tab badges). */

@@ -572,51 +572,78 @@ export function getColumns(): ColumnDef<UserEntity>[] {
     },
     {
       accessorKey: 'role',
-      header: 'Rol',
-      cell: ({ row }) => <RoleBadge role={row.original.role} />,
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Rol</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RoleBadge role={row.original.role} />
+        </div>
+      ),
       enableSorting: false,
     },
     {
       accessorKey: 'workArea',
-      header: 'Área',
-      cell: ({ row }) =>
-        row.original.workArea ? (
-          <Badge variant="secondary" className="gap-1 font-normal">
-            <Briefcase className="h-3 w-3" />
-            {row.original.workArea}
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-muted-foreground text-xs">
-            Sin asignar
-          </Badge>
-        ),
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Área</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          {row.original.workArea ? (
+            <Badge variant="secondary" className="gap-1 font-normal">
+              <Briefcase className="h-3 w-3" />
+              {row.original.workArea}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground text-xs">
+              Sin asignar
+            </Badge>
+          )}
+        </div>
+      ),
       enableSorting: false,
     },
     {
       id: 'hasAuth',
-      header: 'Acceso',
-      cell: ({ row }) =>
-        row.original.hasAuth ? (
-          <Badge
-            variant="outline"
-            className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-          >
-            <LockKeyholeOpen className="h-3 w-3" />
-            Activo
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="gap-1 text-muted-foreground">
-            <LockKeyhole className="h-3 w-3" />
-            Sin acceso
-          </Badge>
-        ),
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Acceso</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          {row.original.hasAuth ? (
+            <Badge
+              variant="outline"
+              className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+            >
+              <LockKeyholeOpen className="h-3 w-3" />
+              Activo
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1 text-muted-foreground">
+              <LockKeyhole className="h-3 w-3" />
+              Sin acceso
+            </Badge>
+          )}
+        </div>
+      ),
       enableSorting: false,
     },
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <RowActions user={row.original} />,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RowActions user={row.original} />
+        </div>
+      ),
       enableSorting: false,
+      size: 56,
     },
   ];
 }

@@ -16,7 +16,7 @@ import {
 
 import { getColumns } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
-import { type InventoryTableProps, LOW_STOCK_THRESHOLD } from './inventory-table.types';
+import { type InventoryTableProps, TYPE_COLORS } from './inventory-table.types';
 
 export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-table.types';
 
@@ -39,16 +39,14 @@ export function InventoryTable({
   onSortingChange,
   onRowClick,
 }: InventoryTableProps) {
-  const [stockLevelFilter, setStockLevelFilter] = useState('all');
+  const [imageFilter, setImageFilter] = useState('all');
 
   const filteredItems = useMemo(() => {
-    if (stockLevelFilter === 'all') return items;
-    if (stockLevelFilter === 'low')
-      return items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD);
-    if (stockLevelFilter === 'out') return items.filter((i) => i.stock === 0);
-    if (stockLevelFilter === 'ok') return items.filter((i) => i.stock >= LOW_STOCK_THRESHOLD);
-    return items;
-  }, [items, stockLevelFilter]);
+    let result = [...items];
+    if (imageFilter === 'has') result = result.filter((i) => !!i.imageUrl);
+    if (imageFilter === 'missing') result = result.filter((i) => !i.imageUrl);
+    return result;
+  }, [items, imageFilter]);
 
   const pageLocations = useMemo(
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
@@ -92,15 +90,15 @@ export function InventoryTable({
         locationFilter={locationFilter}
         onLocationFilterChange={onLocationFilterChange}
         locationOptions={locationOptions}
-        stockLevelFilter={stockLevelFilter}
-        onStockLevelFilterChange={setStockLevelFilter}
+        imageFilter={imageFilter}
+        onImageFilterChange={setImageFilter}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         typeCounts={typeCounts}
         isAdmin={isAdmin}
       />
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -139,6 +137,7 @@ export function InventoryTable({
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
                   className="cursor-pointer"
+                  style={{ boxShadow: TYPE_COLORS[row.original.type].rowAccent }}
                   onClick={() => onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (

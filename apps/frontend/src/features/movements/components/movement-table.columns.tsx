@@ -20,6 +20,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import type { MovementRow } from './movement-table.types';
 
+// ─── Row accent colors by movement type ──────────────────────────────────────
+
+export const MOVEMENT_ROW_ACCENT: Record<'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF', string> = {
+  PURCHASE: 'inset 2px 0 0 #2563eb',
+  RETURN: 'inset 2px 0 0 #16a34a',
+  EXIT: 'inset 2px 0 0 #ea580c',
+  WRITEOFF: 'inset 2px 0 0 #dc2626',
+};
+
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
 
 export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' }) {
@@ -174,15 +183,21 @@ export function getColumns(): ColumnDef<MovementRow>[] {
   return [
     {
       accessorKey: 'type',
-      header: 'Tipo',
-      cell: ({ row }) => <TypeBadge type={row.original.type} />,
+      meta: { center: true, width: 'w-[130px]' },
+      header: () => <span className="font-medium">Tipo</span>,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <TypeBadge type={row.original.type} />
+        </div>
+      ),
       enableSorting: false,
     },
     {
       accessorKey: 'date',
-      header: 'Fecha',
+      meta: { center: true },
+      header: () => <span className="font-medium">Fecha</span>,
       cell: ({ row }) => (
-        <span className="text-sm whitespace-nowrap tabular-nums">
+        <span className="text-sm whitespace-nowrap tabular-nums block text-center">
           {format(new Date(row.original.date), 'dd/MM/yyyy', { locale: es })}
         </span>
       ),

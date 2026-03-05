@@ -179,18 +179,14 @@ export class ItemsService {
   }
 
   async getStats(): Promise<ItemStats> {
-    const LOW_STOCK_THRESHOLD = 10;
-    const [total, products, equipment, tools, kits, lowStock] = await Promise.all([
+    const [total, products, equipment, tools, kits] = await Promise.all([
       this.prisma.item.count(),
       this.prisma.item.count({ where: { type: ItemType.PRODUCT } }),
       this.prisma.item.count({ where: { type: ItemType.EQUIPMENT } }),
       this.prisma.item.count({ where: { type: ItemType.TOOL } }),
       this.prisma.item.count({ where: { type: ItemType.KIT } }),
-      this.prisma.item.count({
-        where: { stock: { gt: 0, lt: LOW_STOCK_THRESHOLD } },
-      }),
     ]);
-    return { total, products, equipment, tools, kits, lowStock };
+    return { total, products, equipment, tools, kits };
   }
 
   async getCounts(search?: string, location?: string): Promise<ItemCounts> {

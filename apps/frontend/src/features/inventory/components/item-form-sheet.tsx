@@ -8,8 +8,10 @@ import { toast } from 'sonner';
 
 import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
 import { z } from 'zod';
+import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -20,25 +22,33 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
-import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
+import {
+  type InventoryItem,
+  type ItemType,
+  TYPE_CONFIG,
+  TYPE_COLORS,
+} from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
+
+// ─── Type cards ───────────────────────────────────────────────────────────────
+
+const TYPE_CARDS = (Object.keys(TYPE_CONFIG) as ItemType[]).map((type) => ({
+  value: type,
+  icon: TYPE_CONFIG[type].icon,
+  label: TYPE_CONFIG[type].label,
+  description: TYPE_COLORS[type].description,
+  styles: {
+    selected: `${TYPE_COLORS[type].bg} border-opacity-100`,
+    border: TYPE_COLORS[type].border,
+    icon: TYPE_COLORS[type].badge.split(' ').find((c) => c.startsWith('text-')) ?? '',
+    label: TYPE_COLORS[type].badge.split(' ').find((c) => c.startsWith('text-')) ?? '',
+  },
+}));
 
 // ─── Stock input with free-form editing ──────────────────────────────────────
 
@@ -103,13 +113,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
 
   const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
 
-  // Load existing kit components when editing a KIT item
   const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
     enabled: isEdit && item?.type === 'KIT' && open,
   });
 
-  // Mirror query data into local state (handles both cache hits and async loads).
-  // Reset to [] when sheet closes.
   useEffect(() => {
     if (open && isEdit && existingComponents) {
       setKitComponents(
@@ -142,18 +149,25 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   });
 
   const watchedType = form.watch('type');
+  const isKit = watchedType === 'KIT';
+  const colors = TYPE_COLORS[watchedType];
 
-  // Auto-fill hidden KIT fields so validation passes
+  const handleTypeSelect = useCallback(
+    (type: ItemType) => {
+      form.setValue('type', type, { shouldValidate: true });
+    },
+    [form],
+  );
+
   useEffect(() => {
-    if (watchedType === 'KIT') {
+    if (isKit) {
       form.setValue('location', '-', { shouldValidate: false });
       form.setValue('unit', 'kit', { shouldValidate: false });
       form.setValue('stock', 0, { shouldValidate: false });
       form.setValue('imageUrl', undefined, { shouldValidate: false });
     }
-  }, [watchedType, form]);
+  }, [isKit, form]);
 
-  // Prefill form fields when sheet opens/closes
   useEffect(() => {
     imageFieldRef.current?.reset();
     if (isEdit && item && open) {
@@ -215,11 +229,10 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         try {
           finalImageUrl = await uploadFile(pendingFile);
         } catch {
-          return; // uploadFile already toasts the error
+          return;
         }
       }
 
-      // Delete old image if it was replaced or removed
       if (originalImageUrl.current && originalImageUrl.current !== finalImageUrl) {
         void deleteFile(originalImageUrl.current);
       }
@@ -229,7 +242,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       try {
         if (isEdit && item) {
           await updateMutation.mutateAsync({ id: item.id, ...submitValues });
-          // Save kit components when editing a KIT, then update cache immediately
           if (values.type === 'KIT') {
             if (kitComponents.length > 0) {
               const updated = await setComponentsMutation.mutateAsync({
@@ -265,7 +277,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       } catch {
         // errors handled by each mutation's onError
       }
-      // imageFieldRef and originalImageUrl are refs — stable, excluded from deps intentionally
     },
     [
       uploadFile,
@@ -296,7 +307,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     [form, onSubmit],
   );
 
-  // Stable kit component handlers
   const handleKitAdd = useCallback((newItem: LocalComponent) => {
     setKitComponents((prev) => {
       if (prev.some((c) => c.componentId === newItem.componentId)) return prev;
@@ -319,163 +329,204 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     [item?.id, kitComponents],
   );
 
+  const { icon: TypeIcon, label: typeLabel } = TYPE_CONFIG[watchedType];
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto p-4">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {isEdit ? <Pencil className="h-5 w-5" /> : <PackagePlus className="h-5 w-5" />}
-            {isEdit ? 'Editar Ítem' : 'Agregar Ítem'}
-          </SheetTitle>
-          <SheetDescription>
-            {isEdit
-              ? 'Modifica los datos del ítem de inventario.'
-              : 'Completa los datos del nuevo ítem de inventario.'}
-          </SheetDescription>
-        </SheetHeader>
+      <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
+        {/* Colored dynamic header */}
+        <div className={`px-6 pt-6 pb-5 border-b ${colors.bg} ${colors.border}`}>
+          <SheetHeader className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Badge className={`gap-1.5 text-sm px-3 py-1 font-medium ${colors.badge}`}>
+                <TypeIcon className="h-4 w-4" />
+                {typeLabel}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {isEdit ? item?.code : 'Nuevo ítem'}
+              </span>
+            </div>
+            <div>
+              <SheetTitle className="text-base flex items-center gap-2">
+                {isEdit ? <Pencil className="h-4 w-4" /> : <PackagePlus className="h-4 w-4" />}
+                {isEdit ? (item?.name ?? 'Editar ítem') : 'Agregar ítem'}
+              </SheetTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">{colors.description}</p>
+            </div>
+          </SheetHeader>
+        </div>
 
-        <Form {...form}>
-          <form onSubmit={handleFormSubmit} className="space-y-4 mt-6">
-            {/* Image upload — hidden for KIT items */}
-            {watchedType !== 'KIT' && (
-              <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
-                    </FormLabel>
-                    <FormControl>
-                      <ImageUploadField
-                        ref={imageFieldRef}
-                        value={field.value}
-                        onChange={field.onChange}
+        {/* Scrollable body */}
+        <ScrollArea className="flex-1 min-h-0">
+          <Form {...form}>
+            <form onSubmit={handleFormSubmit} className="space-y-5 px-6 py-5">
+              {/* Type card picker */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Tipo de ítem</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {TYPE_CARDS.map((card) => {
+                    const Icon = card.icon;
+                    const selected = watchedType === card.value;
+                    return (
+                      <button
+                        key={card.value}
+                        type="button"
                         disabled={isPending}
-                        isUploading={isUploading}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+                        onClick={() => handleTypeSelect(card.value)}
+                        className={cn(
+                          'flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          selected
+                            ? `${TYPE_COLORS[card.value].bg} ${TYPE_COLORS[card.value].border}`
+                            : 'border-border hover:border-muted-foreground/40',
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            'h-4 w-4',
+                            selected
+                              ? (TYPE_COLORS[card.value].badge
+                                  .split(' ')
+                                  .find((c) => c.startsWith('text-') && !c.includes('dark:')) ??
+                                  'text-foreground')
+                              : 'text-muted-foreground',
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            'text-sm font-semibold',
+                            selected
+                              ? (TYPE_COLORS[card.value].badge
+                                  .split(' ')
+                                  .find((c) => c.startsWith('text-') && !c.includes('dark:')) ?? '')
+                              : '',
+                          )}
+                        >
+                          {card.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground leading-tight">
+                          {card.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Ej: Taladradora Industrial"
-                      disabled={isPending}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <Separator />
 
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Código</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: TOOL-001" disabled={isPending} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {(Object.keys(TYPE_CONFIG) as ItemType[]).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {TYPE_CONFIG[type].label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Location — hidden for KIT items */}
-            {watchedType !== 'KIT' && (
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ubicación</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ej: Taller A" disabled={isPending} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Stock + Unit — hidden for KIT items */}
-            {watchedType !== 'KIT' && (
-              <div className="grid grid-cols-2 gap-3">
+              {/* Image upload — hidden for KIT */}
+              {!isKit && (
                 <FormField
                   control={form.control}
-                  name="stock"
+                  name="imageUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
+                      <FormLabel>
+                        Imagen <span className="text-muted-foreground text-xs">(opcional)</span>
+                      </FormLabel>
                       <FormControl>
-                        <StockInput
+                        <ImageUploadField
+                          ref={imageFieldRef}
                           value={field.value}
                           onChange={field.onChange}
                           disabled={isPending}
+                          isUploading={isUploading}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
 
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ej: Taladradora Industrial"
+                        disabled={isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: TOOL-001" disabled={isPending} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Location — hidden for KIT */}
+              {!isKit && (
                 <FormField
                   control={form.control}
-                  name="unit"
+                  name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unidad</FormLabel>
+                      <FormLabel>Ubicación</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
+                        <Input placeholder="Ej: Taller A" disabled={isPending} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            )}
+              )}
 
-            {/* Kit components — shown when type is KIT (create or edit) */}
-            {watchedType === 'KIT' && (
-              <>
-                <Separator />
+              {/* Stock + Unit — hidden for KIT */}
+              {!isKit && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="stock"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{isEdit ? 'Stock' : 'Stock inicial'}</FormLabel>
+                        <FormControl>
+                          <StockInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidad</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: unidades" disabled={isPending} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Kit components — KIT only */}
+              {isKit && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium flex items-center gap-1.5">
                     <Boxes className="h-4 w-4 text-muted-foreground" />
@@ -492,27 +543,27 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                     allowedTypes={['PRODUCT', 'TOOL']}
                   />
                 </div>
-              </>
-            )}
+              )}
 
-            <Separator />
+              <Separator />
 
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending
-                  ? isEdit
-                    ? 'Guardando...'
-                    : 'Agregando...'
-                  : isEdit
-                    ? 'Guardar cambios'
-                    : 'Agregar ítem'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex gap-2 justify-end pb-2">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending
+                    ? isEdit
+                      ? 'Guardando...'
+                      : 'Agregando...'
+                    : isEdit
+                      ? 'Guardar cambios'
+                      : 'Agregar ítem'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

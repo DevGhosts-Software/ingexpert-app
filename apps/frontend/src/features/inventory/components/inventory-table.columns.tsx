@@ -31,28 +31,17 @@ import { ItemFormSheet } from './item-form-sheet';
 import {
   type InventoryItem,
   type ItemType,
-  LOW_STOCK_THRESHOLD,
+  TYPE_COLORS,
   TYPE_CONFIG,
 } from './inventory-table.types';
 
 const EM_DASH = '—';
 
-function StockBadge({ stock, isKit }: { stock: number; isKit: boolean }) {
-  if (isKit) return <span className="text-muted-foreground">{EM_DASH}</span>;
-  if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
-  if (stock < LOW_STOCK_THRESHOLD)
-    return (
-      <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600">
-        Stock bajo
-      </Badge>
-    );
-  return <Badge variant="outline">En stock</Badge>;
-}
-
 function ItemTypeBadge({ type }: { type: ItemType }) {
-  const { label, variant, icon: Icon } = TYPE_CONFIG[type];
+  const { label, icon: Icon } = TYPE_CONFIG[type];
+  const { badge } = TYPE_COLORS[type];
   return (
-    <Badge variant={variant} className="gap-1 font-normal">
+    <Badge className={`gap-1.5 font-normal ${badge}`}>
       <Icon className="h-3 w-3" />
       {label}
     </Badge>
@@ -153,21 +142,27 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         const url = row.original.imageUrl;
         if (isKit) {
           return (
-            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground text-xs">
-              {EM_DASH}
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground/50 text-xs">
+                {EM_DASH}
+              </div>
             </div>
           );
         }
         if (!url) {
           return (
-            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
-              <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+                <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+              </div>
             </div>
           );
         }
         return (
-          <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
-            <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
+          <div className="flex justify-center">
+            <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
+              <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
+            </div>
           </div>
         );
       },
@@ -191,18 +186,30 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       accessorKey: 'code',
       header: ({ column }) => (
-        <ColHeader
-          label="Código"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Código"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
-      cell: ({ row }) => <span className="font-medium">{row.getValue('code')}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium font-mono block text-center">{row.getValue('code')}</span>
+      ),
     },
     {
       accessorKey: 'type',
-      header: 'Tipo',
-      cell: ({ row }) => <ItemTypeBadge type={row.getValue('type')} />,
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Tipo</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <ItemTypeBadge type={row.getValue('type')} />
+        </div>
+      ),
       enableSorting: false,
     },
     {
@@ -214,58 +221,71 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         />
       ),
-      cell: ({ row }) => (
-        <span
-          className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
-          title={row.getValue('location')}
-        >
-          <MapPin className="h-3 w-3 shrink-0" />
-          <span className="truncate">{row.getValue('location')}</span>
-        </span>
-      ),
+      cell: ({ row }) => {
+        if (row.original.type === 'KIT') {
+          return <span className="font-mono text-sm text-muted-foreground/50">{EM_DASH}</span>;
+        }
+        return (
+          <span
+            className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
+            title={row.getValue('location')}
+          >
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{row.getValue('location')}</span>
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'stock',
       header: ({ column }) => (
-        <ColHeader
-          label="Stock"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Stock"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm">
-          {row.original.type === 'KIT' ? EM_DASH : row.getValue('stock')}
+        <span className="font-mono text-sm block text-center">
+          {row.original.type === 'KIT' ? (
+            <span className="text-muted-foreground/50">{EM_DASH}</span>
+          ) : (
+            row.getValue('stock')
+          )}
         </span>
       ),
     },
     {
       accessorKey: 'unit',
       header: ({ column }) => (
-        <ColHeader
-          label="Unidad"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Unidad"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm">
-          {row.original.type === 'KIT' ? EM_DASH : row.getValue('unit')}
+        <span className="font-mono text-sm block text-center">
+          {row.original.type === 'KIT' ? (
+            <span className="text-muted-foreground/50">{EM_DASH}</span>
+          ) : (
+            row.getValue('unit')
+          )}
         </span>
       ),
     },
     {
-      id: 'status',
-      header: 'Estado',
-      cell: ({ row }) => (
-        <StockBadge stock={row.original.stock} isKit={row.original.type === 'KIT'} />
-      ),
-      enableSorting: false,
-    },
-    {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <RowActions item={row.original} isAdmin={isAdmin} />,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RowActions item={row.original} isAdmin={isAdmin} />
+        </div>
+      ),
       enableSorting: false,
     },
   ];
