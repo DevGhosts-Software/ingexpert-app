@@ -203,15 +203,20 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         />
       ),
-      cell: ({ row }) => (
-        <span
-          className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
-          title={row.getValue('location')}
-        >
-          <MapPin className="h-3 w-3 shrink-0" />
-          <span className="truncate">{row.getValue('location')}</span>
-        </span>
-      ),
+      cell: ({ row }) => {
+        if (row.original.type === 'KIT') {
+          return <span className="font-mono text-sm text-muted-foreground/50">{EM_DASH}</span>;
+        }
+        return (
+          <span
+            className="flex items-center gap-1 text-sm text-muted-foreground max-w-[160px]"
+            title={row.getValue('location')}
+          >
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{row.getValue('location')}</span>
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'stock',

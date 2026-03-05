@@ -16,7 +16,7 @@ import {
 
 import { getColumns } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
-import { type InventoryTableProps } from './inventory-table.types';
+import { type InventoryTableProps, TYPE_COLORS } from './inventory-table.types';
 
 export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-table.types';
 
@@ -136,7 +136,7 @@ export function InventoryTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="cursor-pointer"
+                  className={`cursor-pointer ${TYPE_COLORS[row.original.type].rowAccent}`}
                   onClick={() => onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (

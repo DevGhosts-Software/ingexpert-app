@@ -19,13 +19,14 @@ export const TYPE_CONFIG: Record<
 
 export const TYPE_COLORS: Record<
   ItemType,
-  { bg: string; border: string; badge: string; description: string }
+  { bg: string; border: string; badge: string; description: string; rowAccent: string }
 > = {
   PRODUCT: {
     bg: 'bg-blue-50 dark:bg-blue-950/30',
     border: 'border-blue-200 dark:border-blue-800',
     badge: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
     description: 'Bien de consumo',
+    rowAccent: 'border-l-2 border-l-blue-400 dark:border-l-blue-600',
   },
   EQUIPMENT: {
     bg: 'bg-purple-50 dark:bg-purple-950/30',
@@ -33,6 +34,7 @@ export const TYPE_COLORS: Record<
     badge:
       'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800',
     description: 'Activo fijo o maquinaria',
+    rowAccent: 'border-l-2 border-l-purple-400 dark:border-l-purple-600',
   },
   TOOL: {
     bg: 'bg-orange-50 dark:bg-orange-950/30',
@@ -40,12 +42,14 @@ export const TYPE_COLORS: Record<
     badge:
       'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
     description: 'Herramienta manual o eléctrica',
+    rowAccent: 'border-l-2 border-l-orange-400 dark:border-l-orange-600',
   },
   KIT: {
     bg: 'bg-cyan-50 dark:bg-cyan-950/30',
     border: 'border-cyan-200 dark:border-cyan-800',
     badge: 'bg-cyan-100 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800',
     description: 'Conjunto de ítems agrupados',
+    rowAccent: 'border-l-2 border-l-cyan-400 dark:border-l-cyan-600',
   },
 };
 
