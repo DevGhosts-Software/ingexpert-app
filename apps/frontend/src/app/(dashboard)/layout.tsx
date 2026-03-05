@@ -59,7 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  const pageTitle = pageTitles[pathname] ?? 'Ingexpert';
+  const rawPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+  const pageTitle = pageTitles[rawPath] ?? 'Ingexpert';
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: async () => {
@@ -72,9 +73,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-screen">
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="overflow-y-auto">
         <DashboardNavbar title={pageTitle} user={user} onLogout={handleLogout} />
         <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
