@@ -1,4 +1,4 @@
-import { Boxes, Hammer, Package, Wrench } from 'lucide-react';
+import { Boxes, Hammer, LayoutGrid, Package, Wrench } from 'lucide-react';
 import type { ItemStats } from '@ingexpert/schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -43,11 +43,18 @@ const statCards: Array<{
     description: 'Herramientas manuales y eléctricas',
     colorClass: 'text-orange-500',
   },
+  {
+    key: 'kits',
+    label: 'Kits',
+    icon: LayoutGrid,
+    description: 'Conjuntos de ítems agrupados',
+    colorClass: 'text-cyan-500',
+  },
 ];
 
 export function InventoryStats({ stats }: InventoryStatsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       {statCards.map(({ key, label, icon: Icon, description, colorClass }) => (
         <Card key={key}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
