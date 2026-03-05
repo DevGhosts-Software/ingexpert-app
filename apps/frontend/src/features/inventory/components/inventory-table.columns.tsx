@@ -142,21 +142,27 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         const url = row.original.imageUrl;
         if (isKit) {
           return (
-            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground/50 text-xs">
-              {EM_DASH}
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0 text-muted-foreground/50 text-xs">
+                {EM_DASH}
+              </div>
             </div>
           );
         }
         if (!url) {
           return (
-            <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
-              <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+                <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+              </div>
             </div>
           );
         }
         return (
-          <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
-            <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
+          <div className="flex justify-center">
+            <div className="w-10 h-10 rounded-md border overflow-hidden bg-muted/50 shrink-0">
+              <StorageImage src={url} alt={row.original.name} className="w-10 h-10 object-cover" />
+            </div>
           </div>
         );
       },
@@ -221,14 +227,16 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       accessorKey: 'stock',
       header: ({ column }) => (
-        <ColHeader
-          label="Stock"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Stock"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm">
+        <span className="font-mono text-sm block text-center">
           {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('stock')}
         </span>
       ),
