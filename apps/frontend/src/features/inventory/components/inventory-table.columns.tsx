@@ -186,18 +186,20 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       accessorKey: 'code',
       header: ({ column }) => (
-        <ColHeader
-          label="Código"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Código"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
-      cell: ({ row }) => <span className="font-medium">{row.getValue('code')}</span>,
+      cell: ({ row }) => <span className="font-medium font-mono block text-center">{row.getValue('code')}</span>,
     },
     {
       accessorKey: 'type',
-      header: 'Tipo',
-      cell: ({ row }) => <ItemTypeBadge type={row.getValue('type')} />,
+      header: () => <div className="flex justify-center"><span className="font-medium">Tipo</span></div>,
+      cell: ({ row }) => <div className="flex justify-center"><ItemTypeBadge type={row.getValue('type')} /></div>,
       enableSorting: false,
     },
     {
@@ -244,14 +246,16 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       accessorKey: 'unit',
       header: ({ column }) => (
-        <ColHeader
-          label="Unidad"
-          sorted={column.getIsSorted()}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        />
+        <div className="flex justify-center">
+          <ColHeader
+            label="Unidad"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm">
+        <span className="font-mono text-sm block text-center">
           {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('unit')}
         </span>
       ),
@@ -259,7 +263,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <RowActions item={row.original} isAdmin={isAdmin} />,
+      cell: ({ row }) => <div className="flex justify-center"><RowActions item={row.original} isAdmin={isAdmin} /></div>,
       enableSorting: false,
     },
   ];
