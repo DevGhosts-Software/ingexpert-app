@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { getColumns } from './movement-table.columns';
+import { getColumns, MOVEMENT_ROW_ACCENT } from './movement-table.columns';
 import { MovementDetailSheet } from './movement-detail-sheet';
 import { MovementFormSheet } from './movement-form-sheet';
 import type { ActiveTab, MovementRow, TypeCounts } from './movement-table.types';
@@ -308,12 +308,13 @@ export function MovementTable({
                 {hg.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                      <button
-                        onClick={() =>
-                          header.column.toggleSorting(header.column.getIsSorted() === 'asc')
-                        }
-                        className="group flex items-center gap-1 hover:text-foreground font-medium"
-                      >
+                      <div className={(header.column.columnDef.meta as { center?: boolean } | undefined)?.center ? 'flex justify-center' : ''}>
+                        <button
+                          onClick={() =>
+                            header.column.toggleSorting(header.column.getIsSorted() === 'asc')
+                          }
+                          className="group flex items-center gap-1 hover:text-foreground font-medium"
+                        >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getIsSorted() === 'asc' ? (
                           <ArrowUp className="h-3 w-3" />
@@ -322,7 +323,8 @@ export function MovementTable({
                         ) : (
                           <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
                         )}
-                      </button>
+                        </button>
+                      </div>
                     ) : (
                       flexRender(header.column.columnDef.header, header.getContext())
                     )}
@@ -356,6 +358,7 @@ export function MovementTable({
                 <TableRow
                   key={row.id}
                   className="cursor-pointer"
+                  style={{ boxShadow: MOVEMENT_ROW_ACCENT[row.original.type] }}
                   onClick={() => setDetailId(row.original.id)}
                 >
                   {row.getVisibleCells().map((cell) => (
