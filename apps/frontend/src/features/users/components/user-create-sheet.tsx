@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { ControllerRenderProps } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +9,6 @@ import { toast } from 'sonner';
 
 import { UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -37,6 +35,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { WorkAreaCombobox } from './work-area-combobox';
 
 // Single schema — password only required when noAuth is false
 const CreateUserFormSchema = z
@@ -106,85 +105,6 @@ function PasswordInput({
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
-    </div>
-  );
-}
-
-function WorkAreaCombobox({
-  field,
-  workAreas,
-  disabled,
-}: {
-  field: ControllerRenderProps<FormValues, 'workArea'>;
-  workAreas: string[];
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
-
-  const inputValue = field.value ?? '';
-  const filtered = workAreas.filter((a) => a.toLowerCase().includes(inputValue.toLowerCase()));
-  const showDropdown = open && filtered.length > 0;
-
-  const select = (area: string) => {
-    field.onChange(area);
-    setOpen(false);
-    setHighlighted(-1);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showDropdown) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlighted((i) => Math.min(i + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlighted((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && highlighted >= 0) {
-      e.preventDefault();
-      select(filtered[highlighted]);
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    }
-  };
-
-  return (
-    <div className="relative">
-      <Input
-        placeholder="Ej: Taller A, Laboratorio"
-        disabled={disabled}
-        value={inputValue}
-        onChange={(e) => {
-          field.onChange(e.target.value);
-          setOpen(true);
-          setHighlighted(-1);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => {
-          setTimeout(() => setOpen(false), 150);
-          field.onBlur();
-        }}
-        onKeyDown={handleKeyDown}
-      />
-      {showDropdown && (
-        <ul className="absolute z-50 top-full mt-1 w-full rounded-md border bg-popover shadow-md p-1 max-h-48 overflow-auto">
-          {filtered.map((area, i) => (
-            <li
-              key={area}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => select(area)}
-              className={cn(
-                'flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm',
-                i === highlighted
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-accent hover:text-accent-foreground',
-              )}
-            >
-              {area}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
@@ -370,7 +290,8 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
                   </FormLabel>
                   <FormControl>
                     <WorkAreaCombobox
-                      field={field as ControllerRenderProps<FormValues, 'workArea'>}
+                      value={field.value}
+                      onChange={field.onChange}
                       workAreas={workAreas}
                       disabled={isPending}
                     />
