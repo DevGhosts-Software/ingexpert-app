@@ -75,9 +75,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <SidebarProvider className="h-screen">
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <DashboardNavbar title={pageTitle} user={user} onLogout={handleLogout} />
-        <main className="flex-1 overflow-y-auto p-6 min-h-0">{children}</main>
+        <main className="flex-1 overflow-auto p-6 min-h-0">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

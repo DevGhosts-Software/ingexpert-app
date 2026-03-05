@@ -65,7 +65,7 @@ export function UserTable({
         roleCounts={roleCounts}
       />
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
