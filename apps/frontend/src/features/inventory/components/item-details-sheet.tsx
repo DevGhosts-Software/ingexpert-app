@@ -10,41 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { StorageImage } from '@/components/ui/storage-image';
 import { trpc } from '@/lib/trpc';
 
-import { type InventoryItem, type ItemType, TYPE_CONFIG } from './inventory-table.types';
-
-// ─── Extended color config ────────────────────────────────────────────────────
-
-const TYPE_COLORS: Record<
-  ItemType,
-  { bg: string; border: string; badge: string; description: string }
-> = {
-  PRODUCT: {
-    bg: 'bg-blue-50 dark:bg-blue-950/30',
-    border: 'border-blue-200 dark:border-blue-800',
-    badge: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
-    description: 'Bien de consumo con control de stock',
-  },
-  EQUIPMENT: {
-    bg: 'bg-purple-50 dark:bg-purple-950/30',
-    border: 'border-purple-200 dark:border-purple-800',
-    badge:
-      'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
-    description: 'Activo fijo o maquinaria',
-  },
-  TOOL: {
-    bg: 'bg-orange-50 dark:bg-orange-950/30',
-    border: 'border-orange-200 dark:border-orange-800',
-    badge:
-      'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400',
-    description: 'Herramienta manual o eléctrica',
-  },
-  KIT: {
-    bg: 'bg-cyan-50 dark:bg-cyan-950/30',
-    border: 'border-cyan-200 dark:border-cyan-800',
-    badge: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400',
-    description: 'Conjunto de ítems agrupados',
-  },
-};
+import { type InventoryItem, TYPE_CONFIG, TYPE_COLORS } from './inventory-table.types';
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
 
@@ -66,10 +32,6 @@ function MetaRow({
   );
 }
 
-function StockBadge({ stock }: { stock: number }) {
-  if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
-  return <Badge variant="outline">En stock</Badge>;
-}
 
 // ─── Kit components (read-only) ───────────────────────────────────────────────
 
@@ -196,11 +158,8 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
                   icon={Package}
                   label="Stock"
                   value={
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono">
-                        {item.stock} {item.unit}
-                      </span>
-                      <StockBadge stock={item.stock} />
+                    <span className="font-mono">
+                      {item.stock} {item.unit}
                     </span>
                   }
                 />

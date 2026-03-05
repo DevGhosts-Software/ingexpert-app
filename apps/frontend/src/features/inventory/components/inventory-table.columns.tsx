@@ -31,21 +31,17 @@ import { ItemFormSheet } from './item-form-sheet';
 import {
   type InventoryItem,
   type ItemType,
+  TYPE_COLORS,
   TYPE_CONFIG,
 } from './inventory-table.types';
 
 const EM_DASH = '—';
 
-function StockBadge({ stock, isKit }: { stock: number; isKit: boolean }) {
-  if (isKit) return <span className="text-muted-foreground">{EM_DASH}</span>;
-  if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
-  return <Badge variant="outline">En stock</Badge>;
-}
-
 function ItemTypeBadge({ type }: { type: ItemType }) {
-  const { label, variant, icon: Icon } = TYPE_CONFIG[type];
+  const { label, icon: Icon } = TYPE_CONFIG[type];
+  const { badge } = TYPE_COLORS[type];
   return (
-    <Badge variant={variant} className="gap-1 font-normal">
+    <Badge className={`gap-1 font-normal border ${badge}`}>
       <Icon className="h-3 w-3" />
       {label}
     </Badge>
@@ -246,14 +242,6 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           {row.original.type === 'KIT' ? EM_DASH : row.getValue('unit')}
         </span>
       ),
-    },
-    {
-      id: 'status',
-      header: 'Estado',
-      cell: ({ row }) => (
-        <StockBadge stock={row.original.stock} isKit={row.original.type === 'KIT'} />
-      ),
-      enableSorting: false,
     },
     {
       id: 'actions',
