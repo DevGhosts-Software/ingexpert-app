@@ -191,6 +191,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
               </div>
             ) : (
               <>
@@ -211,6 +212,12 @@ export default function DashboardPage() {
                     <TrendingDown className="h-3.5 w-3.5 text-red-500" /> Salidas
                   </span>
                   <span className="font-medium">{movStats?.exits ?? 0}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <TrendingDown className="h-3.5 w-3.5 text-amber-500" /> Bajas
+                  </span>
+                  <span className="font-medium">{movStats?.writeoffs ?? 0}</span>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between text-sm">
