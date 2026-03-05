@@ -136,12 +136,14 @@ export function getColumns(): ColumnDef<ProjectRow>[] {
     },
     {
       accessorKey: 'contact',
-      header: 'Contacto',
+      header: () => <div className="flex justify-center"><span className="font-medium">Contacto</span></div>,
       cell: ({ row }) => (
-        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-          <Phone className="h-3 w-3 shrink-0" />
-          {row.getValue('contact')}
-        </span>
+        <div className="flex justify-center">
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Phone className="h-3 w-3 shrink-0" />
+            {row.getValue('contact')}
+          </span>
+        </div>
       ),
       enableSorting: false,
     },
@@ -162,8 +164,9 @@ export function getColumns(): ColumnDef<ProjectRow>[] {
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <RowActions project={row.original} />,
+      cell: ({ row }) => <div className="flex justify-center"><RowActions project={row.original} /></div>,
       enableSorting: false,
+      size: 56,
     },
   ];
 }
