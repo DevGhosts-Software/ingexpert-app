@@ -170,11 +170,13 @@ export function InventoryTableToolbar({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas las ubicaciones</SelectItem>
-                      {locationOptions.filter((loc) => loc && loc !== '-').map((loc) => (
-                        <SelectItem key={loc} value={loc}>
-                          {loc}
-                        </SelectItem>
-                      ))}
+                      {locationOptions
+                        .filter((loc) => loc && loc !== '-')
+                        .map((loc) => (
+                          <SelectItem key={loc} value={loc}>
+                            {loc}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

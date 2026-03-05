@@ -24,15 +24,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
-import { type InventoryItem, type ItemType, TYPE_CONFIG, TYPE_COLORS } from './inventory-table.types';
+import {
+  type InventoryItem,
+  type ItemType,
+  TYPE_CONFIG,
+  TYPE_COLORS,
+} from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
 // ─── Type cards ───────────────────────────────────────────────────────────────
@@ -360,7 +360,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         <ScrollArea className="flex-1 min-h-0">
           <Form {...form}>
             <form onSubmit={handleFormSubmit} className="space-y-5 px-6 py-5">
-
               {/* Type card picker */}
               <div className="space-y-2">
                 <p className="text-sm font-medium">Tipo de ítem</p>
@@ -385,16 +384,23 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                           className={cn(
                             'h-4 w-4',
                             selected
-                              ? TYPE_COLORS[card.value].badge.split(' ').find((c) => c.startsWith('text-') && !c.includes('dark:')) ?? 'text-foreground'
+                              ? (TYPE_COLORS[card.value].badge
+                                  .split(' ')
+                                  .find((c) => c.startsWith('text-') && !c.includes('dark:')) ??
+                                  'text-foreground')
                               : 'text-muted-foreground',
                           )}
                         />
-                        <span className={cn(
-                          'text-sm font-semibold',
-                          selected
-                            ? TYPE_COLORS[card.value].badge.split(' ').find((c) => c.startsWith('text-') && !c.includes('dark:')) ?? ''
-                            : '',
-                        )}>
+                        <span
+                          className={cn(
+                            'text-sm font-semibold',
+                            selected
+                              ? (TYPE_COLORS[card.value].badge
+                                  .split(' ')
+                                  .find((c) => c.startsWith('text-') && !c.includes('dark:')) ?? '')
+                              : '',
+                          )}
+                        >
                           {card.label}
                         </span>
                         <span className="text-xs text-muted-foreground leading-tight">
@@ -562,4 +568,3 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     </Sheet>
   );
 }
-

@@ -89,7 +89,10 @@ export function ProjectTable({
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
                 {hg.headers.map((h) => (
-                  <TableHead key={h.id} style={h.column.getSize() !== 150 ? { width: h.column.getSize() } : undefined}>
+                  <TableHead
+                    key={h.id}
+                    style={h.column.getSize() !== 150 ? { width: h.column.getSize() } : undefined}
+                  >
                     {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
                   </TableHead>
                 ))}

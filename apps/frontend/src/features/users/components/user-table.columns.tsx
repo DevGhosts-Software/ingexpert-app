@@ -572,14 +572,26 @@ export function getColumns(): ColumnDef<UserEntity>[] {
     },
     {
       accessorKey: 'role',
-      header: () => <div className="flex justify-center"><span className="font-medium">Rol</span></div>,
-      cell: ({ row }) => <div className="flex justify-center"><RoleBadge role={row.original.role} /></div>,
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Rol</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RoleBadge role={row.original.role} />
+        </div>
+      ),
       enableSorting: false,
     },
     {
       accessorKey: 'workArea',
-      header: () => <div className="flex justify-center"><span className="font-medium">Área</span></div>,
-      cell: ({ row }) =>
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Área</span>
+        </div>
+      ),
+      cell: ({ row }) => (
         <div className="flex justify-center">
           {row.original.workArea ? (
             <Badge variant="secondary" className="gap-1 font-normal">
@@ -591,13 +603,18 @@ export function getColumns(): ColumnDef<UserEntity>[] {
               Sin asignar
             </Badge>
           )}
-        </div>,
+        </div>
+      ),
       enableSorting: false,
     },
     {
       id: 'hasAuth',
-      header: () => <div className="flex justify-center"><span className="font-medium">Acceso</span></div>,
-      cell: ({ row }) =>
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Acceso</span>
+        </div>
+      ),
+      cell: ({ row }) => (
         <div className="flex justify-center">
           {row.original.hasAuth ? (
             <Badge
@@ -613,13 +630,18 @@ export function getColumns(): ColumnDef<UserEntity>[] {
               Sin acceso
             </Badge>
           )}
-        </div>,
+        </div>
+      ),
       enableSorting: false,
     },
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <div className="flex justify-center"><RowActions user={row.original} /></div>,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RowActions user={row.original} />
+        </div>
+      ),
       enableSorting: false,
       size: 56,
     },

@@ -32,7 +32,6 @@ function MetaRow({
   );
 }
 
-
 // ─── Kit components (read-only) ───────────────────────────────────────────────
 
 function KitComponentsReadonly({ kitId }: { kitId: string }) {
@@ -150,9 +149,7 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
 
             {/* Metadata */}
             <div className="divide-y">
-              {!isKit && (
-                <MetaRow icon={MapPin} label="Ubicación" value={item.location} />
-              )}
+              {!isKit && <MetaRow icon={MapPin} label="Ubicación" value={item.location} />}
               {!isKit && (
                 <MetaRow
                   icon={Package}

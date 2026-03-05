@@ -65,11 +65,7 @@ export function WorkAreaCombobox({ value, onChange, workAreas, disabled }: WorkA
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
-          <CommandInput
-            placeholder="Buscar área..."
-            value={search}
-            onValueChange={setSearch}
-          />
+          <CommandInput placeholder="Buscar área..." value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty className="py-3 text-center text-sm text-muted-foreground">
               Sin resultados.

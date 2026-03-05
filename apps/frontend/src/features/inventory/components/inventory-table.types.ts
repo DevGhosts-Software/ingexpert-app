@@ -6,7 +6,6 @@ import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
 
-
 export const TYPE_CONFIG: Record<
   ItemType,
   { label: string; icon: React.ElementType; variant: 'default' | 'secondary' | 'outline' }
@@ -24,7 +23,8 @@ export const TYPE_COLORS: Record<
   PRODUCT: {
     bg: 'bg-blue-50 dark:bg-blue-950/30',
     border: 'border-blue-200 dark:border-blue-800',
-    badge: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+    badge:
+      'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
     description: 'Bien de consumo',
     rowAccent: 'inset 2px 0 0 #2563eb',
   },
@@ -47,7 +47,8 @@ export const TYPE_COLORS: Record<
   KIT: {
     bg: 'bg-cyan-50 dark:bg-cyan-950/30',
     border: 'border-cyan-200 dark:border-cyan-800',
-    badge: 'bg-cyan-100 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800',
+    badge:
+      'bg-cyan-100 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800',
     description: 'Conjunto de ítems agrupados',
     rowAccent: 'inset 2px 0 0 #0891b2',
   },

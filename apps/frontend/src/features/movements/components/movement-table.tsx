@@ -306,26 +306,38 @@ export function MovementTable({
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
                 {hg.headers.map((header) => (
-                  <TableHead key={header.id} className={(header.column.columnDef.meta as { width?: string } | undefined)?.width}>
+                  <TableHead
+                    key={header.id}
+                    className={
+                      (header.column.columnDef.meta as { width?: string } | undefined)?.width
+                    }
+                  >
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                      <div className={(header.column.columnDef.meta as { center?: boolean } | undefined)?.center ? 'flex justify-center' : ''}>
+                      <div
+                        className={
+                          (header.column.columnDef.meta as { center?: boolean } | undefined)?.center
+                            ? 'flex justify-center'
+                            : ''
+                        }
+                      >
                         <button
                           onClick={() =>
                             header.column.toggleSorting(header.column.getIsSorted() === 'asc')
                           }
                           className="group flex items-center gap-1 hover:text-foreground font-medium"
                         >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <ArrowUp className="h-3 w-3" />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
-                        )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getIsSorted() === 'asc' ? (
+                            <ArrowUp className="h-3 w-3" />
+                          ) : header.column.getIsSorted() === 'desc' ? (
+                            <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+                          )}
                         </button>
                       </div>
-                    ) : (header.column.columnDef.meta as { center?: boolean } | undefined)?.center ? (
+                    ) : (header.column.columnDef.meta as { center?: boolean } | undefined)
+                        ?.center ? (
                       <div className="flex justify-center">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                       </div>

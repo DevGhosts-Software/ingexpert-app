@@ -24,8 +24,8 @@ import type { MovementRow } from './movement-table.types';
 
 export const MOVEMENT_ROW_ACCENT: Record<'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF', string> = {
   PURCHASE: 'inset 2px 0 0 #2563eb',
-  RETURN:   'inset 2px 0 0 #16a34a',
-  EXIT:     'inset 2px 0 0 #ea580c',
+  RETURN: 'inset 2px 0 0 #16a34a',
+  EXIT: 'inset 2px 0 0 #ea580c',
   WRITEOFF: 'inset 2px 0 0 #dc2626',
 };
 
@@ -185,7 +185,11 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       accessorKey: 'type',
       meta: { center: true, width: 'w-[130px]' },
       header: () => <span className="font-medium">Tipo</span>,
-      cell: ({ row }) => <div className="flex justify-center"><TypeBadge type={row.original.type} /></div>,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <TypeBadge type={row.original.type} />
+        </div>
+      ),
       enableSorting: false,
     },
     {

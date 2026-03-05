@@ -84,9 +84,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={
-                      item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-                    }
+                    isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
                   >
                     <button onClick={() => router.push(item.href)}>
                       <item.icon />
@@ -109,10 +107,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                   {adminNavItems.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname.startsWith(item.href)}
-                      >
+                      <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
                         <button onClick={() => router.push(item.href)}>
                           <item.icon />
                           <span>{item.title}</span>

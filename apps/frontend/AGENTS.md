@@ -226,53 +226,43 @@ function RowActions({ user }: { user: UserEntity }) {
 
 Only `trpc.users.me` (or equivalently cached queries with `staleTime: Infinity`) may be called this way. All other queries must come via props from the Container.
 
-## 14. Free-Form Autocomplete Input Pattern
+## 14. Free-Form Autocomplete (WorkArea Combobox)
 
-**Do NOT use `@base-ui/react` `Combobox` for free-form text fields.** Base UI Combobox does not allow free-form input — after selection it clears the input value and controlling both `value` + `inputValue` causes conflicts.
+For autocomplete fields that accept **both existing suggestions and new free-form values** (e.g. `workArea`), use a **shared `WorkAreaCombobox` component** built on shadcn `Popover` + `Command`:
 
-For autocomplete fields that accept both typed-in values and suggestions (e.g. `workArea`), implement a custom `WorkAreaCombobox` sub-component:
+**Location:** `src/features/users/components/work-area-combobox.tsx`
 
 ```typescript
-// Must be a named sub-component (hooks cannot be used in render prop callbacks)
-function WorkAreaCombobox({ field, workAreas, disabled }) {
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
-  const inputValue = field.value ?? '';
-  const filtered = workAreas.filter((a) => a.toLowerCase().includes(inputValue.toLowerCase()));
+import { WorkAreaCombobox } from './work-area-combobox';
 
-  return (
-    <div className="relative">
-      <Input
-        value={inputValue}
-        onChange={(e) => { field.onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={/* arrow/enter/escape navigation */}
-      />
-      {open && filtered.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-          {filtered.map((area, i) => (
-            <li
-              key={area}
-              onMouseDown={(e) => e.preventDefault()} // prevent blur before click
-              onClick={() => { field.onChange(area); setOpen(false); }}
-              className={cn('px-3 py-2 text-sm cursor-pointer', i === highlighted && 'bg-accent')}
-            >
-              {area}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
+// Inside a FormField render prop:
+<FormControl>
+  <WorkAreaCombobox
+    value={field.value}
+    onChange={field.onChange}
+    workAreas={workAreas}   // string[] from trpc.adminUsers.getWorkAreas
+    disabled={isPending}
+  />
+</FormControl>
 ```
 
-Key rules:
+**Component API:**
 
-- `onMouseDown={e.preventDefault()}` on list items is **required** — prevents the input blur from firing before the click registers.
-- `setTimeout(() => setOpen(false), 150)` on blur gives the click time to fire.
-- The component must be a named function (not inline) to use `useState`.
+| Prop        | Type                          | Description                          |
+| ----------- | ----------------------------- | ------------------------------------ |
+| `value`     | `string \| null \| undefined` | Current form value                   |
+| `onChange`  | `(v: string \| null) => void` | Called on selection or creation      |
+| `workAreas` | `string[]`                    | Existing suggestions from the server |
+| `disabled`  | `boolean`                     | Mirrors form `isPending`             |
+
+**Behavior:**
+- Shows a `Button` trigger (styled like a select) with the current value or a placeholder.
+- Opens a `Popover` containing a `Command` palette with search input.
+- Selecting an already-selected item **deselects** it (sets `null`).
+- When typed text doesn't match any existing area, a **"Crear «...»"** option appears — selecting it sets the typed value as a new area.
+- Width matches the trigger via `w-[--radix-popover-trigger-width]`.
+
+**Do NOT** revert to the old custom `<Input>` + manual dropdown approach for this field.
 
 ## 15. Movement Form — Dynamic Type Card Picker
 
@@ -351,3 +341,52 @@ const noAuth = form.watch('noAuth');
 - `trpc.users.updateMyPassword` — for password change (protectedProcedure, self only).
 
 The logout button lives inside `UserProfileSheet` (passed as `onLogout` prop from layout → navbar → sheet).
+
+## 18. Sidebar Active State
+
+`AppSidebar` (`src/components/app-sidebar.tsx`) uses `pathname.startsWith(item.href)` to detect the active route so that sub-routes (e.g. `/inventory/details`) also highlight the correct nav item. The root `/` uses **exact match** to avoid marking every route as active:
+
+```typescript
+isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
+```
+
+## 19. Table Visual Conventions
+
+### Per-Type Row Accents (Inventory & Movements)
+
+Use `style={{ boxShadow: 'inset 2px 0 0 <hex>' }}` on `<TableRow>` for a colored left border accent. **Do not use `border-l-*` Tailwind classes** — they disappear on the last row of a page due to `border-collapse: collapse` on the table element.
+
+**`TYPE_COLORS.rowAccent`** (in `inventory-table.types.ts`) is the single source of truth for inventory row colors. **`MOVEMENT_ROW_ACCENT`** (in `movement-table.columns.tsx`) holds the equivalent map for movements.
+
+Color palette (use -600 Tailwind shades to match badge saturation):
+
+| Type / Movement | Hex       | Tailwind equiv |
+| --------------- | --------- | -------------- |
+| PRODUCT         | `#2563eb` | blue-600       |
+| EQUIPMENT       | `#9333ea` | purple-600     |
+| TOOL            | `#ea580c` | orange-600     |
+| KIT             | `#0891b2` | cyan-600       |
+| PURCHASE        | `#2563eb` | blue-600       |
+| RETURN          | `#16a34a` | green-600      |
+| EXIT            | `#ea580c` | orange-600     |
+| WRITEOFF        | `#dc2626` | red-600        |
+
+### Centered Columns (TanStack Table)
+
+For non-sortable columns, wrap content in `<div className="flex justify-center">` in both `header` and `cell`.
+
+For **sortable** columns that need centering, add `meta: { center: true }` to the column definition and handle it in the table's header renderer:
+
+```typescript
+// column definition
+meta: { center: true }
+
+// table header renderer
+const isCentered = (header.column.columnDef.meta as { center?: boolean } | undefined)?.center;
+const headerContent = flexRender(header.column.columnDef.header, header.getContext());
+// wrap in <div className="flex justify-center"> when isCentered
+```
+
+### KIT Row Placeholders
+
+KIT items have no image, no location, no stock, and no unit. Render `—` (em-dash) for all these cells with `text-muted-foreground/50` to visually distinguish them from real empty values.

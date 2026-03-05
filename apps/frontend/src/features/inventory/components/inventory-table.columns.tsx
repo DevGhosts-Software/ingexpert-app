@@ -194,12 +194,22 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           />
         </div>
       ),
-      cell: ({ row }) => <span className="font-medium font-mono block text-center">{row.getValue('code')}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium font-mono block text-center">{row.getValue('code')}</span>
+      ),
     },
     {
       accessorKey: 'type',
-      header: () => <div className="flex justify-center"><span className="font-medium">Tipo</span></div>,
-      cell: ({ row }) => <div className="flex justify-center"><ItemTypeBadge type={row.getValue('type')} /></div>,
+      header: () => (
+        <div className="flex justify-center">
+          <span className="font-medium">Tipo</span>
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <ItemTypeBadge type={row.getValue('type')} />
+        </div>
+      ),
       enableSorting: false,
     },
     {
@@ -239,7 +249,11 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm block text-center">
-          {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('stock')}
+          {row.original.type === 'KIT' ? (
+            <span className="text-muted-foreground/50">{EM_DASH}</span>
+          ) : (
+            row.getValue('stock')
+          )}
         </span>
       ),
     },
@@ -256,14 +270,22 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm block text-center">
-          {row.original.type === 'KIT' ? <span className="text-muted-foreground/50">{EM_DASH}</span> : row.getValue('unit')}
+          {row.original.type === 'KIT' ? (
+            <span className="text-muted-foreground/50">{EM_DASH}</span>
+          ) : (
+            row.getValue('unit')
+          )}
         </span>
       ),
     },
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => <div className="flex justify-center"><RowActions item={row.original} isAdmin={isAdmin} /></div>,
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <RowActions item={row.original} isAdmin={isAdmin} />
+        </div>
+      ),
       enableSorting: false,
     },
   ];
