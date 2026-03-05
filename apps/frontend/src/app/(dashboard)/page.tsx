@@ -71,6 +71,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Panel Principal</h2>
+        <p className="text-muted-foreground">Resumen general del sistema de inventario.</p>
+      </div>
+
       {/* Summary row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
