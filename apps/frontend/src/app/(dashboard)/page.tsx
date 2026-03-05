@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Package,
   ArrowLeftRight,
+  Boxes,
+  Container,
   FolderKanban,
-  Users,
+  LayoutGrid,
+  Package,
   TrendingDown,
   TrendingUp,
-  Boxes,
+  Users,
   Wrench,
-  Container,
-  LayoutGrid,
 } from 'lucide-react';
 
 function StatCard({
@@ -127,6 +127,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-full" />
               </div>
             ) : (
               <>
@@ -154,7 +155,15 @@ export default function DashboardPage() {
                   </span>
                   <span className="font-medium">{itemStats?.kits ?? 0}</span>
                 </div>
-
+                <Separator />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total items (Sin kits)</span>
+                  <span className="font-semibold">
+                    {(itemStats?.products ?? 0) +
+                      (itemStats?.equipment ?? 0) +
+                      (itemStats?.tools ?? 0)}
+                  </span>
+                </div>
               </>
             )}
           </CardContent>
