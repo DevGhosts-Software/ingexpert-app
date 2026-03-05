@@ -256,6 +256,7 @@ import { WorkAreaCombobox } from './work-area-combobox';
 | `disabled`  | `boolean`                     | Mirrors form `isPending`             |
 
 **Behavior:**
+
 - Shows a `Button` trigger (styled like a select) with the current value or a placeholder.
 - Opens a `Popover` containing a `Command` palette with search input.
 - Selecting an already-selected item **deselects** it (sets `null`).
@@ -379,7 +380,9 @@ For **sortable** columns that need centering, add `meta: { center: true }` to th
 
 ```typescript
 // column definition
-meta: { center: true }
+meta: {
+  center: true;
+}
 
 // table header renderer
 const isCentered = (header.column.columnDef.meta as { center?: boolean } | undefined)?.center;
