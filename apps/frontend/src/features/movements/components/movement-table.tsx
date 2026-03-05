@@ -306,7 +306,7 @@ export function MovementTable({
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
                 {hg.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className={(header.column.columnDef.meta as { width?: string } | undefined)?.width}>
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <div className={(header.column.columnDef.meta as { center?: boolean } | undefined)?.center ? 'flex justify-center' : ''}>
                         <button
@@ -324,6 +324,10 @@ export function MovementTable({
                           <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
                         )}
                         </button>
+                      </div>
+                    ) : (header.column.columnDef.meta as { center?: boolean } | undefined)?.center ? (
+                      <div className="flex justify-center">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                       </div>
                     ) : (
                       flexRender(header.column.columnDef.header, header.getContext())

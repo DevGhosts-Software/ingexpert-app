@@ -183,7 +183,7 @@ export function getColumns(): ColumnDef<MovementRow>[] {
   return [
     {
       accessorKey: 'type',
-      meta: { center: true },
+      meta: { center: true, width: 'w-[130px]' },
       header: () => <span className="font-medium">Tipo</span>,
       cell: ({ row }) => <div className="flex justify-center"><TypeBadge type={row.original.type} /></div>,
       enableSorting: false,
