@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { DashboardNavbar } from '@/components/dashboard-navbar';
 
@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
+          <p className="text-sm text-muted-foreground">Cargando la aplicación...</p>
         </div>
       </div>
     );
