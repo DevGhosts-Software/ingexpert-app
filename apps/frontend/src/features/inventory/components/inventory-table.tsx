@@ -136,7 +136,8 @@ export function InventoryTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className={`cursor-pointer ${TYPE_COLORS[row.original.type].rowAccent}`}
+                  className="cursor-pointer"
+                  style={{ boxShadow: TYPE_COLORS[row.original.type].rowAccent }}
                   onClick={() => onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
