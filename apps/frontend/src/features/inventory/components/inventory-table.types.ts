@@ -6,7 +6,6 @@ import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
 
-export const LOW_STOCK_THRESHOLD = 10;
 
 export const TYPE_CONFIG: Record<
   ItemType,

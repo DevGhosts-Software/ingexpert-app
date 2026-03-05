@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { StorageImage } from '@/components/ui/storage-image';
 import { trpc } from '@/lib/trpc';
 
-import { type InventoryItem, LOW_STOCK_THRESHOLD, TYPE_CONFIG } from './inventory-table.types';
+import { type InventoryItem, TYPE_CONFIG } from './inventory-table.types';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -30,8 +30,6 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 
 function StockBadge({ stock }: { stock: number }) {
   if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
-  if (stock < LOW_STOCK_THRESHOLD)
-    return <Badge className="bg-orange-500 hover:bg-orange-500">Stock bajo</Badge>;
   return <Badge variant="outline">En stock</Badge>;
 }
 

@@ -31,7 +31,6 @@ import { ItemFormSheet } from './item-form-sheet';
 import {
   type InventoryItem,
   type ItemType,
-  LOW_STOCK_THRESHOLD,
   TYPE_CONFIG,
 } from './inventory-table.types';
 
@@ -40,12 +39,6 @@ const EM_DASH = '—';
 function StockBadge({ stock, isKit }: { stock: number; isKit: boolean }) {
   if (isKit) return <span className="text-muted-foreground">{EM_DASH}</span>;
   if (stock === 0) return <Badge variant="destructive">Sin stock</Badge>;
-  if (stock < LOW_STOCK_THRESHOLD)
-    return (
-      <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600">
-        Stock bajo
-      </Badge>
-    );
   return <Badge variant="outline">En stock</Badge>;
 }
 

@@ -189,7 +189,6 @@ export function InventoryTableToolbar({
                     <SelectContent>
                       <SelectItem value="all">Todos los niveles</SelectItem>
                       <SelectItem value="ok">En stock</SelectItem>
-                      <SelectItem value="low">Stock bajo</SelectItem>
                       <SelectItem value="out">Sin stock</SelectItem>
                     </SelectContent>
                   </Select>

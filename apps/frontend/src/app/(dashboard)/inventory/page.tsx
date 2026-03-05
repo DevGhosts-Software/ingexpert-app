@@ -16,7 +16,6 @@ const DEFAULT_STATS: ItemStats = {
   equipment: 0,
   tools: 0,
   kits: 0,
-  lowStock: 0,
 };
 
 const DEFAULT_COUNTS: ItemCounts = {

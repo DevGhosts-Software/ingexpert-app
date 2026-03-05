@@ -16,7 +16,7 @@ import {
 
 import { getColumns } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
-import { type InventoryTableProps, LOW_STOCK_THRESHOLD } from './inventory-table.types';
+import { type InventoryTableProps } from './inventory-table.types';
 
 export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-table.types';
 
@@ -43,10 +43,8 @@ export function InventoryTable({
 
   const filteredItems = useMemo(() => {
     if (stockLevelFilter === 'all') return items;
-    if (stockLevelFilter === 'low')
-      return items.filter((i) => i.stock > 0 && i.stock < LOW_STOCK_THRESHOLD);
     if (stockLevelFilter === 'out') return items.filter((i) => i.stock === 0);
-    if (stockLevelFilter === 'ok') return items.filter((i) => i.stock >= LOW_STOCK_THRESHOLD);
+    if (stockLevelFilter === 'ok') return items.filter((i) => i.stock > 0);
     return items;
   }, [items, stockLevelFilter]);
 

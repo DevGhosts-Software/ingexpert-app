@@ -10,7 +10,6 @@ import {
   ArrowLeftRight,
   FolderKanban,
   Users,
-  AlertTriangle,
   TrendingDown,
   TrendingUp,
   Boxes,
@@ -78,7 +77,6 @@ export default function DashboardPage() {
           title="Total de Ítems"
           value={itemStats?.total}
           icon={Package}
-          description={itemStats ? `${itemStats.lowStock} con stock bajo` : undefined}
           loading={loadingItems}
         />
         <StatCard
@@ -156,22 +154,7 @@ export default function DashboardPage() {
                   </span>
                   <span className="font-medium">{itemStats?.kits ?? 0}</span>
                 </div>
-                {(itemStats?.lowStock ?? 0) > 0 && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2 text-amber-600">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Stock bajo
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20"
-                      >
-                        {itemStats?.lowStock}
-                      </Badge>
-                    </div>
-                  </>
-                )}
+
               </>
             )}
           </CardContent>
