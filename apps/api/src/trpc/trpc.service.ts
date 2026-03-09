@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { Context } from './trpc.context';
 import { ZodError } from 'zod';
 import { UserRole } from '@ingexpert/database';
+import { type OpenApiMeta } from 'trpc-to-openapi';
 
 type RouteDocsMeta = {
   docs?: {
@@ -15,11 +16,13 @@ type RouteDocsMeta = {
   };
 };
 
+type AppMeta = OpenApiMeta<RouteDocsMeta>;
+
 @Injectable()
 export class TrpcService {
   readonly t = initTRPC
     .context<Context>()
-    .meta<RouteDocsMeta>()
+    .meta<AppMeta>()
     .create({
       errorFormatter({ shape, error }) {
         return {

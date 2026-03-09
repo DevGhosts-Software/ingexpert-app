@@ -5,6 +5,7 @@ import { AppRouter } from './trpc/app.router';
 import { TrpcContextService } from './trpc/trpc.context';
 import cookieParser from 'cookie-parser';
 import { collectRoutes, generateDocsHtml } from 'trpc-docs-generator';
+import { createOpenApiDocument } from './trpc/openapi';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,14 +37,20 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
 
+  // Expose OpenAPI JSON spec (always available for SDK generation)
+  const openApiDocument = createOpenApiDocument(appRouter.appRouter);
+  const expressInstance = app.getHttpAdapter().getInstance();
+  expressInstance.get('/openapi.json', (_req: unknown, res: { json: (d: unknown) => void }) => {
+    res.json(openApiDocument);
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const routes = collectRoutes(appRouter.appRouter);
     const html = generateDocsHtml(routes, {
       title: 'IngExpert API',
     });
 
-    const expressInstance = app.getHttpAdapter().getInstance();
-    expressInstance.get('/docs', (req: any, res: any) => {
+    expressInstance.get('/docs', (req: unknown, res: { send: (h: string) => void }) => {
       res.send(html);
     });
 

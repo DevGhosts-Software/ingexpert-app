@@ -15,27 +15,65 @@ export class UsersRouter {
 
   public get router() {
     return this.trpc.router({
-      me: this.trpc.protectedProcedure.query(async ({ ctx }) => {
-        return await this.usersService.findOrCreate(ctx.user.id, ctx.user.email!);
-      }),
+      me: this.trpc.protectedProcedure
+        .meta({
+          openapi: {
+            method: 'GET',
+            path: '/users/me',
+            tags: ['users'],
+            summary: 'Get current user',
+          },
+        })
+        .output(z.unknown())
+        .query(async ({ ctx }) => {
+          return await this.usersService.findOrCreate(ctx.user.id, ctx.user.email!);
+        }),
 
       updateMe: this.trpc.protectedProcedure
+        .meta({
+          openapi: {
+            method: 'PATCH',
+            path: '/users/me',
+            tags: ['users'],
+            summary: 'Update current user profile',
+          },
+        })
         .input(UpdateUserSchema)
+        .output(z.unknown())
         .mutation(async ({ input, ctx }) => {
           return await this.usersService.update(ctx.user.id, input);
         }),
 
       updateMyPassword: this.trpc.protectedProcedure
+        .meta({
+          openapi: {
+            method: 'POST',
+            path: '/users/me/password',
+            tags: ['users'],
+            summary: 'Change own password',
+          },
+        })
         .input(z.object({ password: z.string().min(8) }))
+        .output(z.unknown())
         .mutation(async ({ input, ctx }) => {
           return await this.adminUsersService.changePassword(ctx.user.id, input.password);
         }),
 
-      listNames: this.trpc.protectedProcedure.query(async () => {
-        return await this.usersService
-          .findAll()
-          .then((users) => users.map((u) => ({ id: u.id, name: u.name, email: u.email })));
-      }),
+      listNames: this.trpc.protectedProcedure
+        .meta({
+          openapi: {
+            method: 'GET',
+            path: '/users/names',
+            tags: ['users'],
+            summary: 'List all user names',
+          },
+        })
+        .output(z.unknown())
+        .query(async () => {
+          return await this.usersService
+            .findAll()
+            .then((users) => users.map((u) => ({ id: u.id, name: u.name, email: u.email })));
+        }),
     });
   }
 }
