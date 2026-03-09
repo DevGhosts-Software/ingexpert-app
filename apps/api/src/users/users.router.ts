@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { UsersService } from './services/users.service';
 import { AdminUsersService } from './services/admin-users.service';
-import { UpdateUserSchema } from '@ingexpert/schema';
+import {
+  UpdateUserSchema,
+  CurrentUserSchema,
+  UserEntitySchema,
+  UserNameSchema,
+} from '@ingexpert/schema';
 import { z } from 'zod';
 
 @Injectable()
@@ -24,7 +29,7 @@ export class UsersRouter {
             summary: 'Get current user',
           },
         })
-        .output(z.unknown())
+        .output(CurrentUserSchema)
         .query(async ({ ctx }) => {
           return await this.usersService.findOrCreate(ctx.user.id, ctx.user.email!);
         }),
@@ -39,7 +44,7 @@ export class UsersRouter {
           },
         })
         .input(UpdateUserSchema)
-        .output(z.unknown())
+        .output(CurrentUserSchema)
         .mutation(async ({ input, ctx }) => {
           return await this.usersService.update(ctx.user.id, input);
         }),
@@ -68,7 +73,7 @@ export class UsersRouter {
             summary: 'List all user names',
           },
         })
-        .output(z.unknown())
+        .output(z.array(UserNameSchema))
         .query(async () => {
           return await this.usersService
             .findAll()

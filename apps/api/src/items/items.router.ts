@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { TrpcService } from '../trpc/trpc.service';
 import { ItemsService } from './items.service';
-import { CreateItemSchema, ItemPaginationSchema, UpdateItemSchema } from '@ingexpert/schema';
+import {
+  CreateItemSchema,
+  ItemCountsSchema,
+  ItemEntitySchema,
+  ItemListSchema,
+  ItemPaginationSchema,
+  ItemStatsSchema,
+  UpdateItemSchema,
+} from '@ingexpert/schema';
 import { z } from 'zod';
 
 @Injectable()
@@ -23,7 +31,7 @@ export class ItemsRouter {
           },
         })
         .input(ItemPaginationSchema)
-        .output(z.unknown())
+        .output(ItemListSchema)
         .query(async ({ input }) => {
           return this.itemsService.findPaginated(input);
         }),
@@ -33,7 +41,7 @@ export class ItemsRouter {
           openapi: { method: 'POST', path: '/items', tags: ['items'], summary: 'Create item' },
         })
         .input(CreateItemSchema)
-        .output(z.unknown())
+        .output(ItemEntitySchema)
         .mutation(async ({ input }) => {
           return this.itemsService.create(input);
         }),
@@ -52,7 +60,7 @@ export class ItemsRouter {
             id: z.string().uuid(),
           }),
         )
-        .output(z.unknown())
+        .output(ItemEntitySchema)
         .mutation(async ({ input }) => {
           const { id, ...data } = input;
           return this.itemsService.update(id, data);
@@ -86,7 +94,7 @@ export class ItemsRouter {
             summary: 'Get item statistics',
           },
         })
-        .output(z.unknown())
+        .output(ItemStatsSchema)
         .query(async () => {
           return this.itemsService.getStats();
         }),
@@ -106,7 +114,7 @@ export class ItemsRouter {
             location: z.string().optional(),
           }),
         )
-        .output(z.unknown())
+        .output(ItemCountsSchema)
         .query(async ({ input }) => {
           return this.itemsService.getCounts(input.search, input.location);
         }),
@@ -120,7 +128,7 @@ export class ItemsRouter {
             summary: 'Get distinct item locations',
           },
         })
-        .output(z.unknown())
+        .output(z.array(z.string()))
         .query(async () => {
           return this.itemsService.getLocations();
         }),
@@ -134,7 +142,7 @@ export class ItemsRouter {
             summary: 'Get all items (admin)',
           },
         })
-        .output(z.unknown())
+        .output(z.array(ItemEntitySchema))
         .query(async () => {
           return this.itemsService.findAll();
         }),

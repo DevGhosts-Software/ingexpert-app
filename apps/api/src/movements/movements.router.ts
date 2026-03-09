@@ -4,8 +4,12 @@ import { TrpcService } from '../trpc/trpc.service';
 import { MovementsService } from './movements.service';
 import {
   CreateMovementSchema,
-  UpdateMovementSchema,
+  MovementEntityWithDetailsSchema,
   MovementFiltersSchema,
+  MovementHeaderEntitySchema,
+  MovementProjectSchema,
+  MovementStatsSchema,
+  UpdateMovementSchema,
 } from '@ingexpert/schema';
 import { UserRole } from '@ingexpert/database';
 import { z } from 'zod';
@@ -29,7 +33,7 @@ export class MovementsRouter {
           },
         })
         .input(MovementFiltersSchema.optional())
-        .output(z.unknown())
+        .output(z.array(MovementHeaderEntitySchema))
         .query(async ({ input, ctx }) => {
           // Non-admins can only see their own movements
           const filters =
@@ -54,7 +58,7 @@ export class MovementsRouter {
           },
         })
         .input(MovementFiltersSchema.optional())
-        .output(z.unknown())
+        .output(MovementStatsSchema)
         .query(async ({ input, ctx }) => {
           const filters =
             ctx.user.role !== UserRole.ADMIN ? { ...input, createdById: ctx.user.id } : input;
@@ -70,7 +74,7 @@ export class MovementsRouter {
             summary: 'Get projects with movements',
           },
         })
-        .output(z.unknown())
+        .output(z.array(MovementProjectSchema))
         .query(async () => {
           return this.movementsService.getProjects();
         }),
@@ -85,7 +89,7 @@ export class MovementsRouter {
           },
         })
         .input(CreateMovementSchema)
-        .output(z.unknown())
+        .output(MovementEntityWithDetailsSchema)
         .mutation(async ({ input, ctx }) => {
           return this.movementsService.create(input, ctx.user.id);
         }),
@@ -100,7 +104,7 @@ export class MovementsRouter {
           },
         })
         .input(z.object({ id: z.string().uuid(), data: UpdateMovementSchema }))
-        .output(z.unknown())
+        .output(MovementEntityWithDetailsSchema)
         .mutation(async ({ input }) => {
           return this.movementsService.update(input.id, input.data);
         }),

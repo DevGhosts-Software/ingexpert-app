@@ -31,3 +31,20 @@ export type KitComponentEntity = Omit<KitDetail, 'quantity'> & {
   quantity: number;
   component: Omit<Item, 'stock'> & { stock: number };
 };
+
+// ─── Output schemas ───────────────────────────────────────────────────────────
+
+/** Component summary as returned by getAllWithComponents (mapped by the service). */
+const KitSummaryComponentSchema = z.object({
+  name: z.string(),
+  code: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+});
+
+export const KitSummarySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  components: z.array(KitSummaryComponentSchema),
+});

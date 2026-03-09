@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { type Item, ItemType } from '@ingexpert/database';
-import { BasePaginationSchema } from './pagination.schema';
+import { BasePaginationSchema, paginatedSchema } from './pagination.schema';
 import { KitComponentSchema } from './kit.schema';
 
 export { ItemType } from '@ingexpert/database';
@@ -62,3 +62,34 @@ export type ItemCounts = {
   TOOL: number;
   KIT: number;
 };
+
+// ─── Output schemas ───────────────────────────────────────────────────────────
+
+export const ItemEntitySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  location: z.string(),
+  stock: z.number(),
+  unit: z.string(),
+  type: z.nativeEnum(ItemType),
+  imageUrl: z.string(),
+});
+
+export const ItemListSchema = paginatedSchema(ItemEntitySchema);
+
+export const ItemStatsSchema = z.object({
+  total: z.number(),
+  products: z.number(),
+  equipment: z.number(),
+  tools: z.number(),
+  kits: z.number(),
+});
+
+export const ItemCountsSchema = z.object({
+  ALL: z.number(),
+  PRODUCT: z.number(),
+  EQUIPMENT: z.number(),
+  TOOL: z.number(),
+  KIT: z.number(),
+});

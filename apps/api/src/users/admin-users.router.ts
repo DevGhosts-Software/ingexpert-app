@@ -7,6 +7,8 @@ import {
   CreateUserWithoutAuthSchema,
   GrantAuthSchema,
   UpdateUserSchema,
+  UserEntitySchema,
+  UserStatsSchema,
 } from '@ingexpert/schema';
 
 @Injectable()
@@ -28,7 +30,7 @@ export class AdminUsersRouter {
           },
         })
         .input(CreateUserSchema)
-        .output(z.unknown())
+        .output(UserEntitySchema)
         .mutation(async ({ input }) => {
           return await this.adminUsersService.create(input);
         }),
@@ -43,7 +45,7 @@ export class AdminUsersRouter {
           },
         })
         .input(CreateUserWithoutAuthSchema)
-        .output(z.unknown())
+        .output(UserEntitySchema)
         .mutation(async ({ input }) => {
           return await this.adminUsersService.createWithoutAuth(input);
         }),
@@ -58,7 +60,7 @@ export class AdminUsersRouter {
           },
         })
         .input(GrantAuthSchema)
-        .output(z.unknown())
+        .output(UserEntitySchema)
         .mutation(async ({ input }) => {
           return await this.adminUsersService.grantAuth(input);
         }),
@@ -77,7 +79,7 @@ export class AdminUsersRouter {
             summary: 'List all users',
           },
         })
-        .output(z.unknown())
+        .output(z.array(UserEntitySchema))
         .query(async () => {
           return await this.adminUsersService.findAll();
         }),
@@ -91,7 +93,7 @@ export class AdminUsersRouter {
             summary: 'Get user statistics',
           },
         })
-        .output(z.unknown())
+        .output(UserStatsSchema)
         .query(async () => {
           return await this.adminUsersService.getStats();
         }),
@@ -105,7 +107,7 @@ export class AdminUsersRouter {
             summary: 'Get available work areas',
           },
         })
-        .output(z.unknown())
+        .output(z.array(z.string()))
         .query(async () => {
           return await this.adminUsersService.getWorkAreas();
         }),
@@ -125,7 +127,7 @@ export class AdminUsersRouter {
           },
         })
         .input(z.object({ id: z.uuid(), data: UpdateUserSchema }))
-        .output(z.unknown())
+        .output(UserEntitySchema)
         .mutation(async ({ input }) => {
           return await this.adminUsersService.update(input.id, input.data);
         }),

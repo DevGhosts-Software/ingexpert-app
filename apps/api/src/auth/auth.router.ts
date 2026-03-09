@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
 import { TrpcService } from '../trpc/trpc.service';
 import { AuthService } from './services/auth.service';
-import { LoginSchema } from '@ingexpert/schema';
+import { AuthSessionSchema, LoginSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 
 const REFRESH_COOKIE = 'ingexpert_refresh_token';
@@ -42,7 +42,7 @@ export class AuthRouter {
           },
         })
         .input(LoginSchema)
-        .output(z.unknown())
+        .output(AuthSessionSchema)
         .mutation(async ({ input, ctx }) => {
           const result = await this.authService.login(input);
           const opts = this.cookieOptions(process.env.NODE_ENV === 'production');
@@ -67,7 +67,7 @@ export class AuthRouter {
             protect: false,
           },
         })
-        .output(z.unknown())
+        .output(AuthSessionSchema)
         .mutation(async ({ ctx }) => {
           const refreshToken = ctx.req.cookies?.[REFRESH_COOKIE] as string | undefined;
           if (!refreshToken) {

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { TrpcService } from '../trpc/trpc.service';
 import { KitsService } from './kits.service';
-import { KitImportRowSchema, SetKitComponentsSchema } from '@ingexpert/schema';
+import { KitImportRowSchema, KitSummarySchema, SetKitComponentsSchema } from '@ingexpert/schema';
 
 @Injectable()
 export class KitsRouter {
@@ -29,22 +29,13 @@ export class KitsRouter {
             summary: 'Get all kits with their components',
           },
         })
-        .output(z.unknown())
+        .output(z.array(KitSummarySchema))
         .query(async () => {
           return this.kitsService.getAllWithComponents();
         }),
 
       setComponents: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'POST',
-            path: '/kits/components',
-            tags: ['kits'],
-            summary: 'Set kit components',
-          },
-        })
         .input(SetKitComponentsSchema)
-        .output(z.unknown())
         .mutation(async ({ input }) => {
           return this.kitsService.setComponents(input);
         }),

@@ -4,6 +4,9 @@ import { TrpcService } from '../trpc/trpc.service';
 import { ProjectsService } from './projects.service';
 import {
   CreateProjectSchema,
+  ProjectEntitySchema,
+  ProjectListSchema,
+  ProjectStatsSchema,
   UpdateProjectSchema,
   ProjectPaginationSchema,
 } from '@ingexpert/schema';
@@ -27,7 +30,7 @@ export class ProjectsRouter {
           },
         })
         .input(ProjectPaginationSchema)
-        .output(z.unknown())
+        .output(ProjectListSchema)
         .query(async ({ input }) => {
           return this.projectsService.findPaginated(input);
         }),
@@ -41,7 +44,7 @@ export class ProjectsRouter {
             summary: 'Get all projects',
           },
         })
-        .output(z.unknown())
+        .output(z.array(ProjectEntitySchema))
         .query(async () => {
           return this.projectsService.findAll();
         }),
@@ -55,7 +58,7 @@ export class ProjectsRouter {
             summary: 'Get project statistics',
           },
         })
-        .output(z.unknown())
+        .output(ProjectStatsSchema)
         .query(async () => {
           return this.projectsService.getStats();
         }),
@@ -70,7 +73,7 @@ export class ProjectsRouter {
           },
         })
         .input(CreateProjectSchema)
-        .output(z.unknown())
+        .output(ProjectEntitySchema)
         .mutation(async ({ input }) => {
           return this.projectsService.create(input);
         }),
@@ -85,7 +88,7 @@ export class ProjectsRouter {
           },
         })
         .input(UpdateProjectSchema.extend({ id: z.string().uuid() }))
-        .output(z.unknown())
+        .output(ProjectEntitySchema)
         .mutation(async ({ input }) => {
           const { id, ...data } = input;
           return this.projectsService.update(id, data);

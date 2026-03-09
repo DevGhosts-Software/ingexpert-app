@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { type Item, type Movement, type MovementDetail, MovementType } from '@ingexpert/database';
+import { ItemEntitySchema } from './item.schema';
 
 export { MovementType } from '@ingexpert/database';
 
@@ -83,3 +84,51 @@ export type MovementEntityWithDetails = Omit<Movement, 'date'> & {
     }
   >;
 };
+
+// ─── Output schemas ───────────────────────────────────────────────────────────
+
+const movementBaseFields = {
+  id: z.string().uuid(),
+  type: z.nativeEnum(MovementType),
+  createdById: z.string().uuid(),
+  destination: z.string().nullable(),
+  observations: z.string().nullable(),
+  responsibleDeliveryId: z.string().uuid().nullable(),
+  responsibleReceiptId: z.string().uuid().nullable(),
+  date: z.string(),
+  projectId: z.string().uuid().nullable(),
+  itemsCount: z.number(),
+  projectName: z.string().nullable(),
+  creatorName: z.string().nullable(),
+  responsibleDeliveryName: z.string().nullable(),
+  responsibleReceiptName: z.string().nullable(),
+};
+
+export const MovementHeaderEntitySchema = z.object(movementBaseFields);
+
+const MovementDetailEntitySchema = z.object({
+  id: z.string().uuid(),
+  movementId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  quantity: z.number(),
+  item: ItemEntitySchema,
+});
+
+export const MovementEntityWithDetailsSchema = z.object({
+  ...movementBaseFields,
+  details: z.array(MovementDetailEntitySchema),
+});
+
+export const MovementStatsSchema = z.object({
+  total: z.number(),
+  purchases: z.number(),
+  returns: z.number(),
+  exits: z.number(),
+  writeoffs: z.number(),
+  thisMonth: z.number(),
+});
+
+export const MovementProjectSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+});
