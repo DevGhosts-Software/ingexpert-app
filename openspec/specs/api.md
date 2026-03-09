@@ -108,7 +108,33 @@ When a movement detail references a `KIT` item, the service expands it into its 
 
 ---
 
-## Shared Entity Pattern
+## Layered Architecture
+
+Strictly separate concerns into three layers — never mix them:
+
+| Layer | Files | Responsibility |
+|---|---|---|
+| **Transport** | `*.router.ts` | tRPC procedures, Zod input validation, HTTP status. No business logic. |
+| **Logic** | `*/services/*.service.ts` | Business logic, stock calculations, DB interactions. |
+| **Data** | `PrismaService` | Database queries and data mapping. Inject via constructor. |
+
+- **RBAC:** Use distinct procedure types (`protectedProcedure`, `adminProcedure`) for different access levels — never hybrid endpoints.
+- **SOLID:**
+  - SRP: each class has exactly one reason to change.
+  - OCP/DIP: depend on interfaces/injection, not concrete implementations.
+
+---
+
+## Database Interaction
+
+- **PrismaService:** Always inject `PrismaService` — never instantiate `PrismaClient` directly in a module.
+- **Transactions:** Use `prisma.$transaction` when updating stock + creating a movement record simultaneously.
+- **Supabase trigger:** User profile creation in Prisma (the `User` table row) is handled by a PostgreSQL trigger on `auth.users` in Supabase. The API does not need to manually `INSERT` into `User` on login — the row already exists.
+- **Error handling:** Use centralized NestJS exception filters. Never return raw database errors to the client. For `onDelete: Restrict` violations, add a service-level pre-check with a user-friendly error message.
+
+---
+
+
 
 ### 1. Entity Type (in `packages/schema`)
 

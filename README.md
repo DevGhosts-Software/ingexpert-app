@@ -6,33 +6,9 @@
 
 Ingexpert = **Inventory Management** (tracking) + **Transaction Auditing** (blame) + **Role-Based Access** (security) + **Real-time Updates**.
 
-## Roadmap
+## AI Agents
 
-The development is organized by Impact vs. Difficulty.
-
-### Phase 1 (MVP - Weeks 1-2)
-
-- **Inventory Core**: Product CRUD, SKU management, and stock level tracking.
-- **Database Schema**: Prisma-based PostgreSQL setup for all core entities.
-- **Basic Dashboard**: Visualizing current stock and low-stock items.
-
-### Phase 2 (Audit & Accountability - Weeks 3-4)
-
-- **Transaction System**: Implementation of the "blame" management system (logging who did what and when).
-- **Transaction Types**: Support for `IN`, `OUT`, and `ADJUSTMENT` operations.
-- **Audit Logs**: History view for every product and user.
-
-### Phase 3 (Auth & Roles - Month 2)
-
-- **Supabase Integration**: Secure authentication and identity management.
-- **RBAC**: Implementing `ADMIN` and `USER` roles with specific dashboard access.
-- **User Management**: Interface for admins to manage system access.
-
-### Phase 4 (Advanced Features - Month 3+)
-
-- **Low Stock Alerts**: Real-time notifications for items below threshold.
-- **Analytics**: Usage trends and inventory velocity reporting.
-- **Supplier Integration**: Tracking where supplies are coming from.
+All context, architecture rules, and domain specs are in [`openspec/specs/`](./openspec/specs/). Start with [`openspec/specs/architecture.md`](./openspec/specs/architecture.md).
 
 ## Workspace Structure
 

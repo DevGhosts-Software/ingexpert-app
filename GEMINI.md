@@ -1,59 +1,37 @@
-# 🧠 Role: Ingexpert Systems Architect
-
-You are the Lead Systems Architect for **Ingexpert**, a high-performance Stock Management System. Your goal is to build a reliable, audited, and type-safe inventory platform using **Next.js**, **NestJS**, **tRPC**, **Prisma**, and **Tailwind CSS v4**.
-
+---
+trigger: always_on
 ---
 
-## 🔗 Context Protocol (The Satellite System)
+# Ingexpert — AI Agent Entry Point
 
-**CRITICAL: You are operating in a distributed context environment.**
-The root `AGENTS.md` is your map. You **MUST** traverse the graph before answering complex queries.
+> **Read the specs before writing any code.**
+> All architecture, conventions, and domain rules live in **`openspec/specs/`**.
 
-1.  **Root Context:** Read `AGENTS.md` to understand the monorepo structure and global standards.
-2.  **Satellite Context:** If working on a specific domain (e.g., "API" or "Frontend"), you **MUST** read the linked `apps/*/AGENTS.md` file defined in the root.
-3.  **Verification:** If a user request contradicts `AGENTS.md`, assume `AGENTS.md` is the Source of Truth, unless explicitly told to refactor the architecture.
+## Context Loading Order
 
----
+1. **[`openspec/specs/architecture.md`](./openspec/specs/architecture.md)** — monorepo layout, commands, feature flow, domain inventory, key rules.
+2. **Satellite specs** (read only the ones relevant to your task):
+   - [`api.md`](./openspec/specs/api.md) — NestJS module structure, auth, movements, users, bulk ops
+   - [`frontend.md`](./openspec/specs/frontend.md) — Container/Presenter, type rules, cache, UI conventions
+   - [`schema.md`](./openspec/specs/schema.md) — Two-track type system, naming, entity patterns
+   - [`database.md`](./openspec/specs/database.md) — Prisma models, serialization, constraints, seed
+3. **[`openapi/openapi.json`](./openapi/openapi.json)** — exact endpoint shapes (generated at API startup).
 
-## 🛠️ Operational Standards
+## Operational Standards
 
-### 1. The "Think-Code-Verify" Loop
+### Think-Code-Verify Loop
 
-For every task, adhere to this strict sequence:
+1. **Context:** State which architectural patterns apply before coding.
+2. **Implement:** Follow the layered architecture in the specs.
+3. **Verify:** Run `pnpm check` (format + lint + type-check + Next.js build).
+4. **Format:** Run `pnpm format`.
 
-1.  **Context Check:** Briefly acknowledge which architectural patterns apply (e.g., "Implementing a Transaction service with ACID compliance").
-2.  **Implementation:** Write the code following the project's layered architecture.
-3.  **Safety Check:** Run `pnpm lint` and `pnpm type-check` to catch errors, or `pnpm check` for the full pre-push pipeline (format check + lint + type-check + Next.js build).
-4.  **Formatting:** Run `pnpm format` to ensure consistency.
+## Hard Rules
 
-## 2. Coding Constraints
-
-- **Strict Typing:** `no-explicit-any` is enforced. No `any` anywhere.
-- **Shared Schemas:** NEVER define Zod schemas inside Routers. Always import them from `@ingexpert/schema`.
-- **Entity Types:** NEVER define Zod schemas for API response types. Use Prisma-derived entity types from `@ingexpert/schema` (see root `AGENTS.md` Section 5).
-- **Data Integrity:** Stock operations MUST be performed within database transactions to ensure consistency between product counts and audit logs.
-- **No Git:** Do not execute git commands.
-- **Completion:** Do not leave `// TODO` or `// FIXME`. Implement the solution or define the interface clearly.
-
-### 3. Architecture Maintenance
-
-- **Living Documentation:** If you make a major architectural decision (e.g., adding a new transaction type), you **MUST** update the relevant `AGENTS.md` file to reflect this change.
-- **Conflict Resolution:** If you find a contradiction between the code and `AGENTS.md`, fix the documentation to match the reality of the code.
-
----
-
-## 🧠 Project Memory & History
-
-- **Architecture:** Monorepo with NestJS backend and Next.js frontend.
-- **API:** tRPC for end-to-end type safety.
-- **Database:** Prisma ORM for PostgreSQL.
-- **Styling:** Tailwind CSS v4 and shadcn/ui.
-- **Auth:** Supabase Auth integration.
-
----
-
-## 🚀 Initialization Trigger
-
-_If the user asks for code, start your response by stating:_
-
-> "Loaded context from AGENTS.md. working on [App/Package Name]..."
+- No `any`. TypeScript strict mode is enforced everywhere.
+- Never define Zod schemas inside routers — import from `@ingexpert/schema`.
+- Never create local interfaces that duplicate API entity shapes — import from `@ingexpert/schema`.
+- Frontend reads via tRPC only — no direct DB access.
+- Stock mutations must use `prisma.\`.
+- No `// TODO` or `// FIXME` — implement fully or define the interface clearly.
+- **Living docs:** After any major architectural decision, update the relevant `openspec/specs/` file.

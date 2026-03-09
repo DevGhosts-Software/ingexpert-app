@@ -265,6 +265,77 @@ const noAuth = form.watch('noAuth');
 
 ---
 
+## WorkArea Combobox
+
+For autocomplete fields that accept both existing suggestions and new free-form values (e.g. `workArea`), use the shared `WorkAreaCombobox` built on shadcn `Popover` + `Command`.
+
+**Location:** `src/features/users/components/work-area-combobox.tsx`
+
+```typescript
+import { WorkAreaCombobox } from './work-area-combobox';
+
+<FormControl>
+  <WorkAreaCombobox
+    value={field.value}
+    onChange={field.onChange}
+    workAreas={workAreas}   // string[] from trpc.adminUsers.getWorkAreas
+    disabled={isPending}
+  />
+</FormControl>
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `value` | `string \| null \| undefined` | Current form value |
+| `onChange` | `(v: string \| null) => void` | Called on selection or creation |
+| `workAreas` | `string[]` | Existing suggestions from the server |
+| `disabled` | `boolean` | Mirrors form `isPending` |
+
+- Selecting an already-selected item **deselects** it (sets `null`).
+- When typed text doesn't match any existing area, a **"Crear «...»"** option appears.
+- Width matches the trigger via `w-[--radix-popover-trigger-width]`.
+- **Do not** revert to a plain `<Input>` + manual dropdown for this field.
+
+---
+
+## Movement Form — Card Picker
+
+The movement creation form (`movement-form-sheet.tsx`) uses a **card picker** instead of a dropdown for the movement type. Each card shows an icon, label, and short description. The selected card gets a color-coded border/background.
+
+Fields shown per type:
+
+| Type | Fields displayed |
+|---|---|
+| `PURCHASE` | Quien recibe |
+| `RETURN` | Proyecto de origen · Quien devuelve el material |
+| `EXIT` | Destino · Proyecto destino · Responsable de entrega |
+| `WRITEOFF` | Warning banner (no project/people fields) |
+| All types | Observaciones (always shown, adaptive placeholder) |
+
+Switching type clears all irrelevant field values via `form.setValue` to prevent stale data.
+
+---
+
+## Movement Detail Sheet
+
+`movement-detail-sheet.tsx` renders a colored header banner (blue/green/orange/red) matching the movement type, with the type badge, movement ID hash, and full date/time.
+
+The metadata section is fully type-aware — only fields relevant to that type are rendered. `observations` is rendered as a distinct highlighted block (not an inline row) so it stands out, particularly for `WRITEOFF`.
+
+---
+
+## Navbar & User Profile
+
+`DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
+
+`UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** place any user edits their own name, avatar URL, and password:
+- `trpc.users.updateMe` — name and avatar
+- `trpc.users.updateMyPassword` — password change (self only, always allowed)
+
+The logout button lives inside `UserProfileSheet`, passed as `onLogout` from layout → navbar → sheet.
+
+---
+
 ## shadcn/ui Rules
 
 - Import all components from `@/components/ui` (never relative paths).
