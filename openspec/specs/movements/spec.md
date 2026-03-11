@@ -1,0 +1,114 @@
+# Movements Spec — Ingexpert
+
+> **Source of Truth for Endpoint Contracts**: Before implementing any movement route, ledger logic change, or frontend hook, read **`openapi/openapi.json`** for the exact endpoint shapes, request/response schemas, and authentication requirements for this domain.
+
+Covers: Movement ledger — create-only immutability, stock direction rules per `MovementType`, Kit expansion in transactions, role-based filter security boundary, movement schemas, and movement UI components.
+
+---
+
+## Core Rule: Movements Are Immutable
+
+Movements are **create-only** by design. Once created:
+- No `update` mutation is exposed on the frontend.
+- Stock changes are applied atomically inside `$transaction` on creation.
+- The movement record is permanent and auditable.
+
+---
+
+## Movement Model
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `String` | UUID |
+| `type` | `MovementType` | `PURCHASE`, `RETURN`, `EXIT`, or `WRITEOFF` |
+| `createdById` | `String` (FK→User) | Always `ctx.user.id` — not overridable by client |
+| `responsibleDeliveryId?` | `String?` (FK→User) | For EXIT movements |
+| `responsibleReceiptId?` | `String?` (FK→User) | For PURCHASE/RETURN movements |
+| `projectId?` | `String?` (FK→Project) | Optional project link |
+| `destination?` | `String?` | Physical destination |
+| `observations?` | `String?` | Notes, mandatory for WRITEOFF |
+| `date` | `DateTime` | Serialized as ISO string over JSON |
+
+`MovementDetail` (line items):
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `String` | UUID |
+| `movementId` | `String` (FK→Movement, `onDelete: Cascade`) | Parent movement |
+| `itemId` | `String` (FK→Item) | Referenced item |
+| `quantity` | `Decimal` | Serialized via `.toNumber()` in mapper |
+
+---
+
+## MovementType Enum
+
+| Type | Stock effect | Validation |
+|---|---|---|
+| `PURCHASE` | Increment | None |
+| `RETURN` | Increment | None |
+| `EXIT` | Decrement | Validates sufficient stock before commit |
+| `WRITEOFF` | Decrement | Validates sufficient stock before commit |
+
+---
+
+## Kit Expansion
+
+When a movement detail references a `KIT` item, the service expands it into its components and validates/adjusts stock for each component individually. **All-or-nothing:** if any component has insufficient stock, the entire transaction is rejected.
+
+---
+
+## Role-Based Filters — Security Boundary
+
+`getAll` and `getStats` accept optional `MovementFiltersDto` (`createdById`, `dateFrom`, `dateTo`).
+
+- **Admins:** May filter by any `createdById`.
+- **Non-admins:** Server **forces** `createdById = ctx.user.id` regardless of client payload.
+
+This is the security boundary — not the UI. Even if the frontend sends a different `createdById`, the server overrides it.
+
+---
+
+## Schema — Movements Domain Modules
+
+| File | DTOs | Entities | Output schemas |
+|---|---|---|---|
+| `movement.schema.ts` | `CreateMovementSchema`, `UpdateMovementSchema`, `MovementFiltersSchema` | `MovementHeaderEntity`, `MovementEntityWithDetails`, `MovementStats` | `MovementHeaderEntitySchema`, `MovementEntityWithDetailsSchema`, `MovementStatsSchema`, `MovementProjectSchema` |
+
+`MovementHeaderEntity` overrides the `date` field:
+```typescript
+export type MovementHeaderEntity = Omit<Movement, 'date'> & { date: string; /* + joined fields */ };
+```
+
+---
+
+## Frontend — Movement Form Card Picker
+
+The movement creation form (`movement-form-sheet.tsx`) uses a **card picker** instead of a dropdown for the movement type. Each card shows an icon, label, and short description. The selected card gets a color-coded border/background.
+
+Fields shown per type:
+
+| Type | Fields displayed |
+|---|---|
+| `PURCHASE` | Quien recibe |
+| `RETURN` | Proyecto de origen · Quien devuelve el material |
+| `EXIT` | Destino · Proyecto destino · Responsable de entrega |
+| `WRITEOFF` | Warning banner (no project/people fields) |
+| All types | Observaciones (always shown, adaptive placeholder) |
+
+Switching type clears all irrelevant field values via `form.setValue` to prevent stale data.
+
+---
+
+## Frontend — Movement Detail Sheet
+
+`movement-detail-sheet.tsx` renders a colored header banner matching the movement type:
+
+| MovementType | Hex | Tailwind |
+|---|---|---|
+| `PURCHASE` | `#2563eb` | blue-600 |
+| `RETURN` | `#16a34a` | green-600 |
+| `EXIT` | `#ea580c` | orange-600 |
+| `WRITEOFF` | `#dc2626` | red-600 |
+
+The banner shows the type badge, movement ID hash, and full date/time.
+
+The metadata section is fully type-aware — only fields relevant to that type are rendered. `observations` is rendered as a distinct highlighted block (not an inline row) so it stands out, particularly for `WRITEOFF`.

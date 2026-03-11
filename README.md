@@ -8,7 +8,7 @@ Ingexpert = **Inventory Management** (tracking) + **Transaction Auditing** (blam
 
 ## AI Agents
 
-All context, architecture rules, and domain specs are in [`openspec/specs/`](./openspec/specs/). Start with [`openspec/specs/architecture.md`](./openspec/specs/architecture.md).
+All context, architecture rules, and domain specs are in [`openspec/specs/`](./openspec/specs/). Start with [`openspec/specs/core-architecture/spec.md`](./openspec/specs/core-architecture/spec.md).
 
 ## Workspace Structure
 

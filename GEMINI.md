@@ -9,12 +9,12 @@ trigger: always_on
 
 ## Context Loading Order
 
-1. **[`openspec/specs/architecture.md`](./openspec/specs/architecture.md)** — monorepo layout, commands, feature flow, domain inventory, key rules.
-2. **Satellite specs** (read only the ones relevant to your task):
-   - [`api.md`](./openspec/specs/api.md) — NestJS module structure, auth, movements, users, bulk ops
-   - [`frontend.md`](./openspec/specs/frontend.md) — Container/Presenter, type rules, cache, UI conventions
-   - [`schema.md`](./openspec/specs/schema.md) — Two-track type system, naming, entity patterns
-   - [`database.md`](./openspec/specs/database.md) — Prisma models, serialization, constraints, seed
+1. **[`openspec/specs/core-architecture/spec.md`](./openspec/specs/core-architecture/spec.md)** — monorepo layout, commands, feature flow, layered architecture, schema two-track system, frontend global patterns, key rules.
+2. **Capability specs** (read only the ones relevant to your task):
+   - [`auth/spec.md`](./openspec/specs/auth/spec.md) — JWT/JWKS, procedure guards, users module, `hasAuth`, permission matrix
+   - [`inventory/spec.md`](./openspec/specs/inventory/spec.md) — items, kits, stock handling, bulk import, Excel mapping
+   - [`movements/spec.md`](./openspec/specs/movements/spec.md) — movement ledger, stock direction, kit expansion, role filters
+   - [`projects/spec.md`](./openspec/specs/projects/spec.md) — project management, delete restriction, managerId constraint
 3. **[`openapi/openapi.json`](./openapi/openapi.json)** — exact endpoint shapes (generated at API startup).
 
 ## Operational Standards
