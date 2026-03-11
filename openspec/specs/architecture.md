@@ -24,6 +24,7 @@ ingexpert-app/
 ├── apps/
 │   ├── api/          NestJS 11 + tRPC — backend, all DB writes
 │   └── frontend/     Next.js + React 19 — UI, reads via tRPC only
+│       └── src-tauri/  Tauri 2 desktop configuration (native packaging)
 ├── packages/
 │   ├── schema/       Shared Zod DTOs + Prisma-derived entity types
 │   └── database/     Prisma ORM client + generated types
@@ -96,3 +97,4 @@ When adding a new domain feature, follow this order **strictly**:
 | [`frontend.md`](./frontend.md) | Container/Presenter pattern, type rules, cache invalidation, debouncing, UI conventions |
 | [`schema.md`](./schema.md) | Two-track type system, DTO/Entity patterns, naming conventions |
 | [`database.md`](./database.md) | Prisma models, data types, schema update workflow, seed |
+| [`openspec-conventions.md`](./openspec-conventions.md) | OpenSpec workspace structure: folder roles, spec naming, ADR lifecycle, what belongs where |

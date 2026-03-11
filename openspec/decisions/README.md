@@ -27,4 +27,9 @@ What are the trade-offs? What becomes easier or harder?
 
 ## Current decisions recorded here
 
-_None yet — add as architectural decisions are made._
+| ADR | Title | Status |
+|-----|-------|--------|
+| [ADR-001](./ADR-001-trpc-over-rest.md) | tRPC Over Plain REST API | Accepted |
+| [ADR-002](./ADR-002-supabase-auth.md) | Supabase Auth with RS256 JWKS | Accepted |
+| [ADR-003](./ADR-003-tauri-desktop.md) | Tauri 2 for Desktop Packaging | Accepted |
+| [ADR-004](./ADR-004-prisma-orm.md) | Prisma as the ORM | Accepted |

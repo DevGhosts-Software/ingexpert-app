@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  Project: Ingexpert — Corporate Stock Management System (Offline-First, Admin-Only registration)
+  Project: Ingexpert — Desktop-First Corporate Stock Management System (Admin-Only registration)
 
   Monorepo (pnpm + Turbo):
     - apps/api        → NestJS 11 + tRPC (backend, business logic, Supabase Auth RS256/JWKS)

@@ -134,39 +134,6 @@ Strictly separate concerns into three layers — never mix them:
 
 ---
 
-
-
-### 1. Entity Type (in `packages/schema`)
-
-```typescript
-// Decimal field → override to number
-export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
-
-// Date field → override to string (ISO serialized over JSON)
-export type MovementEntity = Omit<Movement, 'date'> & { date: string };
-```
-
-### 2. Service Mapper (in `apps/api`)
-
-```typescript
-private mapItem(item: Item): ItemEntity {
-  return {
-    id: item.id,
-    name: item.name,
-    code: item.code,
-    location: item.location,
-    stock: item.stock.toNumber(), // Decimal → number
-    unit: item.unit,
-    type: item.type,
-    imageUrl: item.imageUrl,
-  };
-}
-```
-
-**Safety guarantee:** Adding a new DB column causes a TypeScript error in `mapXxx()` until the mapping is updated. Schema drift is caught at compile time.
-
----
-
 ## Bulk Operations Pattern
 
 For batch writes (e.g. Excel import), do **not** use a single interactive `$transaction` wrapping many sequential queries — Prisma's default timeout (5 s) will expire on large datasets.
