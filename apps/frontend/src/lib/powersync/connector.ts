@@ -62,7 +62,7 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
   }
 
   private mapCrudEntryToRequest(entry: CrudEntry): UploadRequest {
-    if (entry.table === 'MovementDetail') {
+    if (entry.table === 'MovementDetail' || entry.table === 'movement_details') {
       throw new Error(
         'MovementDetail CRUD upload must be replayed through movement-level endpoints, not direct table writes',
       );
@@ -74,21 +74,21 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
 
     const payload = entry.opData ?? {};
 
-    if (entry.table === 'Item') {
+    if (entry.table === 'Item' || entry.table === 'items') {
       if (entry.op === UpdateType.PUT) {
         return { method: 'POST', path: '/items', body: payload };
       }
       return { method: 'PATCH', path: `/items/${entry.id}`, body: { id: entry.id, ...payload } };
     }
 
-    if (entry.table === 'Project') {
+    if (entry.table === 'Project' || entry.table === 'projects') {
       if (entry.op === UpdateType.PUT) {
         return { method: 'POST', path: '/projects', body: payload };
       }
       return { method: 'PATCH', path: `/projects/${entry.id}`, body: { id: entry.id, ...payload } };
     }
 
-    if (entry.table === 'Movement') {
+    if (entry.table === 'Movement' || entry.table === 'movements') {
       if (entry.op === UpdateType.PUT) {
         return { method: 'POST', path: '/movements', body: payload };
       }

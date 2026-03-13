@@ -30,6 +30,9 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
       await database.init();
       await database.connect(new IngexpertPowerSyncBackendConnector());
 
+      (window as any).db = database;
+      console.log('🚀 PowerSync DB is now available on window.db');
+
       if (!isCancelled) {
         setPowerSyncDatabase(database);
       }

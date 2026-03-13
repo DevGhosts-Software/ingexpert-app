@@ -17,6 +17,15 @@ sync_config:
         # Baseline policy: sync all rows to all authenticated users.
         data:
           - SELECT id, code, name, location, stock, unit, type, image_url FROM items
+          - SELECT id, kit_id, item_id, quantity FROM kit_details
           - SELECT id, type, created_by_id, destination, observations, responsible_delivery_id, responsible_receipt_id, date, project_id FROM movements
           - SELECT id, movement_id, item_id, quantity FROM movement_details
           - SELECT id, name, contact, address, manager_id FROM projects
+          - SELECT id, work_area_id FROM staff
+          - SELECT id, email, role, name, avatar, "hasAuth" AS has_auth FROM users
+          - SELECT id, name FROM work_areas
+
+client_auth:
+  jwks_uri: !env PS_JWKS_URL
+  audience:
+    - authenticated

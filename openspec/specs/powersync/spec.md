@@ -9,9 +9,13 @@
 The PowerSync publication source MUST include the Prisma-mapped physical tables:
 
 - `items` (`Item`)
+- `kit_details` (`KitDetail`)
 - `movements` (`Movement`)
 - `movement_details` (`MovementDetail`)
 - `projects` (`Project`)
+- `staff` (`Staff`)
+- `users` (`User`)
+- `work_areas` (`WorkArea`)
 
 The publication definition SHALL be maintained in `packages/database/prisma/powersync pubilcation.sql`.
 
@@ -39,15 +43,19 @@ The PowerSync service MUST mount `ops/powersync/powersync.yaml` read-only as its
 - A PostgreSQL source using `PS_DATA_SOURCE_URI`
 - The `powersync` publication as replication source
 - A schema contract for:
-  - `Item`
-  - `Movement`
-  - `MovementDetail`
-  - `Project`
+  - `items`
+  - `kit_details`
+  - `movements`
+  - `movement_details`
+  - `projects`
+  - `staff`
+  - `users`
+  - `work_areas`
 - A baseline global bucket policy that syncs all rows from those entities to authenticated users
 
 This baseline is intentionally broad for local development and MUST be treated as an initial policy, not a final production authorization model.
 
-Any local startup/config modernization MUST preserve the Ingexpert sync scope for `items`, `movements`, `movement_details`, and `projects`, and MUST continue replicating from the `powersync` publication.
+Any local startup/config modernization MUST preserve the Ingexpert sync scope for `items`, `kit_details`, `movements`, `movement_details`, `projects`, `staff`, `users`, and `work_areas`, and MUST continue replicating from the `powersync` publication.
 
 ---
 
@@ -73,10 +81,14 @@ The deprecated `@journeyapps/powersync-sdk-web` package MUST NOT be used by fron
 
 The frontend SHALL define `apps/frontend/src/lib/powersync/schema.ts` with `AppSchema` including:
 
-- `Item`
-- `Movement`
-- `MovementDetail`
-- `Project`
+- `items`
+- `kit_details`
+- `movements`
+- `movement_details`
+- `projects`
+- `staff`
+- `users`
+- `work_areas`
 
 The schema contract MUST remain aligned with Prisma-backed entity fields for those tables.
 
