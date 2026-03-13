@@ -1,14 +1,16 @@
-port: ${PS_PORT}
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATA_SOURCE_URI
+      publication: powersync
 
-database:
-  type: postgresql
-  uri: ${PS_DATA_SOURCE_URI}
-  publication: powersync
+storage:
+  type: mongodb
+  uri: !env PS_MONGO_URI
 
-mongo:
-  uri: ${PS_MONGO_URI}
+port: !env PS_PORT
 
-sync_rules:
+sync_config:
   content: |
     bucket_definitions:
       global:
@@ -18,35 +20,3 @@ sync_rules:
           - SELECT id, type, created_by_id, destination, observations, responsible_delivery_id, responsible_receipt_id, date, project_id FROM movements
           - SELECT id, movement_id, item_id, quantity FROM movement_details
           - SELECT id, name, contact, address, manager_id FROM projects
-
-schema:
-  Item:
-    id: text
-    code: text
-    name: text
-    location: text
-    stock: real
-    unit: text
-    type: text
-    image_url: text
-  Movement:
-    id: text
-    type: text
-    created_by_id: text
-    destination: text
-    observations: text
-    responsible_delivery_id: text
-    responsible_receipt_id: text
-    date: text
-    project_id: text
-  MovementDetail:
-    id: text
-    movement_id: text
-    item_id: text
-    quantity: real
-  Project:
-    id: text
-    name: text
-    contact: text
-    address: text
-    manager_id: text

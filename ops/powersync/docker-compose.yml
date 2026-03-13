@@ -3,26 +3,39 @@ services:
     image: journeyapps/powersync-service:latest
     container_name: ingexpert-powersync
     depends_on:
-      - mongo
+      mongo-rs-init:
+        condition: service_completed_successfully
     ports:
-      - "${PS_PORT:-8080}:8080"
+      - "${PS_PORT:-8080}:${PS_PORT:-8080}"
     environment:
       PS_PORT: ${PS_PORT:-8080}
       PS_DATA_SOURCE_URI: ${PS_DATA_SOURCE_URI}
-      PS_MONGO_URI: mongodb://mongo:27017/powersync
+      PS_MONGO_URI: ${PS_MONGO_URI:-mongodb://mongo:27017/powersync?replicaSet=rs0}
+      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
     volumes:
       - ./powersync.yaml:/config/powersync.yaml:ro
-    command: ["--config", "/config/powersync.yaml"]
+    command: ["start", "-r", "unified"]
     restart: unless-stopped
 
   mongo:
     image: mongo:7
     container_name: ingexpert-powersync-mongo
+    command: --replSet rs0 --bind_ip_all --quiet
     ports:
       - "27017:27017"
     volumes:
       - powersync-mongo-data:/data/db
     restart: unless-stopped
+
+  mongo-rs-init:
+    image: mongo:7
+    depends_on:
+      - mongo
+    restart: on-failure
+    entrypoint:
+      - bash
+      - -c
+      - 'mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version: 1, members: [{ _id: 0, host : "mongo:27017" }]})'''
 
 volumes:
   powersync-mongo-data:

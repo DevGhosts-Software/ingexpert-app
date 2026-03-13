@@ -24,7 +24,11 @@ The repository SHALL include `ops/powersync/docker-compose.yml` with exactly two
 - `journeyapps/powersync-service`
 - `mongo` (internal PowerSync state storage)
 
-The PowerSync service MUST mount `ops/powersync/powersync.yaml` as its configuration source.
+The PowerSync service MUST start with supported subcommand semantics using `start -r unified` (or an equivalent supported role subcommand).
+
+The PowerSync service MUST NOT use deprecated top-level `--config` invocation flags that fail on current images.
+
+The PowerSync service MUST mount `ops/powersync/powersync.yaml` read-only as its configuration source and set `POWERSYNC_CONFIG_PATH` to the mounted file path.
 
 ---
 
@@ -42,6 +46,8 @@ The PowerSync service MUST mount `ops/powersync/powersync.yaml` as its configura
 - A baseline global bucket policy that syncs all rows from those entities to authenticated users
 
 This baseline is intentionally broad for local development and MUST be treated as an initial policy, not a final production authorization model.
+
+Any local startup/config modernization MUST preserve the Ingexpert sync scope for `items`, `movements`, `movement_details`, and `projects`, and MUST continue replicating from the `powersync` publication.
 
 ---
 
