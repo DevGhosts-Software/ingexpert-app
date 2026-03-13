@@ -16,11 +16,11 @@ Covers: Supabase Auth integration, JWT validation, tRPC procedure guards, Users 
 
 ## Procedure Types
 
-| Procedure | Guard | Used for |
-|---|---|---|
-| `trpc.procedure` | None (public) | Unauthenticated endpoints (login, refresh) |
-| `trpc.protectedProcedure` | Valid JWT required | All authenticated users |
-| `trpc.adminProcedure` | JWT + `role === ADMIN` | Admin-only operations |
+| Procedure                 | Guard                  | Used for                                   |
+| ------------------------- | ---------------------- | ------------------------------------------ |
+| `trpc.procedure`          | None (public)          | Unauthenticated endpoints (login, refresh) |
+| `trpc.protectedProcedure` | Valid JWT required     | All authenticated users                    |
+| `trpc.adminProcedure`     | JWT + `role === ADMIN` | Admin-only operations                      |
 
 Use distinct procedure types for different access levels — never add an inline role check inside a `protectedProcedure`.
 
@@ -28,12 +28,13 @@ Use distinct procedure types for different access levels — never add an inline
 
 ## Users Module — Two-Router Architecture
 
-| Router | Procedure type | Procedures |
-|---|---|---|
-| `UsersRouter` | `protectedProcedure` | `me`, `updateMe`, `updateMyPassword`, `listNames` |
-| `AdminUsersRouter` | `adminProcedure` | `create`, `createWithoutAuth`, `grantAuth`, `revokeAuth`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
+| Router             | Procedure type       | Procedures                                                                                                                                |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `UsersRouter`      | `protectedProcedure` | `me`, `updateMe`, `updateMyPassword`, `listNames`                                                                                         |
+| `AdminUsersRouter` | `adminProcedure`     | `create`, `createWithoutAuth`, `grantAuth`, `revokeAuth`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
 
 **Rules:**
+
 - `updateMyPassword` (self) → `protectedProcedure` in `UsersRouter`, delegates to `AdminUsersService.changePassword`.
 - `updatePassword` (admin resets any user) → `adminProcedure` in `AdminUsersRouter`.
 - Never add a `protectedProcedure` to `AdminUsersRouter`.
@@ -44,36 +45,37 @@ Use distinct procedure types for different access levels — never add an inline
 
 Users can exist without a Supabase Auth account (tracked in system but cannot log in):
 
-| Operation | Effect |
-|---|---|
-| `create` | DB record + Supabase Auth account → `hasAuth: true` |
-| `createWithoutAuth` | DB record only, UUID generated locally → `hasAuth: false` |
-| `grantAuth` | `supabaseAdmin.auth.admin.createUser({ id, email, password })` → `hasAuth: true` |
-| `revokeAuth` | `supabaseAdmin.auth.admin.deleteUser(id)` → `hasAuth: false`, DB preserved |
-| `remove` | Deletes DB record. Only calls Supabase `deleteUser` if `hasAuth: true` |
+| Operation           | Effect                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `create`            | DB record + Supabase Auth account → `hasAuth: true`                              |
+| `createWithoutAuth` | DB record only, UUID generated locally → `hasAuth: false`                        |
+| `grantAuth`         | `supabaseAdmin.auth.admin.createUser({ id, email, password })` → `hasAuth: true` |
+| `revokeAuth`        | `supabaseAdmin.auth.admin.deleteUser(id)` → `hasAuth: false`, DB preserved       |
+| `remove`            | Deletes DB record. Only calls Supabase `deleteUser` if `hasAuth: true`           |
 
 ---
 
 ## Permission Rules
 
-| Action | Who |
-|---|---|
-| Edit user | Self + non-admin users. Admins cannot edit other admins. |
-| Delete user | Non-admin users only. Cannot delete self. Cannot delete other admins. |
-| Reset password | Self + non-admin users. Cannot reset another admin's password. |
-| Change own password | Any authenticated user (`updateMyPassword`). |
+| Action              | Who                                                                   |
+| ------------------- | --------------------------------------------------------------------- |
+| Edit user           | Self + non-admin users. Admins cannot edit other admins.              |
+| Delete user         | Non-admin users only. Cannot delete self. Cannot delete other admins. |
+| Reset password      | Self + non-admin users. Cannot reset another admin's password.        |
+| Change own password | Any authenticated user (`updateMyPassword`).                          |
 
 ---
 
 ## Schema — Auth & User Domain Modules
 
-| File | DTOs | Entities | Output schemas |
-|---|---|---|---|
-| `auth.schema.ts` | `LoginSchema` | — | `AuthSessionSchema` |
-| `user.schema.ts` | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema` | `UserEntity`, `UserStats` | `UserEntitySchema`, `CurrentUserSchema`, `UserStatsSchema`, `UserNameSchema` |
-| `pagination.schema.ts` | `BasePaginationSchema` | `PaginationMeta` | `PaginationMetaSchema`, `paginatedSchema<T>()` |
+| File                   | DTOs                                                                                     | Entities                  | Output schemas                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
+| `auth.schema.ts`       | `LoginSchema`                                                                            | —                         | `AuthSessionSchema`                                                          |
+| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema` | `UserEntity`, `UserStats` | `UserEntitySchema`, `CurrentUserSchema`, `UserStatsSchema`, `UserNameSchema` |
+| `pagination.schema.ts` | `BasePaginationSchema`                                                                   | `PaginationMeta`          | `PaginationMetaSchema`, `paginatedSchema<T>()`                               |
 
 `UserEntity` is defined as:
+
 ```typescript
 export type UserEntity = User & { workArea: string | null };
 // Note: hasAuth is a DB column on User — included automatically in User base
@@ -103,6 +105,7 @@ Exception: layout-level components (e.g. `AppSidebar`) may call `useIsAdmin()` d
 `DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
 
 `UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** place any user edits their own name, avatar URL, and password:
+
 - `trpc.users.updateMe` — name and avatar
 - `trpc.users.updateMyPassword` — password change (self only, always allowed)
 

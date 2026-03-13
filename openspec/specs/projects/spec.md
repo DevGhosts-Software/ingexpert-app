@@ -8,12 +8,12 @@ Covers: Project management — `Project` model, `managerId` FK requirement, dele
 
 ## Project Model
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | `String` | UUID |
-| `name` | `String` | Must be unique |
-| `contact` | `String` | Contact person name |
-| `address` | `String` | Physical address |
+| Field       | Type                         | Notes                                                      |
+| ----------- | ---------------------------- | ---------------------------------------------------------- |
+| `id`        | `String`                     | UUID                                                       |
+| `name`      | `String`                     | Must be unique                                             |
+| `contact`   | `String`                     | Contact person name                                        |
+| `address`   | `String`                     | Physical address                                           |
 | `managerId` | `String` (FK→User, required) | Manager must exist in `User` table; `hasAuth` not required |
 
 ---
@@ -43,19 +43,20 @@ Every project requires a `managerId` referencing an existing `User` row. The ref
 
 ## Domain Inventory
 
-| Domain | API module | Frontend feature | Notes |
-|---|---|---|---|
+| Domain   | API module  | Frontend feature     | Notes                                                                |
+| -------- | ----------- | -------------------- | -------------------------------------------------------------------- |
 | Projects | `projects/` | `features/projects/` | Cannot delete if linked movements exist. `managerId` → FK to `User`. |
 
 ---
 
 ## Schema — Projects Domain Module
 
-| File | DTOs | Entities | Output schemas |
-|---|---|---|---|
+| File                | DTOs                                                                    | Entities        | Output schemas                                                   |
+| ------------------- | ----------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------- |
 | `project.schema.ts` | `CreateProjectSchema`, `UpdateProjectSchema`, `ProjectPaginationSchema` | `ProjectEntity` | `ProjectEntitySchema`, `ProjectListSchema`, `ProjectStatsSchema` |
 
 `ProjectEntity` requires no type overrides:
+
 ```typescript
 export type ProjectEntity = Project;
 ```

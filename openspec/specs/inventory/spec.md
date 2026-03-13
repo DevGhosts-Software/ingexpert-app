@@ -8,16 +8,16 @@ Covers: Items and Kits domain — CRUD rules, `ItemType` enum, stock Decimal han
 
 ## Item Model
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | `String` | UUID |
-| `code` | `String` | Natural identifier — unique, used for bulk import matching |
-| `name` | `String` | Display name |
-| `location` | `String` | Physical location. Empty string for KIT items. |
-| `stock` | `Decimal` | Serialized to `number` in service mappers via `.toNumber()` |
-| `unit` | `String` | Unit of measure |
-| `type` | `ItemType` | `PRODUCT`, `EQUIPMENT`, `TOOL`, or `KIT` |
-| `imageUrl` | `String?` | Optional image URL |
+| Field      | Type       | Notes                                                       |
+| ---------- | ---------- | ----------------------------------------------------------- |
+| `id`       | `String`   | UUID                                                        |
+| `code`     | `String`   | Natural identifier — unique, used for bulk import matching  |
+| `name`     | `String`   | Display name                                                |
+| `location` | `String`   | Physical location. Empty string for KIT items.              |
+| `stock`    | `Decimal`  | Serialized to `number` in service mappers via `.toNumber()` |
+| `unit`     | `String`   | Unit of measure                                             |
+| `type`     | `ItemType` | `PRODUCT`, `EQUIPMENT`, `TOOL`, or `KIT`                    |
+| `imageUrl` | `String?`  | Optional image URL                                          |
 
 **KIT items** have no meaningful stock or location. They are composition containers only — `stock: 0, location: ''`.
 
@@ -25,12 +25,12 @@ Covers: Items and Kits domain — CRUD rules, `ItemType` enum, stock Decimal han
 
 ## ItemType Enum
 
-| Value | Description |
-|---|---|
-| `PRODUCT` | Standard stocked product |
-| `EQUIPMENT` | Equipment (tracked, no kit composition) |
-| `TOOL` | Tool (can be a kit component) |
-| `KIT` | Virtual bundle — no direct stock; expands into PRODUCT/TOOL components |
+| Value       | Description                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| `PRODUCT`   | Standard stocked product                                               |
+| `EQUIPMENT` | Equipment (tracked, no kit composition)                                |
+| `TOOL`      | Tool (can be a kit component)                                          |
+| `KIT`       | Virtual bundle — no direct stock; expands into PRODUCT/TOOL components |
 
 ---
 
@@ -74,10 +74,10 @@ Match by `code` (natural identifier), not `name`. See `core-architecture/spec.md
 
 ## Schema — Inventory Domain Modules
 
-| File | DTOs | Entities | Output schemas |
-|---|---|---|---|
-| `item.schema.ts` | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema` | `ItemEntity`, `ItemStats`, `ItemCounts` | `ItemEntitySchema`, `ItemListSchema`, `ItemStatsSchema`, `ItemCountsSchema` |
-| `kit.schema.ts` | `SetKitComponentsSchema`, `KitComponentSchema`, `KitImportRowSchema` | `KitComponentEntity` | `KitSummarySchema` |
+| File             | DTOs                                                                 | Entities                                | Output schemas                                                              |
+| ---------------- | -------------------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| `item.schema.ts` | `CreateItemSchema`, `UpdateItemSchema`, `ItemPaginationSchema`       | `ItemEntity`, `ItemStats`, `ItemCounts` | `ItemEntitySchema`, `ItemListSchema`, `ItemStatsSchema`, `ItemCountsSchema` |
+| `kit.schema.ts`  | `SetKitComponentsSchema`, `KitComponentSchema`, `KitImportRowSchema` | `KitComponentEntity`                    | `KitSummarySchema`                                                          |
 
 ---
 
@@ -85,12 +85,12 @@ Match by `code` (natural identifier), not `name`. See `core-architecture/spec.md
 
 Use `style={{ boxShadow: 'inset 2px 0 0 <hex>' }}` on `<TableRow>`. Do **not** use `border-l-*` Tailwind classes.
 
-| ItemType | Hex | Tailwind |
-|---|---|---|
-| `PRODUCT` | `#2563eb` | blue-600 |
+| ItemType    | Hex       | Tailwind   |
+| ----------- | --------- | ---------- |
+| `PRODUCT`   | `#2563eb` | blue-600   |
 | `EQUIPMENT` | `#9333ea` | purple-600 |
-| `TOOL` | `#ea580c` | orange-600 |
-| `KIT` | `#0891b2` | cyan-600 |
+| `TOOL`      | `#ea580c` | orange-600 |
+| `KIT`       | `#0891b2` | cyan-600   |
 
 ---
 
@@ -104,12 +104,12 @@ KIT items have no image, location, stock, or unit. Render `—` (em-dash) with `
 
 `ItemType` is stored in English in the DB but written/read in Spanish in Excel files:
 
-| DB value | Excel label |
-|---|---|
-| `PRODUCT` | `PRODUCTO` |
-| `EQUIPMENT` | `EQUIPO` |
-| `TOOL` | `HERRAMIENTA` |
-| `KIT` | `KIT` |
+| DB value    | Excel label   |
+| ----------- | ------------- |
+| `PRODUCT`   | `PRODUCTO`    |
+| `EQUIPMENT` | `EQUIPO`      |
+| `TOOL`      | `HERRAMIENTA` |
+| `KIT`       | `KIT`         |
 
 `parseItemType()` in the import dialog accepts both Spanish and English values. Unknown values default to `PRODUCT`.
 
@@ -134,12 +134,12 @@ import { WorkAreaCombobox } from './work-area-combobox';
 </FormControl>
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `value` | `string \| null \| undefined` | Current form value |
-| `onChange` | `(v: string \| null) => void` | Called on selection or creation |
-| `workAreas` | `string[]` | Existing suggestions from the server |
-| `disabled` | `boolean` | Mirrors form `isPending` |
+| Prop        | Type                          | Description                          |
+| ----------- | ----------------------------- | ------------------------------------ |
+| `value`     | `string \| null \| undefined` | Current form value                   |
+| `onChange`  | `(v: string \| null) => void` | Called on selection or creation      |
+| `workAreas` | `string[]`                    | Existing suggestions from the server |
+| `disabled`  | `boolean`                     | Mirrors form `isPending`             |
 
 - Selecting an already-selected item **deselects** it (sets `null`).
 - When typed text doesn't match any existing area, a **"Crear «...»"** option appears.

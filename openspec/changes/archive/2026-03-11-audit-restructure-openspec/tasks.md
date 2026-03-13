@@ -9,7 +9,7 @@
 
 ## 3. Fix api.md — Remove Orphaned Content
 
-- [x] 3.1 In `openspec/specs/api.md`, delete the orphaned fragment that starts at `### 1. Entity Type (in \`packages/schema\`)` (approximately lines 138–165) — this includes the entity type example, the service mapper example, and the "Safety guarantee" note. The `---` separator line before it should also be removed.
+- [x] 3.1 In `openspec/specs/api.md`, delete the orphaned fragment that starts at `### 1. Entity Type (in \`packages/schema\`)`(approximately lines 138–165) — this includes the entity type example, the service mapper example, and the "Safety guarantee" note. The`---` separator line before it should also be removed.
 
 ## 4. Create openspec Conventions Spec
 

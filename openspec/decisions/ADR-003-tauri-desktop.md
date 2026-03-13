@@ -1,18 +1,22 @@
 # ADR-003: Tauri 2 for Desktop Packaging
 
 ## Status
+
 Accepted
 
 ## Context
+
 Ingexpert is intended to run as a native desktop application on corporate workstations. The frontend is built with Next.js + React, so a framework that can wrap a web-based UI as a native app was needed.
 
 Options considered:
+
 - **Electron** — the most established option; bundles its own Chromium and Node.js runtime, resulting in binaries of 100–200 MB or more per platform.
 - **Tauri 2** — uses the OS's native webview (WebView2 on Windows, WebKit on macOS/Linux) and a Rust backend; binaries are typically under 10 MB.
 - **NW.js** — similar to Electron but less actively maintained.
 - **Plain web app (browser-only)** — rejected because corporate environment requirements include offline resilience and OS-level integration (file system, notifications).
 
 ## Decision
+
 Use **Tauri 2** to package the Next.js frontend as a native desktop application.
 
 - The Tauri configuration lives in `apps/frontend/src-tauri/`.
@@ -21,6 +25,7 @@ Use **Tauri 2** to package the Next.js frontend as a native desktop application.
 - Next.js is never run directly by developers — Tauri calls `next:build` and `next:dev` internally.
 
 ## Consequences
+
 - **Easier:** Binary size is dramatically smaller than Electron (no bundled Chromium).
 - **Easier:** Native OS APIs (file system, system tray, notifications) are accessible via Tauri's Rust plugin system.
 - **Easier:** Security model is stricter by default — Tauri's allowlist limits which OS capabilities the webview can access.

@@ -9,6 +9,7 @@ Covers: Movement ledger — create-only immutability, stock direction rules per 
 ## Core Rule: Movements Are Immutable
 
 Movements are **create-only** by design. Once created:
+
 - No `update` mutation is exposed on the frontend.
 - Stock changes are applied atomically inside `$transaction` on creation.
 - The movement record is permanent and auditable.
@@ -17,17 +18,17 @@ Movements are **create-only** by design. Once created:
 
 ## Movement Model
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | `String` | UUID |
-| `type` | `MovementType` | `PURCHASE`, `RETURN`, `EXIT`, or `WRITEOFF` |
-| `createdById` | `String` (FK→User) | Always `ctx.user.id` — not overridable by client |
-| `responsibleDeliveryId?` | `String?` (FK→User) | For EXIT movements |
-| `responsibleReceiptId?` | `String?` (FK→User) | For PURCHASE/RETURN movements |
-| `projectId?` | `String?` (FK→Project) | Optional project link |
-| `destination?` | `String?` | Physical destination |
-| `observations?` | `String?` | Notes, mandatory for WRITEOFF |
-| `date` | `DateTime` | Serialized as ISO string over JSON |
+| Field                    | Type                   | Notes                                            |
+| ------------------------ | ---------------------- | ------------------------------------------------ |
+| `id`                     | `String`               | UUID                                             |
+| `type`                   | `MovementType`         | `PURCHASE`, `RETURN`, `EXIT`, or `WRITEOFF`      |
+| `createdById`            | `String` (FK→User)     | Always `ctx.user.id` — not overridable by client |
+| `responsibleDeliveryId?` | `String?` (FK→User)    | For EXIT movements                               |
+| `responsibleReceiptId?`  | `String?` (FK→User)    | For PURCHASE/RETURN movements                    |
+| `projectId?`             | `String?` (FK→Project) | Optional project link                            |
+| `destination?`           | `String?`              | Physical destination                             |
+| `observations?`          | `String?`              | Notes, mandatory for WRITEOFF                    |
+| `date`                   | `DateTime`             | Serialized as ISO string over JSON               |
 
 `MovementDetail` (line items):
 | Field | Type | Notes |
@@ -41,12 +42,12 @@ Movements are **create-only** by design. Once created:
 
 ## MovementType Enum
 
-| Type | Stock effect | Validation |
-|---|---|---|
-| `PURCHASE` | Increment | None |
-| `RETURN` | Increment | None |
-| `EXIT` | Decrement | Validates sufficient stock before commit |
-| `WRITEOFF` | Decrement | Validates sufficient stock before commit |
+| Type       | Stock effect | Validation                               |
+| ---------- | ------------ | ---------------------------------------- |
+| `PURCHASE` | Increment    | None                                     |
+| `RETURN`   | Increment    | None                                     |
+| `EXIT`     | Decrement    | Validates sufficient stock before commit |
+| `WRITEOFF` | Decrement    | Validates sufficient stock before commit |
 
 ---
 
@@ -69,13 +70,14 @@ This is the security boundary — not the UI. Even if the frontend sends a diffe
 
 ## Schema — Movements Domain Modules
 
-| File | DTOs | Entities | Output schemas |
-|---|---|---|---|
+| File                 | DTOs                                                                    | Entities                                                             | Output schemas                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `movement.schema.ts` | `CreateMovementSchema`, `UpdateMovementSchema`, `MovementFiltersSchema` | `MovementHeaderEntity`, `MovementEntityWithDetails`, `MovementStats` | `MovementHeaderEntitySchema`, `MovementEntityWithDetailsSchema`, `MovementStatsSchema`, `MovementProjectSchema` |
 
 `MovementHeaderEntity` overrides the `date` field:
+
 ```typescript
-export type MovementHeaderEntity = Omit<Movement, 'date'> & { date: string; /* + joined fields */ };
+export type MovementHeaderEntity = Omit<Movement, 'date'> & { date: string /* + joined fields */ };
 ```
 
 ---
@@ -86,13 +88,13 @@ The movement creation form (`movement-form-sheet.tsx`) uses a **card picker** in
 
 Fields shown per type:
 
-| Type | Fields displayed |
-|---|---|
-| `PURCHASE` | Quien recibe |
-| `RETURN` | Proyecto de origen · Quien devuelve el material |
-| `EXIT` | Destino · Proyecto destino · Responsable de entrega |
-| `WRITEOFF` | Warning banner (no project/people fields) |
-| All types | Observaciones (always shown, adaptive placeholder) |
+| Type       | Fields displayed                                    |
+| ---------- | --------------------------------------------------- |
+| `PURCHASE` | Quien recibe                                        |
+| `RETURN`   | Proyecto de origen · Quien devuelve el material     |
+| `EXIT`     | Destino · Proyecto destino · Responsable de entrega |
+| `WRITEOFF` | Warning banner (no project/people fields)           |
+| All types  | Observaciones (always shown, adaptive placeholder)  |
 
 Switching type clears all irrelevant field values via `form.setValue` to prevent stale data.
 
@@ -102,12 +104,12 @@ Switching type clears all irrelevant field values via `form.setValue` to prevent
 
 `movement-detail-sheet.tsx` renders a colored header banner matching the movement type:
 
-| MovementType | Hex | Tailwind |
-|---|---|---|
-| `PURCHASE` | `#2563eb` | blue-600 |
-| `RETURN` | `#16a34a` | green-600 |
-| `EXIT` | `#ea580c` | orange-600 |
-| `WRITEOFF` | `#dc2626` | red-600 |
+| MovementType | Hex       | Tailwind   |
+| ------------ | --------- | ---------- |
+| `PURCHASE`   | `#2563eb` | blue-600   |
+| `RETURN`     | `#16a34a` | green-600  |
+| `EXIT`       | `#ea580c` | orange-600 |
+| `WRITEOFF`   | `#dc2626` | red-600    |
 
 The banner shows the type badge, movement ID hash, and full date/time.
 

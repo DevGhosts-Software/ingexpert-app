@@ -4,7 +4,7 @@ The `openspec/` folder was set up for Ingexpert but never formally audited. Duri
 
 1. **Stale/inaccurate claims** — `config.yaml` and `architecture.md` describe the project as "Offline-First" but no offline-first dependencies (PowerSync, service workers, workbox) exist anywhere in the codebase. Tauri 2 provides desktop packaging, which is not the same as offline-first data sync.
 
-2. **Orphaned content in `api.md`** — Lines ~138–165 contain entity type and service mapper code examples under `### 1. Entity Type (in \`packages/schema\`)` but there is no parent `##` section heading. This content is structurally adrift and duplicates what is already fully covered in `schema.md`.
+2. **Orphaned content in `api.md`** — Lines ~138–165 contain entity type and service mapper code examples under `### 1. Entity Type (in \`packages/schema\`)`but there is no parent`##`section heading. This content is structurally adrift and duplicates what is already fully covered in`schema.md`.
 
 3. **Missing documentation** — The `openspec/decisions/` folder is empty (no ADRs despite several significant architectural decisions having been made), and there is no spec explaining how to maintain the openspec workspace itself.
 
@@ -13,6 +13,7 @@ This change is **documentation-only** — no code, no schema migrations, no API 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Remove false "Offline-First" label from all agent-facing context (config.yaml, architecture.md)
 - Add Tauri to the monorepo layout diagram in `architecture.md`
 - Remove or properly integrate the orphaned entity-type section in `api.md`
@@ -20,6 +21,7 @@ This change is **documentation-only** — no code, no schema migrations, no API 
 - Create `openspec/specs/openspec-conventions.md` as a living reference for workspace maintenance
 
 **Non-Goals:**
+
 - Redesigning the openspec folder structure (flat `specs/*.md` layout stays as-is)
 - Adding offline-first capability — that is a separate future feature decision
 - Changing any TypeScript code, Prisma schema, or API behavior

@@ -7,7 +7,9 @@ This is the mandatory starting point for any AI agent generating code, routes, o
 ---
 
 ## References / Decisions
+
 If you need historical context on why these architectural boundaries exist, refer to our Architecture Decision Records:
+
 - [ADR-001: tRPC over REST](../../decisions/ADR-001-trpc-over-rest.md)
 - [ADR-002: Supabase Auth](../../decisions/ADR-002-supabase-auth.md)
 - [ADR-003: Tauri Desktop](../../decisions/ADR-003-tauri-desktop.md)
@@ -31,17 +33,17 @@ ingexpert-app/
 
 ## Commands Reference
 
-| Command | Purpose |
-|---|---|
-| `pnpm dev` | Start API + Tauri desktop app (embeds Next.js) |
-| `pnpm build` | Build everything (API + Tauri native bundle) |
-| `pnpm check` | **Pre-push pipeline**: format check → lint → type-check → Next.js build |
-| `pnpm format` | Auto-fix Prettier formatting |
-| `pnpm lint` | Run ESLint across all packages |
-| `pnpm type-check` | Run `tsc --noEmit` across all packages |
-| `pnpm db:generate` | Regenerate Prisma Client after schema changes |
-| `pnpm db:migrate` | Apply pending DB migrations |
-| `pnpm db:studio` | Open Prisma Studio |
+| Command            | Purpose                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `pnpm dev`         | Start API + Tauri desktop app (embeds Next.js)                          |
+| `pnpm build`       | Build everything (API + Tauri native bundle)                            |
+| `pnpm check`       | **Pre-push pipeline**: format check → lint → type-check → Next.js build |
+| `pnpm format`      | Auto-fix Prettier formatting                                            |
+| `pnpm lint`        | Run ESLint across all packages                                          |
+| `pnpm type-check`  | Run `tsc --noEmit` across all packages                                  |
+| `pnpm db:generate` | Regenerate Prisma Client after schema changes                           |
+| `pnpm db:migrate`  | Apply pending DB migrations                                             |
+| `pnpm db:studio`   | Open Prisma Studio                                                      |
 
 > `pnpm --filter @ingexpert/frontend next:dev` and `next:build` are called automatically by Tauri — do not run them directly.
 
@@ -62,14 +64,14 @@ When adding a new domain feature, follow this order **strictly**:
 
 ## Domain Inventory
 
-| Domain    | API module              | Frontend feature       | Spec |
-|-----------|-------------------------|------------------------|------|
-| Auth      | `auth/`                 | `features/auth/`       | [`auth/spec.md`](../auth/spec.md) |
-| Items     | `items/`                | `features/inventory/`  | [`inventory/spec.md`](../inventory/spec.md) |
-| Kits      | `kits/`                 | (part of inventory UI) | [`inventory/spec.md`](../inventory/spec.md) |
-| Movements | `movements/`            | `features/movements/`  | [`movements/spec.md`](../movements/spec.md) |
-| Projects  | `projects/`             | `features/projects/`   | [`projects/spec.md`](../projects/spec.md) |
-| Users     | `users/` + `admin-users/` | `features/users/`    | [`auth/spec.md`](../auth/spec.md) |
+| Domain    | API module                | Frontend feature       | Spec                                        |
+| --------- | ------------------------- | ---------------------- | ------------------------------------------- |
+| Auth      | `auth/`                   | `features/auth/`       | [`auth/spec.md`](../auth/spec.md)           |
+| Items     | `items/`                  | `features/inventory/`  | [`inventory/spec.md`](../inventory/spec.md) |
+| Kits      | `kits/`                   | (part of inventory UI) | [`inventory/spec.md`](../inventory/spec.md) |
+| Movements | `movements/`              | `features/movements/`  | [`movements/spec.md`](../movements/spec.md) |
+| Projects  | `projects/`               | `features/projects/`   | [`projects/spec.md`](../projects/spec.md)   |
+| Users     | `users/` + `admin-users/` | `features/users/`      | [`auth/spec.md`](../auth/spec.md)           |
 
 ---
 
@@ -112,11 +114,11 @@ apps/api/src/
 
 Strictly separate concerns into three layers — never mix them:
 
-| Layer | Files | Responsibility |
-|---|---|---|
-| **Transport** | `*.router.ts` | tRPC procedures, Zod input validation, HTTP status. No business logic. |
-| **Logic** | `*/services/*.service.ts` | Business logic, stock calculations, DB interactions. |
-| **Data** | `PrismaService` | Database queries and data mapping. Inject via constructor. |
+| Layer         | Files                     | Responsibility                                                         |
+| ------------- | ------------------------- | ---------------------------------------------------------------------- |
+| **Transport** | `*.router.ts`             | tRPC procedures, Zod input validation, HTTP status. No business logic. |
+| **Logic**     | `*/services/*.service.ts` | Business logic, stock calculations, DB interactions.                   |
+| **Data**      | `PrismaService`           | Database queries and data mapping. Inject via constructor.             |
 
 - **RBAC:** Use distinct procedure types (`protectedProcedure`, `adminProcedure`) for different access levels — never hybrid endpoints.
 - **SOLID:** SRP — each class has exactly one reason to change. DIP — depend on interfaces/injection, not concrete implementations.
@@ -167,6 +169,7 @@ async importMany(items: CreateItemDto[]): Promise<void> {
 ## API — OpenAPI Integration
 
 Every tRPC procedure exposed to OpenAPI **must** have:
+
 - `.meta({ openapi: { method, path, tags, summary } })`
 - `.output(SomeZodSchema)` — output schema imported from `@ingexpert/schema`
 
@@ -178,34 +181,34 @@ The spec is regenerated on every server startup and served at `GET /openapi.json
 
 ## Database — Core Models
 
-| Model | Key fields | Notes |
-|---|---|---|
-| `User` | `id`, `email`, `role: UserRole`, `name?`, `avatar?`, `hasAuth: Boolean` | `hasAuth` tracks whether user can log in (has Supabase Auth account) |
-| `Staff` | `userId` (FK→User), `workAreaId?` (FK→WorkArea, `onDelete: SetNull`) | Extended user profile for movement responsibility tracking |
-| `WorkArea` | `id`, `name @unique` | Normalized department/area. One WorkArea → many Staff (1-N) |
-| `Item` | `id`, `code`, `name`, `location`, `stock: Decimal`, `unit`, `type: ItemType`, `imageUrl` | KIT items have no meaningful stock or location |
-| `Movement` | `id`, `type: MovementType`, `createdById` (FK→User), `responsibleDeliveryId?`, `responsibleReceiptId?`, `projectId?`, `destination?`, `observations?`, `date: DateTime` | Immutable audit log |
-| `MovementDetail` | `id`, `movementId` (FK→Movement), `itemId` (FK→Item), `quantity: Decimal` | Line items for a movement |
-| `Project` | `id`, `name`, `contact`, `address`, `managerId` (FK→User, required) | Manager must exist in `users` table; no Supabase Auth required |
+| Model            | Key fields                                                                                                                                                              | Notes                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `User`           | `id`, `email`, `role: UserRole`, `name?`, `avatar?`, `hasAuth: Boolean`                                                                                                 | `hasAuth` tracks whether user can log in (has Supabase Auth account) |
+| `Staff`          | `userId` (FK→User), `workAreaId?` (FK→WorkArea, `onDelete: SetNull`)                                                                                                    | Extended user profile for movement responsibility tracking           |
+| `WorkArea`       | `id`, `name @unique`                                                                                                                                                    | Normalized department/area. One WorkArea → many Staff (1-N)          |
+| `Item`           | `id`, `code`, `name`, `location`, `stock: Decimal`, `unit`, `type: ItemType`, `imageUrl`                                                                                | KIT items have no meaningful stock or location                       |
+| `Movement`       | `id`, `type: MovementType`, `createdById` (FK→User), `responsibleDeliveryId?`, `responsibleReceiptId?`, `projectId?`, `destination?`, `observations?`, `date: DateTime` | Immutable audit log                                                  |
+| `MovementDetail` | `id`, `movementId` (FK→Movement), `itemId` (FK→Item), `quantity: Decimal`                                                                                               | Line items for a movement                                            |
+| `Project`        | `id`, `name`, `contact`, `address`, `managerId` (FK→User, required)                                                                                                     | Manager must exist in `users` table; no Supabase Auth required       |
 
 ---
 
 ## Database — Enums
 
-| Enum | Values |
-|---|---|
-| `UserRole` | `ADMIN`, `USER` |
-| `ItemType` | `PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT` |
+| Enum           | Values                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------- |
+| `UserRole`     | `ADMIN`, `USER`                                                                                       |
+| `ItemType`     | `PRODUCT`, `EQUIPMENT`, `TOOL`, `KIT`                                                                 |
 | `MovementType` | `PURCHASE` (entry/buy), `RETURN` (entry/return), `EXIT` (exit to project), `WRITEOFF` (exit/disposal) |
 
 ---
 
 ## Database — Data Type Serialization
 
-| DB type | Prisma type | Wire type | How to convert |
-|---|---|---|---|
-| `Decimal` | `Prisma.Decimal` | `number` | `.toNumber()` in service mapper |
-| `DateTime` | `Date` | `string` | ISO string over JSON (automatic) |
+| DB type    | Prisma type      | Wire type | How to convert                   |
+| ---------- | ---------------- | --------- | -------------------------------- |
+| `Decimal`  | `Prisma.Decimal` | `number`  | `.toNumber()` in service mapper  |
+| `DateTime` | `Date`           | `string`  | ISO string over JSON (automatic) |
 
 Always call `.toNumber()` on `stock` (Item) and `quantity` (MovementDetail) before returning from service mappers.
 
@@ -213,11 +216,11 @@ Always call `.toNumber()` on `stock` (Item) and `quantity` (MovementDetail) befo
 
 ## Database — Relation Constraints
 
-| Constraint | Where used | Effect |
-|---|---|---|
-| `onDelete: Restrict` | `Project → Movement` | Cannot delete a Project while Movements reference it. Add a pre-check in the service with a user-friendly tRPC error. |
-| `onDelete: SetNull` | `Staff → WorkArea` | Deleting a WorkArea sets `workAreaId` to null on related Staff records, not deleting the user. |
-| `onDelete: Cascade` | `Movement → MovementDetail` | Deleting a Movement removes its line items. |
+| Constraint           | Where used                  | Effect                                                                                                                |
+| -------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `onDelete: Restrict` | `Project → Movement`        | Cannot delete a Project while Movements reference it. Add a pre-check in the service with a user-friendly tRPC error. |
+| `onDelete: SetNull`  | `Staff → WorkArea`          | Deleting a WorkArea sets `workAreaId` to null on related Staff records, not deleting the user.                        |
+| `onDelete: Cascade`  | `Movement → MovementDetail` | Deleting a Movement removes its line items.                                                                           |
 
 ---
 
@@ -247,13 +250,13 @@ Always call `.toNumber()` on `stock` (Item) and `quantity` (MovementDetail) befo
 
 Used exclusively for tRPC `.input()` validation at the API boundary.
 
-- **When to use Zod:** Only for data coming *into* the API (create, update, filter inputs).
+- **When to use Zod:** Only for data coming _into_ the API (create, update, filter inputs).
 - **Never use Zod for:** API response types. Responses are typed at compile time via entities — they are never `.parse()`-d at runtime.
 - **Exception:** `.output()` schemas on tRPC procedures for OpenAPI documentation are also Zod, but they do not validate at runtime.
 
 ### Track 2 — Entities (Prisma-derived TypeScript types)
 
-Used for all data returned *from* the API. Structurally derived from Prisma-generated model types so the database schema is the source of truth.
+Used for all data returned _from_ the API. Structurally derived from Prisma-generated model types so the database schema is the source of truth.
 
 **Safety guarantee:** Adding a column to a Prisma model causes a TypeScript error in the service's `mapXxx()` method until the mapping is updated. Schema drift is caught at compile time.
 
@@ -298,13 +301,13 @@ export const ItemEntitySchema = z.object({ ... });
 
 ## Schema — Naming Conventions
 
-| Thing | Convention | Example |
-|---|---|---|
-| Zod schema | `PascalCase` + `Schema` | `CreateItemSchema` |
-| DTO type | `PascalCase` + `Dto`, inferred from schema | `CreateItemDto` |
-| Entity type | `PascalCase` + `Entity`, Prisma-derived | `ItemEntity` |
-| Output schema | `[Entity]Schema` | `ItemEntitySchema` |
-| Enums | Re-exported from `@ingexpert/database` | `export { ItemType } from '@ingexpert/database'` |
+| Thing         | Convention                                 | Example                                          |
+| ------------- | ------------------------------------------ | ------------------------------------------------ |
+| Zod schema    | `PascalCase` + `Schema`                    | `CreateItemSchema`                               |
+| DTO type      | `PascalCase` + `Dto`, inferred from schema | `CreateItemDto`                                  |
+| Entity type   | `PascalCase` + `Entity`, Prisma-derived    | `ItemEntity`                                     |
+| Output schema | `[Entity]Schema`                           | `ItemEntitySchema`                               |
+| Enums         | Re-exported from `@ingexpert/database`     | `export { ItemType } from '@ingexpert/database'` |
 
 ---
 
@@ -318,7 +321,7 @@ export type ProjectEntity = Project;
 export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
 
 // Date field → string (ISO over JSON)
-export type MovementHeaderEntity = Omit<Movement, 'date'> & { date: string; /* + joined fields */ };
+export type MovementHeaderEntity = Omit<Movement, 'date'> & { date: string /* + joined fields */ };
 
 // Relation flattened to scalar
 export type UserEntity = User & { workArea: string | null };
@@ -394,13 +397,13 @@ The Component is the **Visualizer** and **Actor**.
 
 ## Frontend — File Naming Map
 
-| Resource | File name | Export |
-|---|---|---|
-| Container | `page.tsx` | `export default function Page()` |
-| Presenter | `[feature]-table.tsx` | `export function FeatureTable()` |
-| Columns | `[feature]-table.columns.tsx` | `export function getColumns()` |
-| Types | `[feature]-table.types.ts` | Re-exports from `@ingexpert/schema` |
-| Toolbar | `[feature]-table-toolbar.tsx` | `export function FeatureTableToolbar()` |
+| Resource  | File name                     | Export                                  |
+| --------- | ----------------------------- | --------------------------------------- |
+| Container | `page.tsx`                    | `export default function Page()`        |
+| Presenter | `[feature]-table.tsx`         | `export function FeatureTable()`        |
+| Columns   | `[feature]-table.columns.tsx` | `export function getColumns()`          |
+| Types     | `[feature]-table.types.ts`    | Re-exports from `@ingexpert/schema`     |
+| Toolbar   | `[feature]-table-toolbar.tsx` | `export function FeatureTableToolbar()` |
 
 ---
 
@@ -416,7 +419,11 @@ import type { ItemCounts, ItemStats, ItemType } from '@ingexpert/schema';
 export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 
 // ❌ wrong — duplicates the API shape and breaks DB-schema link
-interface InventoryItem { id: string; name: string; stock: number; }
+interface InventoryItem {
+  id: string;
+  name: string;
+  stock: number;
+}
 ```
 
 ---

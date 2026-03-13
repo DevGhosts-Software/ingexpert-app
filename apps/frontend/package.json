@@ -22,6 +22,9 @@
     "stock-management"
   ],
   "dependencies": {
+    "@journeyapps/powersync-sdk-web": "^0.5.0",
+    "@journeyapps/wa-sqlite": "~0.2.0",
+    "@powersync/react": "^1.9.0",
     "@base-ui/react": "^1.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@ingexpert/api": "workspace:*",
@@ -47,6 +50,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",
+    "kysely": "^0.28.11",
     "next": "catalog:next",
     "next-themes": "^0.4.6",
     "postcss": "^8.5.6",

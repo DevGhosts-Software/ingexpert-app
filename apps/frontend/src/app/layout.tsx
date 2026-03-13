@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { PowerSyncProvider } from '@/components/providers/powersync-provider';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { TRPCProvider } from '@/components/providers/trpc-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -16,17 +17,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head />
       <body>
         <TRPCProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              {children}
-              <Toaster />
-            </TooltipProvider>
-          </ThemeProvider>
+          <PowerSyncProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <TooltipProvider>
+                {children}
+                <Toaster />
+              </TooltipProvider>
+            </ThemeProvider>
+          </PowerSyncProvider>
         </TRPCProvider>
       </body>
     </html>

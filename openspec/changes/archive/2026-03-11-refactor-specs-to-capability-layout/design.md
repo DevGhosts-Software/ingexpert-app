@@ -7,6 +7,7 @@ The `spec-driven` schema already supports capability-based subdirectories (`spec
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Migrate all content from the six flat spec files into five capability-based `spec.md` files
 - Add an explicit `openapi.json` source-of-truth clause to every domain capability spec
 - Update all agent entry points (`AGENTS.md`, `GEMINI.md`, system-prompt) to reference the new paths
@@ -14,6 +15,7 @@ The `spec-driven` schema already supports capability-based subdirectories (`spec
 - Delete the empty `openspec/features/` directory (README-only, no value)
 
 **Non-Goals:**
+
 - Changing any TypeScript code, Prisma schema, or API behavior
 - Redesigning the domain boundaries (same 5 capabilities as proposed)
 - Adding new rules or changing existing requirements — content migrates verbatim, except for the `openapi.json` clause and structural edits
@@ -22,27 +24,27 @@ The `spec-driven` schema already supports capability-based subdirectories (`spec
 
 ### Content assignment to capabilities
 
-| Source section | Target capability |
-|---|---|
-| `architecture.md` — monorepo layout, commands, feature order, domain inventory, key rules | `core-architecture` |
-| `api.md` — module structure, procedure types, layered architecture, DB interaction, bulk ops, OpenAPI integration | `core-architecture` |
-| `database.md` — schema update workflow, serialization, relation constraints, seed, best practices | `core-architecture` |
-| `schema.md` — two-track system, file structure, naming conventions, entity override patterns, build note | `core-architecture` |
+| Source section                                                                                                                                  | Target capability   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `architecture.md` — monorepo layout, commands, feature order, domain inventory, key rules                                                       | `core-architecture` |
+| `api.md` — module structure, procedure types, layered architecture, DB interaction, bulk ops, OpenAPI integration                               | `core-architecture` |
+| `database.md` — schema update workflow, serialization, relation constraints, seed, best practices                                               | `core-architecture` |
+| `schema.md` — two-track system, file structure, naming conventions, entity override patterns, build note                                        | `core-architecture` |
 | `frontend.md` — Container/Presenter pattern, file naming, type rules, cache invalidation, debouncing, forms, shadcn rules, sidebar active state | `core-architecture` |
-| `api.md` — authentication (JWT, JWKS, guards), users module (two-router, hasAuth, permission matrix) | `auth` |
-| `schema.md` — auth and user schemas/entities | `auth` |
-| `frontend.md` — role-based UI (`useIsAdmin`), `UserProfileSheet`, navbar | `auth` |
-| `api.md` — items and kits modules | `inventory` |
-| `database.md` — `Item` model, `ItemType` enum, Kit composition | `inventory` |
-| `schema.md` — item and kit schemas | `inventory` |
-| `frontend.md` — inventory table conventions, KIT placeholders, Excel type mapping, WorkAreaCombobox | `inventory` |
-| `api.md` — movements module (business rules, stock direction, kit expansion, role filters) | `movements` |
-| `database.md` — `Movement`, `MovementDetail` models, `MovementType` enum | `movements` |
-| `schema.md` — movement schemas | `movements` |
-| `frontend.md` — movement form card picker, movement detail sheet | `movements` |
-| `database.md` — `Project` model | `projects` |
-| `schema.md` — project schemas | `projects` |
-| `frontend.md` — project UI (implied from domain inventory) | `projects` |
+| `api.md` — authentication (JWT, JWKS, guards), users module (two-router, hasAuth, permission matrix)                                            | `auth`              |
+| `schema.md` — auth and user schemas/entities                                                                                                    | `auth`              |
+| `frontend.md` — role-based UI (`useIsAdmin`), `UserProfileSheet`, navbar                                                                        | `auth`              |
+| `api.md` — items and kits modules                                                                                                               | `inventory`         |
+| `database.md` — `Item` model, `ItemType` enum, Kit composition                                                                                  | `inventory`         |
+| `schema.md` — item and kit schemas                                                                                                              | `inventory`         |
+| `frontend.md` — inventory table conventions, KIT placeholders, Excel type mapping, WorkAreaCombobox                                             | `inventory`         |
+| `api.md` — movements module (business rules, stock direction, kit expansion, role filters)                                                      | `movements`         |
+| `database.md` — `Movement`, `MovementDetail` models, `MovementType` enum                                                                        | `movements`         |
+| `schema.md` — movement schemas                                                                                                                  | `movements`         |
+| `frontend.md` — movement form card picker, movement detail sheet                                                                                | `movements`         |
+| `database.md` — `Project` model                                                                                                                 | `projects`          |
+| `schema.md` — project schemas                                                                                                                   | `projects`          |
+| `frontend.md` — project UI (implied from domain inventory)                                                                                      | `projects`          |
 
 **Alternative considered:** Keep `users` as a separate capability — rejected because Users is entirely auth-infrastructure in this system (Supabase Auth coupling, `hasAuth` lifecycle, permission matrix). Separating it creates a thin spec with content that cannot be understood without the auth context.
 
