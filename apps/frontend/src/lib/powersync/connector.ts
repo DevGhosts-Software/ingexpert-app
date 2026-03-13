@@ -3,9 +3,63 @@ import { UpdateType, type PowerSyncBackendConnector } from '@powersync/web';
 import { supabase } from '@/lib/supabase';
 
 const MOVEMENT_OPTIMISTIC_SOURCE = 'movement-optimistic-stock';
+const MISSING_SESSION_ERROR = 'Cannot upload PowerSync CRUD without an active Supabase session';
 
 type CrudPayload = Record<string, unknown>;
 type CrudSource = { source?: string };
+type ConnectorDebugListener = () => void;
+
+export type PowerSyncConnectorDebugState = {
+  lastCredentialAttemptAt: string | null;
+  lastCredentialAt: string | null;
+  lastCredentialError: string | null;
+  sessionUserId: string | null;
+  sessionExpiresAt: string | null;
+  lastUploadAttemptAt: string | null;
+  lastUploadAt: string | null;
+  lastUploadError: string | null;
+  lastBatchSize: number;
+  lastBatchUploaded: number;
+  lastBatchSkipped: number;
+  lastBatchHadMore: boolean;
+};
+
+const INITIAL_CONNECTOR_DEBUG_STATE: PowerSyncConnectorDebugState = {
+  lastCredentialAttemptAt: null,
+  lastCredentialAt: null,
+  lastCredentialError: null,
+  sessionUserId: null,
+  sessionExpiresAt: null,
+  lastUploadAttemptAt: null,
+  lastUploadAt: null,
+  lastUploadError: null,
+  lastBatchSize: 0,
+  lastBatchUploaded: 0,
+  lastBatchSkipped: 0,
+  lastBatchHadMore: false,
+};
+
+const connectorDebugListeners = new Set<ConnectorDebugListener>();
+let connectorDebugState: PowerSyncConnectorDebugState = INITIAL_CONNECTOR_DEBUG_STATE;
+
+function updateConnectorDebugState(
+  patch: Partial<PowerSyncConnectorDebugState>,
+): PowerSyncConnectorDebugState {
+  connectorDebugState = { ...connectorDebugState, ...patch };
+  for (const listener of connectorDebugListeners) {
+    listener();
+  }
+  return connectorDebugState;
+}
+
+export function subscribePowerSyncConnectorDebug(listener: ConnectorDebugListener): () => void {
+  connectorDebugListeners.add(listener);
+  return () => connectorDebugListeners.delete(listener);
+}
+
+export function getPowerSyncConnectorDebugSnapshot(): PowerSyncConnectorDebugState {
+  return connectorDebugState;
+}
 
 export function isMovementOptimisticItemsUpdate(entry: CrudEntry): boolean {
   const isItemsTable = entry.table === 'Item' || entry.table === 'items';
@@ -26,6 +80,16 @@ export function shouldSkipCrudUpload(entry: CrudEntry): boolean {
   return isMovementOptimisticItemsUpdate(entry);
 }
 
+export function isRecoverablePowerSyncUploadError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('network') ||
+    normalized.includes('fetch') ||
+    normalized.includes('timeout') ||
+    normalized.includes('active supabase session')
+  );
+}
+
 function parseCrudMetadata(rawMetadata: string | undefined): CrudSource | null {
   if (!rawMetadata) {
     return null;
@@ -43,7 +107,7 @@ function parseCrudMetadata(rawMetadata: string | undefined): CrudSource | null {
   return null;
 }
 
-function readMetadataFromPayload(payload?: Record<string, any>): string | undefined {
+function readMetadataFromPayload(payload?: Record<string, unknown>): string | undefined {
   const metadata = payload?._metadata;
   return typeof metadata === 'string' ? metadata : undefined;
 }
@@ -57,17 +121,47 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
   private readonly powerSyncEndpoint = process.env.NEXT_PUBLIC_POWERSYNC_URL;
 
   async fetchCredentials(): Promise<PowerSyncCredentials | null> {
+    updateConnectorDebugState({
+      lastCredentialAttemptAt: new Date().toISOString(),
+      lastCredentialError: null,
+    });
+
     const {
       data: { session },
+      error,
     } = await supabase.auth.getSession();
 
+    if (error) {
+      updateConnectorDebugState({
+        lastCredentialError: error.message,
+      });
+      return null;
+    }
+
     if (!session) {
+      updateConnectorDebugState({
+        sessionUserId: null,
+        sessionExpiresAt: null,
+      });
       return null;
     }
 
     if (!this.powerSyncEndpoint) {
+      updateConnectorDebugState({
+        lastCredentialError: 'Missing NEXT_PUBLIC_POWERSYNC_URL for PowerSync credentials',
+      });
       throw new Error('Missing NEXT_PUBLIC_POWERSYNC_URL for PowerSync credentials');
     }
+
+    const issuedAt = new Date().toISOString();
+    updateConnectorDebugState({
+      lastCredentialAt: issuedAt,
+      lastCredentialError: null,
+      sessionUserId: session.user.id,
+      sessionExpiresAt: session.expires_at
+        ? new Date(session.expires_at * 1000).toISOString()
+        : null,
+    });
 
     return {
       endpoint: this.powerSyncEndpoint,
@@ -77,28 +171,77 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
+    updateConnectorDebugState({
+      lastUploadAttemptAt: new Date().toISOString(),
+      lastUploadError: null,
+    });
+
     const {
       data: { session },
+      error,
     } = await supabase.auth.getSession();
 
+    if (error) {
+      updateConnectorDebugState({
+        lastUploadError: error.message,
+      });
+      throw new Error(error.message);
+    }
+
     if (!session?.access_token) {
-      throw new Error('Cannot upload PowerSync CRUD without an active Supabase session');
+      updateConnectorDebugState({
+        lastUploadError: MISSING_SESSION_ERROR,
+      });
+      throw new Error(MISSING_SESSION_ERROR);
     }
 
     while (true) {
       const batch = await database.getCrudBatch(100);
       if (!batch) {
+        updateConnectorDebugState({
+          lastUploadAt: new Date().toISOString(),
+          lastBatchSize: 0,
+          lastBatchUploaded: 0,
+          lastBatchSkipped: 0,
+          lastBatchHadMore: false,
+        });
         return;
       }
 
-      for (const entry of batch.crud) {
-        if (shouldSkipCrudUpload(entry)) {
-          continue;
-        }
-        await this.uploadCrudEntry(entry);
-      }
+      let uploadedCount = 0;
+      let skippedCount = 0;
 
-      await batch.complete();
+      try {
+        for (const entry of batch.crud) {
+          if (shouldSkipCrudUpload(entry)) {
+            skippedCount += 1;
+            continue;
+          }
+          await this.uploadCrudEntry(entry);
+          uploadedCount += 1;
+        }
+
+        await batch.complete();
+        updateConnectorDebugState({
+          lastUploadAt: new Date().toISOString(),
+          lastUploadError: null,
+          lastBatchSize: batch.crud.length,
+          lastBatchUploaded: uploadedCount,
+          lastBatchSkipped: skippedCount,
+          lastBatchHadMore: batch.haveMore,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown PowerSync upload processing error';
+        updateConnectorDebugState({
+          lastUploadError: message,
+          lastBatchSize: batch.crud.length,
+          lastBatchUploaded: uploadedCount,
+          lastBatchSkipped: skippedCount,
+          lastBatchHadMore: batch.haveMore,
+        });
+        throw error;
+      }
       if (!batch.haveMore) {
         return;
       }

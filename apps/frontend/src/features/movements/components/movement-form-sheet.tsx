@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@powersync/react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -117,6 +119,8 @@ type FormValues = z.infer<typeof MovementFormSchema>;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MovementItem = LocalComponent; // reuse shape: componentId = itemId
+type LocalProjectRow = { id: string; name: string };
+type LocalUserRow = { id: string; name: string | null; email: string };
 
 interface MovementFormSheetProps {
   open: boolean;
@@ -138,9 +142,36 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   }, [open]);
 
   // ── Support data ────────────────────────────────────────────────────────────
-  const { data: projects = [] } = trpc.movements.getProjects.useQuery();
-  const { data: users = [] } = trpc.users.listNames.useQuery();
-  const { data: me } = trpc.users.me.useQuery();
+  const projectsQuery = useQuery<LocalProjectRow>(
+    'SELECT id, name FROM projects ORDER BY name ASC',
+  );
+  const usersQuery = useQuery<LocalUserRow>(
+    'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC',
+  );
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const projects = projectsQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) {
+        setCurrentUserId(session?.user.id ?? null);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user.id ?? null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // ── Form ────────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
@@ -261,7 +292,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   // Called when user confirms in the dialog
   const onConfirm = useCallback(async () => {
     if (!pendingPayload) return;
-    if (!me?.id) {
+    if (!currentUserId) {
       toast.error('No se pudo identificar el usuario actual');
       return;
     }
@@ -291,7 +322,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           [
             movementId,
             pendingPayload.type,
-            me.id,
+            currentUserId,
             pendingPayload.destination ?? null,
             pendingPayload.observations ?? null,
             pendingPayload.responsibleDeliveryId ?? null,
@@ -315,7 +346,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         }
       });
 
-      toast.success('Movimiento registrado correctamente');
+      toast.success('Movimiento guardado localmente. Se sincronizará cuando haya conexión.');
       setPendingPayload(null);
       onClose();
     } catch (error) {
@@ -325,7 +356,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           : 'Error al registrar movimiento en almacenamiento local';
       toast.error(message);
     }
-  }, [me?.id, onClose, pendingPayload, powerSyncDb]);
+  }, [currentUserId, onClose, pendingPayload, powerSyncDb]);
 
   return (
     <>

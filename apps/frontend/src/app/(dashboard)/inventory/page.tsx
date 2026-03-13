@@ -34,7 +34,7 @@ type InventoryRow = {
   stock: number | string | null;
   unit: string;
   type: string;
-  imageUrl: string | null;
+  image_url: string | null;
 };
 
 type KitExportRow = {
@@ -72,7 +72,7 @@ export default function InventoryPage() {
       stock,
       unit,
       type,
-      image_url AS "imageUrl"
+      image_url
     FROM items
   `);
 
@@ -100,7 +100,7 @@ export default function InventoryPage() {
         stock: Number(item.stock ?? 0),
         unit: item.unit,
         type: asItemType(item.type),
-        imageUrl: item.imageUrl ?? '',
+        imageUrl: item.image_url ?? '',
       })),
     [inventoryQuery.data],
   );

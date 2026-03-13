@@ -1,6 +1,6 @@
 import type { CrudEntry } from '@powersync/web';
 import { UpdateType } from '@powersync/web';
-import { shouldSkipCrudUpload } from './connector';
+import { isRecoverablePowerSyncUploadError, shouldSkipCrudUpload } from './connector';
 
 function asCrudEntry(entry: Partial<CrudEntry>): CrudEntry {
   return entry as CrudEntry;
@@ -38,5 +38,25 @@ export function validateConnectorSkipRules(): void {
 
   if (shouldSkipCrudUpload(movementInsert)) {
     throw new Error('Expected movement inserts to be uploaded');
+  }
+
+  if (!isRecoverablePowerSyncUploadError('Network request failed while uploading movement batch')) {
+    throw new Error('Expected network upload failures to be treated as recoverable');
+  }
+
+  if (
+    !isRecoverablePowerSyncUploadError(
+      'Cannot upload PowerSync CRUD without an active Supabase session',
+    )
+  ) {
+    throw new Error('Expected missing-session upload failures to be treated as recoverable');
+  }
+
+  if (
+    isRecoverablePowerSyncUploadError(
+      'PowerSync upload failed for movements/1: invalid input syntax for type uuid',
+    )
+  ) {
+    throw new Error('Expected data-shape upload failures to be treated as non-recoverable');
   }
 }

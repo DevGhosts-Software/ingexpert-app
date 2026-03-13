@@ -158,15 +158,20 @@ Inventory-facing frontend screens MUST replace tRPC read hooks with PowerSync `u
 - **THEN** it MUST execute a PowerSync `useQuery` statement instead of `trpc.inventory.*.useQuery`
 - **THEN** it MUST render data from the local SQLite result set without requiring network availability
 
-## Requirement: Inventory SQL projections MUST preserve frontend entity shape
+## Requirement: Inventory SQL projection mapping MUST minimize unnecessary aliasing
 
-Inventory SQL queries MUST project snake_case database columns using the camelCase aliases defined by PowerSync sync rules.
+Local PowerSync SQL queries MUST avoid aliasing database columns unless aliasing is required to satisfy a consuming contract.
 
-#### Scenario: Aliases are mapped in query projection
+#### Scenario: Query row types keep native DB names
 
-- **WHEN** inventory rows are selected from local SQLite
-- **THEN** fields such as `image_url` MUST be selected as `image_url AS "imageUrl"`
-- **THEN** fields such as `created_by_id` MUST be selected as `created_by_id AS "createdById"`
+- **WHEN** a query result is consumed internally by local transformation logic
+- **THEN** columns such as `image_url` MUST be selected using native DB names without alias-only convenience mappings
+
+#### Scenario: Contract boundary maps only required fields
+
+- **WHEN** local row data is converted into frontend entity shapes that require camelCase fields
+- **THEN** mapping to fields such as `imageUrl` MUST occur at a single boundary transform step
+- **THEN** duplicate SQL and post-query remapping for the same field MUST be avoided
 
 ## Requirement: Local-first writes SHALL remove blocking write spinners
 

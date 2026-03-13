@@ -1,25 +1,76 @@
 'use client';
 
 import { useQuery, useStatus } from '@powersync/react';
-
-type CountRow = {
-  total: number | string | null;
-};
-
-function getCount(data: CountRow[]): number {
-  const rawValue = data[0]?.total ?? 0;
-  const parsed = Number(rawValue);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+import { useMemo, useSyncExternalStore } from 'react';
+import {
+  getPowerSyncConnectorDebugSnapshot,
+  subscribePowerSyncConnectorDebug,
+} from '@/lib/powersync/connector';
+import { DEBUG_COUNT_SQL, parseCount, type CountRow } from '@/lib/powersync/debug';
 
 export function PowerSyncDebug() {
   const status = useStatus();
-  const itemsQuery = useQuery<CountRow>('SELECT COUNT(*) as total FROM items');
-  const bucketsQuery = useQuery<CountRow>('SELECT COUNT(*) as total FROM ps_buckets');
+  const connectorState = useSyncExternalStore(
+    subscribePowerSyncConnectorDebug,
+    getPowerSyncConnectorDebugSnapshot,
+    getPowerSyncConnectorDebugSnapshot,
+  );
+  const itemsQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.items);
+  const projectsQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.projects);
+  const movementsQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.movements);
+  const movementDetailsQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.movementDetails);
+  const usersQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.users);
+  const bucketsQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.buckets);
+  const queueQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.queue);
 
-  const itemCount = getCount(itemsQuery.data);
-  const bucketCount = getCount(bucketsQuery.data);
-  const isBusySyncing = !status.hasSynced || itemsQuery.isFetching || bucketsQuery.isFetching;
+  const tableCounts = useMemo(
+    () => ({
+      items: parseCount(itemsQuery.data),
+      projects: parseCount(projectsQuery.data),
+      movements: parseCount(movementsQuery.data),
+      movementDetails: parseCount(movementDetailsQuery.data),
+      users: parseCount(usersQuery.data),
+      buckets: parseCount(bucketsQuery.data),
+      pendingQueueRows: parseCount(queueQuery.data),
+    }),
+    [
+      bucketsQuery.data,
+      itemsQuery.data,
+      movementDetailsQuery.data,
+      movementsQuery.data,
+      projectsQuery.data,
+      queueQuery.data,
+      usersQuery.data,
+    ],
+  );
+
+  const queryErrors = [
+    itemsQuery.error,
+    projectsQuery.error,
+    movementsQuery.error,
+    movementDetailsQuery.error,
+    usersQuery.error,
+    bucketsQuery.error,
+    queueQuery.error,
+  ]
+    .filter((value): value is Error => value instanceof Error)
+    .map((error) => error.message);
+
+  const isBusySyncing =
+    !status.hasSynced ||
+    itemsQuery.isFetching ||
+    projectsQuery.isFetching ||
+    movementsQuery.isFetching ||
+    movementDetailsQuery.isFetching ||
+    usersQuery.isFetching ||
+    bucketsQuery.isFetching ||
+    queueQuery.isFetching;
+  const isOfflineBrowser = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  const connectionLabel = status.connected
+    ? '🟢 Conectado'
+    : isOfflineBrowser
+      ? '🔴 Sin internet'
+      : '🟠 Endpoint desconectado';
 
   return (
     <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-green-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-xl backdrop-blur-sm">
@@ -27,18 +78,39 @@ export function PowerSyncDebug() {
         ⚙️ PowerSync Debug
       </h3>
       <div className="space-y-1">
-        <p>🔌 WebSocket: {status.connected ? '🟢 Conectado' : '🔴 Desconectado'}</p>
+        <p>🔌 Conexión: {connectionLabel}</p>
         <p>🔄 Estado Sync: {status.hasSynced ? '✅ Sincronizado' : '🟡 Sincronizando...'}</p>
         <p>⬇️ Actividad: {isBusySyncing ? '🟡 Sí...' : '⏸️ No'}</p>
+        <p>
+          🔑 Sesión:{' '}
+          {connectorState.sessionUserId ? `✅ ${connectorState.sessionUserId}` : '⚠️ Sin sesión'}
+        </p>
+        <p>🕒 Expira token: {connectorState.sessionExpiresAt ?? '—'}</p>
         <div className="mt-2 border-t border-gray-700 pt-2">
-          <p>🪣 Buckets recibidos: {bucketCount}</p>
-          <p>📦 Items en SQLite: {itemCount}</p>
-          {bucketsQuery.error ? (
-            <p className="text-red-400">Buckets query error: {bucketsQuery.error.message}</p>
+          <p>📦 items: {tableCounts.items}</p>
+          <p>🗂️ projects: {tableCounts.projects}</p>
+          <p>🧾 movements: {tableCounts.movements}</p>
+          <p>🧩 movement_details: {tableCounts.movementDetails}</p>
+          <p>👥 users: {tableCounts.users}</p>
+          <p>🪣 buckets: {tableCounts.buckets}</p>
+          <p>📬 Cola (ps_crud): {tableCounts.pendingQueueRows}</p>
+          <p>
+            ☁️ Último upload: {connectorState.lastUploadAt ?? '—'} (ok:{' '}
+            {connectorState.lastBatchUploaded}, skip: {connectorState.lastBatchSkipped}, more:{' '}
+            {connectorState.lastBatchHadMore ? 'sí' : 'no'})
+          </p>
+          <p>🔐 Última credencial: {connectorState.lastCredentialAt ?? '—'}</p>
+          {connectorState.lastCredentialError ? (
+            <p className="text-red-400">Credential error: {connectorState.lastCredentialError}</p>
           ) : null}
-          {itemsQuery.error ? (
-            <p className="text-red-400">Items query error: {itemsQuery.error.message}</p>
+          {connectorState.lastUploadError ? (
+            <p className="text-red-400">Upload error: {connectorState.lastUploadError}</p>
           ) : null}
+          {queryErrors.map((errorMessage) => (
+            <p key={errorMessage} className="text-red-400">
+              Query error: {errorMessage}
+            </p>
+          ))}
         </div>
       </div>
     </div>
