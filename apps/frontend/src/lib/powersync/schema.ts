@@ -1,4 +1,4 @@
-import { Schema, TableV2, column } from '@journeyapps/powersync-sdk-web';
+import { Schema, TableV2, column } from '@powersync/web';
 
 export const AppSchema = new Schema({
   Item: new TableV2({

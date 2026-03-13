@@ -11,6 +11,7 @@
     "next:dev": "next dev",
     "next:build": "next build",
     "start": "next start",
+    "postinstall": "powersync-web copy-assets -o public",
     "lint": "eslint . --fix",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next out coverage"
@@ -22,8 +23,8 @@
     "stock-management"
   ],
   "dependencies": {
-    "@journeyapps/powersync-sdk-web": "^0.5.0",
-    "@journeyapps/wa-sqlite": "~0.2.0",
+    "@journeyapps/wa-sqlite": "^1.5.0",
+    "@powersync/web": "^1.9.0",
     "@powersync/react": "^1.9.0",
     "@base-ui/react": "^1.2.0",
     "@hookform/resolvers": "^5.2.2",

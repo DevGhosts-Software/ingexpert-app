@@ -1,7 +1,7 @@
 'use client';
 
-import type { AbstractPowerSyncDatabase } from '@journeyapps/powersync-sdk-web';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import type { AbstractPowerSyncDatabase } from '@powersync/web';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { IngexpertPowerSyncBackendConnector } from '@/lib/powersync/connector';
 import { getPowerSyncDatabase } from '@/lib/powersync/db';
 
@@ -16,15 +16,23 @@ export function usePowerSyncDatabase(): AbstractPowerSyncDatabase {
 }
 
 export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
-  const powerSyncDatabase = useMemo(() => getPowerSyncDatabase(), []);
+  const [powerSyncDatabase, setPowerSyncDatabase] = useState<AbstractPowerSyncDatabase | null>(
+    null,
+  );
   const [initializationError, setInitializationError] = useState<Error | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
+    let database: AbstractPowerSyncDatabase | null = null;
 
     void (async () => {
-      await powerSyncDatabase.init();
-      await powerSyncDatabase.connect(new IngexpertPowerSyncBackendConnector());
+      database = getPowerSyncDatabase();
+      await database.init();
+      await database.connect(new IngexpertPowerSyncBackendConnector());
+
+      if (!isCancelled) {
+        setPowerSyncDatabase(database);
+      }
     })().catch((error: unknown) => {
       const normalizedError =
         error instanceof Error ? error : new Error('PowerSync initialization failed');
@@ -36,14 +44,22 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isCancelled = true;
-      void powerSyncDatabase.disconnect().catch((error: unknown) => {
+      if (!database) {
+        return;
+      }
+
+      void database.disconnect().catch((error: unknown) => {
         console.error('PowerSync disconnect failed', error);
       });
     };
-  }, [powerSyncDatabase]);
+  }, []);
 
   if (initializationError) {
     throw initializationError;
+  }
+
+  if (!powerSyncDatabase) {
+    return null;
   }
 
   return (

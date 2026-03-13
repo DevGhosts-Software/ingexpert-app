@@ -58,10 +58,12 @@ This baseline is intentionally broad for local development and MUST be treated a
 
 The frontend workspace (`apps/frontend`) SHALL declare the PowerSync client dependencies:
 
-- `@journeyapps/powersync-sdk-web`
+- `@powersync/web`
 - `@powersync/react`
 - `kysely`
 - `@journeyapps/wa-sqlite`
+
+The deprecated `@journeyapps/powersync-sdk-web` package MUST NOT be used by frontend PowerSync integration files.
 
 The frontend SHALL define `apps/frontend/src/lib/powersync/schema.ts` with `AppSchema` including:
 
@@ -72,7 +74,23 @@ The frontend SHALL define `apps/frontend/src/lib/powersync/schema.ts` with `AppS
 
 The schema contract MUST remain aligned with Prisma-backed entity fields for those tables.
 
-The frontend SHALL provide `apps/frontend/src/lib/powersync/db.ts` that initializes a shared PowerSync database using `WASQLitePowerSyncDatabaseOpenFactory` and OPFS-capable local persistence.
+The frontend SHALL provide `apps/frontend/src/lib/powersync/db.ts` that initializes a shared PowerSync database using current `@powersync/web` factory APIs and OPFS-capable local persistence.
+
+---
+
+## Turbopack Worker Asset Setup
+
+The frontend package configuration SHALL include an automated worker asset copy step that runs `powersync-web copy-assets -o public` so PowerSync worker bundles are available under `public/@powersync/`.
+
+PowerSync database and sync worker configuration SHALL reference generated worker assets explicitly under `public/@powersync/worker/` for Turbopack compatibility.
+
+---
+
+## Tauri-Compatible Static Routing and Asset Resolution
+
+The Next.js frontend build configuration SHALL remain compatible with Tauri desktop packaging (`apps/frontend/src-tauri/tauri.conf.json` with `frontendDist: ../out`) so exported routes and PowerSync worker assets load correctly in packaged runtime.
+
+Any PowerSync path changes MUST preserve compatibility with static export routing semantics used by the desktop bundle.
 
 ---
 
@@ -97,5 +115,7 @@ No new API routes are introduced by this capability.
 ## Frontend Provider Wiring
 
 The frontend SHALL include `apps/frontend/src/components/providers/powersync-provider.tsx` that initializes and connects the shared PowerSync database and exposes it through a dedicated React context provider for descendant components.
+
+Provider bootstrap MUST remain client-only and MUST NOT execute WebAssembly worker initialization in server-side rendering paths.
 
 The Next.js application provider tree in `apps/frontend/src/app/layout.tsx` SHALL wrap the app with `PowerSyncProvider` so descendant components can consume offline-reactive PowerSync state.

@@ -1,9 +1,5 @@
-import type {
-  AbstractPowerSyncDatabase,
-  CrudEntry,
-  PowerSyncCredentials,
-} from '@journeyapps/powersync-sdk-web';
-import { UpdateType, type PowerSyncBackendConnector } from '@journeyapps/powersync-sdk-web';
+import type { AbstractPowerSyncDatabase, CrudEntry, PowerSyncCredentials } from '@powersync/web';
+import { UpdateType, type PowerSyncBackendConnector } from '@powersync/web';
 import { supabase } from '@/lib/supabase';
 
 type HttpMethod = 'POST' | 'PATCH';

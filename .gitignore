@@ -30,6 +30,7 @@ dist
 # Tauri
 apps/frontend/src-tauri/target/
 apps/frontend/src-tauri/gen/
+apps/frontend/public/@powersync/
 
 
 # Debug
