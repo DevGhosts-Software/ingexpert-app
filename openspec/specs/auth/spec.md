@@ -118,3 +118,16 @@ The logout button lives inside `UserProfileSheet`, passed as `onLogout` from lay
 ```typescript
 isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
 ```
+
+---
+
+## Frontend — tRPC Transport URL Contract
+
+Frontend authentication calls (`auth.login`, `auth.refresh`, `auth.logout`) MUST be sent through the API tRPC middleware path (`/trpc`).
+
+`NEXT_PUBLIC_API_URL` MAY be configured as either:
+
+- API origin only (e.g. `http://localhost:3001`)
+- Full tRPC URL (e.g. `http://localhost:3001/trpc`)
+
+When origin-only is provided, frontend transport MUST normalize to the `/trpc` endpoint before dispatching requests, and MUST NOT call root-level procedure paths such as `/auth.login`.

@@ -6,6 +6,17 @@ import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 
+function resolveTrpcUrl(rawApiUrl: string | undefined): string {
+  const fallback = 'http://localhost:3001/trpc';
+  const normalized = (rawApiUrl?.trim() || fallback).replace(/\/+$/, '');
+
+  if (normalized.endsWith('/trpc')) {
+    return normalized;
+  }
+
+  return `${normalized}/trpc`;
+}
+
 function AuthSync() {
   const refreshMutation = trpc.auth.refresh.useMutation();
 
@@ -40,7 +51,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/trpc',
+          url: resolveTrpcUrl(process.env.NEXT_PUBLIC_API_URL),
           async headers() {
             const {
               data: { session },
