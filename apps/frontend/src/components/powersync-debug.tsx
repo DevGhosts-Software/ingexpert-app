@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useStatus } from '@powersync/react';
-import { useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import {
   getPowerSyncConnectorDebugSnapshot,
   subscribePowerSyncConnectorDebug,
@@ -9,6 +9,7 @@ import {
 import { DEBUG_COUNT_SQL, parseCount, type CountRow } from '@/lib/powersync/debug';
 
 export function PowerSyncDebug() {
+  const [isMinimized, setIsMinimized] = useState(false);
   const status = useStatus();
   const connectorState = useSyncExternalStore(
     subscribePowerSyncConnectorDebug,
@@ -74,45 +75,60 @@ export function PowerSyncDebug() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-green-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-xl backdrop-blur-sm">
-      <h3 className="mb-2 border-b border-gray-700 pb-1 font-bold text-white">
-        ⚙️ PowerSync Debug
-      </h3>
-      <div className="space-y-1">
-        <p>🔌 Conexión: {connectionLabel}</p>
-        <p>🔄 Estado Sync: {status.hasSynced ? '✅ Sincronizado' : '🟡 Sincronizando...'}</p>
-        <p>⬇️ Actividad: {isBusySyncing ? '🟡 Sí...' : '⏸️ No'}</p>
-        <p>
-          🔑 Sesión:{' '}
-          {connectorState.sessionUserId ? `✅ ${connectorState.sessionUserId}` : '⚠️ Sin sesión'}
-        </p>
-        <p>🕒 Expira token: {connectorState.sessionExpiresAt ?? '—'}</p>
-        <div className="mt-2 border-t border-gray-700 pt-2">
-          <p>📦 items: {tableCounts.items}</p>
-          <p>🗂️ projects: {tableCounts.projects}</p>
-          <p>🧾 movements: {tableCounts.movements}</p>
-          <p>🧩 movement_details: {tableCounts.movementDetails}</p>
-          <p>👥 users: {tableCounts.users}</p>
-          <p>🪣 buckets: {tableCounts.buckets}</p>
-          <p>📬 Cola (ps_crud): {tableCounts.pendingQueueRows}</p>
-          <p>
-            ☁️ Último upload: {connectorState.lastUploadAt ?? '—'} (ok:{' '}
-            {connectorState.lastBatchUploaded}, skip: {connectorState.lastBatchSkipped}, more:{' '}
-            {connectorState.lastBatchHadMore ? 'sí' : 'no'})
-          </p>
-          <p>🔐 Última credencial: {connectorState.lastCredentialAt ?? '—'}</p>
-          {connectorState.lastCredentialError ? (
-            <p className="text-red-400">Credential error: {connectorState.lastCredentialError}</p>
-          ) : null}
-          {connectorState.lastUploadError ? (
-            <p className="text-red-400">Upload error: {connectorState.lastUploadError}</p>
-          ) : null}
-          {queryErrors.map((errorMessage) => (
-            <p key={errorMessage} className="text-red-400">
-              Query error: {errorMessage}
-            </p>
-          ))}
-        </div>
+      <div className="mb-2 flex items-center justify-between border-b border-gray-700 pb-1">
+        <h3 className="font-bold text-white">⚙️ PowerSync Debug</h3>
+        <button
+          type="button"
+          onClick={() => setIsMinimized((value) => !value)}
+          className="rounded border border-gray-600 px-1.5 py-0.5 text-[10px] text-gray-200 hover:bg-gray-800"
+          aria-label={isMinimized ? 'Expandir debug' : 'Minimizar debug'}
+        >
+          {isMinimized ? 'Expandir' : 'Minimizar'}
+        </button>
       </div>
+      {isMinimized ? (
+        <div className="space-y-1">
+          <p>🔌 {connectionLabel}</p>
+          <p>📬 Cola: {tableCounts.pendingQueueRows}</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <p>🔌 Conexión: {connectionLabel}</p>
+          <p>🔄 Estado Sync: {status.hasSynced ? '✅ Sincronizado' : '🟡 Sincronizando...'}</p>
+          <p>⬇️ Actividad: {isBusySyncing ? '🟡 Sí...' : '⏸️ No'}</p>
+          <p>
+            🔑 Sesión:{' '}
+            {connectorState.sessionUserId ? `✅ ${connectorState.sessionUserId}` : '⚠️ Sin sesión'}
+          </p>
+          <p>🕒 Expira token: {connectorState.sessionExpiresAt ?? '—'}</p>
+          <div className="mt-2 border-t border-gray-700 pt-2">
+            <p>📦 items: {tableCounts.items}</p>
+            <p>🗂️ projects: {tableCounts.projects}</p>
+            <p>🧾 movements: {tableCounts.movements}</p>
+            <p>🧩 movement_details: {tableCounts.movementDetails}</p>
+            <p>👥 users: {tableCounts.users}</p>
+            <p>🪣 buckets: {tableCounts.buckets}</p>
+            <p>📬 Cola (ps_crud): {tableCounts.pendingQueueRows}</p>
+            <p>
+              ☁️ Último upload: {connectorState.lastUploadAt ?? '—'} (ok:{' '}
+              {connectorState.lastBatchUploaded}, skip: {connectorState.lastBatchSkipped}, more:{' '}
+              {connectorState.lastBatchHadMore ? 'sí' : 'no'})
+            </p>
+            <p>🔐 Última credencial: {connectorState.lastCredentialAt ?? '—'}</p>
+            {connectorState.lastCredentialError ? (
+              <p className="text-red-400">Credential error: {connectorState.lastCredentialError}</p>
+            ) : null}
+            {connectorState.lastUploadError ? (
+              <p className="text-red-400">Upload error: {connectorState.lastUploadError}</p>
+            ) : null}
+            {queryErrors.map((errorMessage) => (
+              <p key={errorMessage} className="text-red-400">
+                Query error: {errorMessage}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

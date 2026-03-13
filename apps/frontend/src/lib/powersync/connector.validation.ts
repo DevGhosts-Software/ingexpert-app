@@ -1,6 +1,10 @@
 import type { CrudEntry } from '@powersync/web';
 import { UpdateType } from '@powersync/web';
-import { isRecoverablePowerSyncUploadError, shouldSkipCrudUpload } from './connector';
+import {
+  isPowerSyncPermissionDeniedError,
+  isRecoverablePowerSyncUploadError,
+  shouldSkipCrudUpload,
+} from './connector';
 
 function asCrudEntry(entry: Partial<CrudEntry>): CrudEntry {
   return entry as CrudEntry;
@@ -58,5 +62,22 @@ export function validateConnectorSkipRules(): void {
     )
   ) {
     throw new Error('Expected data-shape upload failures to be treated as non-recoverable');
+  }
+
+  if (
+    !isRecoverablePowerSyncUploadError(
+      'PowerSync upload failed for movements/1: duplicate key value violates unique constraint "movements_pkey"',
+    )
+  ) {
+    throw new Error('Expected duplicate-key replay failures to be treated as recoverable');
+  }
+
+  if (
+    !isPowerSyncPermissionDeniedError({
+      code: '42501',
+      message: 'permission denied for schema public',
+    })
+  ) {
+    throw new Error('Expected SQLSTATE 42501 permission errors to be detected');
   }
 }

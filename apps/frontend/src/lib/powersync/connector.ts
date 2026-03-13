@@ -4,10 +4,18 @@ import { supabase } from '@/lib/supabase';
 
 const MOVEMENT_OPTIMISTIC_SOURCE = 'movement-optimistic-stock';
 const MISSING_SESSION_ERROR = 'Cannot upload PowerSync CRUD without an active Supabase session';
+const POWERSYNC_PERMISSION_REMEDIATION =
+  'Permission remediation required: run packages/database/prisma/powersync-upload-permissions.sql in your Supabase SQL editor, then re-run the verification queries in that file.';
 
 type CrudPayload = Record<string, unknown>;
 type CrudSource = { source?: string };
 type ConnectorDebugListener = () => void;
+type SupabaseUploadError = {
+  message: string;
+  code?: string | null;
+  details?: string | null;
+  hint?: string | null;
+};
 
 export type PowerSyncConnectorDebugState = {
   lastCredentialAttemptAt: string | null;
@@ -86,7 +94,39 @@ export function isRecoverablePowerSyncUploadError(message: string): boolean {
     normalized.includes('network') ||
     normalized.includes('fetch') ||
     normalized.includes('timeout') ||
-    normalized.includes('active supabase session')
+    normalized.includes('active supabase session') ||
+    normalized.includes('permission denied for schema') ||
+    normalized.includes('permission denied for table') ||
+    normalized.includes('duplicate key value violates unique constraint')
+  );
+}
+
+export function isPowerSyncPermissionDeniedError(error: SupabaseUploadError): boolean {
+  const normalizedMessage = error.message.toLowerCase();
+  const normalizedDetails = (error.details ?? '').toLowerCase();
+  const normalizedHint = (error.hint ?? '').toLowerCase();
+  return (
+    error.code === '42501' ||
+    normalizedMessage.includes('permission denied for schema') ||
+    normalizedMessage.includes('permission denied for table') ||
+    normalizedDetails.includes('permission denied') ||
+    normalizedHint.includes('permission denied')
+  );
+}
+
+function buildUploadFailureMessage(table: string, id: string, error: SupabaseUploadError): string {
+  const baseMessage = `PowerSync upload failed for ${table}/${id}: ${error.message}`;
+  if (!isPowerSyncPermissionDeniedError(error)) {
+    return baseMessage;
+  }
+  return `${baseMessage} ${POWERSYNC_PERMISSION_REMEDIATION}`;
+}
+
+function isDuplicateKeyError(error: SupabaseUploadError): boolean {
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    error.code === '23505' ||
+    normalizedMessage.includes('duplicate key value violates unique constraint')
   );
 }
 
@@ -260,9 +300,14 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
         throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
       }
 
-      const { error } = await supabase.from('movements').insert({ id: entry.id, ...payload });
+      const { error } = await supabase
+        .from('movements')
+        .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
       if (error) {
-        throw new Error(`PowerSync upload failed for movements/${entry.id}: ${error.message}`);
+        if (isDuplicateKeyError(error)) {
+          return;
+        }
+        throw new Error(buildUploadFailureMessage('movements', entry.id, error));
       }
       return;
     }
@@ -274,43 +319,54 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
 
       const { error } = await supabase
         .from('movement_details')
-        .insert({ id: entry.id, ...payload });
+        .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
       if (error) {
-        throw new Error(
-          `PowerSync upload failed for movement_details/${entry.id}: ${error.message}`,
-        );
+        if (isDuplicateKeyError(error)) {
+          return;
+        }
+        throw new Error(buildUploadFailureMessage('movement_details', entry.id, error));
       }
       return;
     }
 
     if (entry.table === 'Item' || entry.table === 'items') {
       if (entry.op === UpdateType.PUT) {
-        const { error } = await supabase.from('items').insert({ id: entry.id, ...payload });
+        const { error } = await supabase
+          .from('items')
+          .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
         if (error) {
-          throw new Error(`PowerSync upload failed for items/${entry.id}: ${error.message}`);
+          if (isDuplicateKeyError(error)) {
+            return;
+          }
+          throw new Error(buildUploadFailureMessage('items', entry.id, error));
         }
         return;
       }
 
       const { error } = await supabase.from('items').update(payload).eq('id', entry.id);
       if (error) {
-        throw new Error(`PowerSync upload failed for items/${entry.id}: ${error.message}`);
+        throw new Error(buildUploadFailureMessage('items', entry.id, error));
       }
       return;
     }
 
     if (entry.table === 'Project' || entry.table === 'projects') {
       if (entry.op === UpdateType.PUT) {
-        const { error } = await supabase.from('projects').insert({ id: entry.id, ...payload });
+        const { error } = await supabase
+          .from('projects')
+          .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
         if (error) {
-          throw new Error(`PowerSync upload failed for projects/${entry.id}: ${error.message}`);
+          if (isDuplicateKeyError(error)) {
+            return;
+          }
+          throw new Error(buildUploadFailureMessage('projects', entry.id, error));
         }
         return;
       }
 
       const { error } = await supabase.from('projects').update(payload).eq('id', entry.id);
       if (error) {
-        throw new Error(`PowerSync upload failed for projects/${entry.id}: ${error.message}`);
+        throw new Error(buildUploadFailureMessage('projects', entry.id, error));
       }
       return;
     }
