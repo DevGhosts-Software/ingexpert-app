@@ -9,7 +9,6 @@ import {
   MovementHeaderEntitySchema,
   MovementProjectSchema,
   MovementStatsSchema,
-  UpdateMovementSchema,
 } from '@ingexpert/schema';
 import { UserRole } from '@ingexpert/database';
 import { z } from 'zod';
@@ -92,21 +91,6 @@ export class MovementsRouter {
         .output(MovementEntityWithDetailsSchema)
         .mutation(async ({ input, ctx }) => {
           return this.movementsService.create(input, ctx.user.id);
-        }),
-
-      update: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'PATCH',
-            path: '/movements',
-            tags: ['movements'],
-            summary: 'Update movement',
-          },
-        })
-        .input(z.object({ id: z.string().uuid(), data: UpdateMovementSchema }))
-        .output(MovementEntityWithDetailsSchema)
-        .mutation(async ({ input }) => {
-          return this.movementsService.update(input.id, input.data);
         }),
     });
   }

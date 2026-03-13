@@ -1,15 +1,18 @@
 import { Schema, TableV2, column } from '@powersync/web';
 
 export const AppSchema = new Schema({
-  items: new TableV2({
-    code: column.text,
-    name: column.text,
-    location: column.text,
-    stock: column.real,
-    unit: column.text,
-    type: column.text,
-    image_url: column.text,
-  }),
+  items: new TableV2(
+    {
+      code: column.text,
+      name: column.text,
+      location: column.text,
+      stock: column.real,
+      unit: column.text,
+      type: column.text,
+      image_url: column.text,
+    },
+    { trackMetadata: true },
+  ),
   kit_details: new TableV2({
     kit_id: column.text,
     item_id: column.text,

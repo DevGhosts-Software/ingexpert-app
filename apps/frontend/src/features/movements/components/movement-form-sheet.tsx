@@ -12,11 +12,13 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -125,6 +127,7 @@ interface MovementFormSheetProps {
 
 export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   const utils = trpc.useUtils();
+  const powerSyncDb = usePowerSyncDatabase();
 
   // ── Items list state ────────────────────────────────────────────────────────
   const [movementItems, setMovementItems] = useState<MovementItem[]>([]);
@@ -137,6 +140,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   // ── Support data ────────────────────────────────────────────────────────────
   const { data: projects = [] } = trpc.movements.getProjects.useQuery();
   const { data: users = [] } = trpc.users.listNames.useQuery();
+  const { data: me } = trpc.users.me.useQuery();
 
   // ── Form ────────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
@@ -177,20 +181,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
       });
     }
   }, [open, form]);
-
-  // ── Mutations ───────────────────────────────────────────────────────────────
-  const createMutation = trpc.movements.create.useMutation({
-    onError: (e) => toast.error(e.message ?? 'Error al registrar movimiento'),
-  });
-
-  function invalidateAll() {
-    return Promise.all([
-      utils.movements.getAll.invalidate(),
-      utils.movements.getStats.invalidate(),
-      utils.items.list.invalidate(),
-      utils.items.getStats.invalidate(),
-    ]);
-  }
 
   // ── Item list helpers ───────────────────────────────────────────────────────
   const handleAddItem = useCallback(
@@ -247,7 +237,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     );
   }, []);
 
-  const isPending = createMutation.isPending;
   const excludeIds: string[] = [];
 
   // ── Confirm dialog state ────────────────────────────────────────────────────
@@ -272,16 +261,71 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   // Called when user confirms in the dialog
   const onConfirm = useCallback(async () => {
     if (!pendingPayload) return;
+    if (!me?.id) {
+      toast.error('No se pudo identificar el usuario actual');
+      return;
+    }
+
+    const movementId = uuidv4();
+    const movementDate = new Date().toISOString();
+    const stockDeltaSign =
+      pendingPayload.type === 'PURCHASE' || pendingPayload.type === 'RETURN' ? 1 : -1;
+    const optimisticMetadata = JSON.stringify({ source: 'movement-optimistic-stock' });
+
     try {
-      await createMutation.mutateAsync(pendingPayload);
+      await powerSyncDb.writeTransaction(async (tx) => {
+        await tx.execute(
+          `
+            INSERT INTO movements (
+              id,
+              type,
+              created_by_id,
+              destination,
+              observations,
+              responsible_delivery_id,
+              responsible_receipt_id,
+              date,
+              project_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            movementId,
+            pendingPayload.type,
+            me.id,
+            pendingPayload.destination ?? null,
+            pendingPayload.observations ?? null,
+            pendingPayload.responsibleDeliveryId ?? null,
+            pendingPayload.responsibleReceiptId ?? null,
+            movementDate,
+            pendingPayload.projectId ?? null,
+          ],
+        );
+
+        for (const detail of pendingPayload.details) {
+          await tx.execute(
+            `INSERT INTO movement_details (id, movement_id, item_id, quantity) VALUES (?, ?, ?, ?)`,
+            [uuidv4(), movementId, detail.itemId, detail.quantity],
+          );
+
+          await tx.execute(`UPDATE items SET stock = stock + ?, _metadata = ? WHERE id = ?`, [
+            stockDeltaSign * detail.quantity,
+            optimisticMetadata,
+            detail.itemId,
+          ]);
+        }
+      });
+
       toast.success('Movimiento registrado correctamente');
-      void invalidateAll();
       setPendingPayload(null);
       onClose();
-    } catch {
-      // handled by mutation onError
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Error al registrar movimiento en almacenamiento local';
+      toast.error(message);
     }
-  }, [pendingPayload, createMutation, onClose]);
+  }, [me?.id, onClose, pendingPayload, powerSyncDb]);
 
   return (
     <>
@@ -588,17 +632,14 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                     onAdd={handleAddItem}
                     onRemove={handleRemoveItem}
                     onQtyChange={handleQtyChange}
-                    disabled={isPending}
                   />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 pb-4">
-                  <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+                  <Button type="button" variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? 'Registrando...' : 'Revisar y confirmar'}
-                  </Button>
+                  <Button type="submit">Revisar y confirmar</Button>
                 </div>
               </form>
             </Form>
@@ -648,10 +689,8 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Volver a editar</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirm} disabled={isPending}>
-              {isPending ? 'Registrando...' : 'Confirmar registro'}
-            </AlertDialogAction>
+            <AlertDialogCancel>Volver a editar</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirm}>Confirmar registro</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

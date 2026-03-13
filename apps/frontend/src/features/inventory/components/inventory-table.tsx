@@ -22,6 +22,8 @@ export type { InventoryItem, ItemType, InventoryTableProps } from './inventory-t
 
 export function InventoryTable({
   items,
+  exportItems,
+  exportKitRows,
   isLoading = false,
   isAdmin,
   pageCount,
@@ -96,6 +98,8 @@ export function InventoryTable({
         onTabChange={handleTabChange}
         typeCounts={typeCounts}
         isAdmin={isAdmin}
+        exportItems={exportItems}
+        exportKitRows={exportKitRows}
       />
 
       <div className="rounded-md border overflow-x-auto">

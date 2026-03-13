@@ -24,8 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trpc } from '@/lib/trpc';
-
 import type { ItemCounts } from '@ingexpert/schema';
 import { TAB_ITEMS } from './inventory-table.types';
 
@@ -41,6 +39,22 @@ interface InventoryTableToolbarProps {
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
   isAdmin: boolean;
+  exportItems: Array<{
+    code: string;
+    name: string;
+    location: string;
+    stock: number;
+    unit: string;
+    type: string;
+  }>;
+  exportKitRows: Array<{
+    kitName: string;
+    kitCode: string;
+    componentName: string;
+    componentCode: string;
+    quantity: number;
+    unit: string;
+  }>;
 }
 
 export function InventoryTableToolbar({
@@ -55,20 +69,16 @@ export function InventoryTableToolbar({
   onTabChange,
   typeCounts,
   isAdmin,
+  exportItems,
+  exportKitRows,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const utils = trpc.useUtils();
 
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      const [items, kitsData] = await Promise.all([
-        utils.items.getAll.fetch(),
-        utils.kits.getAllWithComponents.fetch(),
-      ]);
-
       const TYPE_ES: Record<string, string> = {
         PRODUCT: 'PRODUCTO',
         EQUIPMENT: 'EQUIPO',
@@ -77,7 +87,7 @@ export function InventoryTableToolbar({
       };
 
       // Sheet 1: all items except kits
-      const inventoryRows = items
+      const inventoryRows = exportItems
         .filter((item) => item.type !== 'KIT')
         .map((item) => ({
           CODIGO: item.code,
@@ -89,16 +99,14 @@ export function InventoryTableToolbar({
         }));
 
       // Sheet 2: kit compositions (one row per component)
-      const kitRows = kitsData.flatMap((kit) =>
-        kit.components.map((comp) => ({
-          KIT: kit.name,
-          CODIGO_KIT: kit.code,
-          COMPONENTE: comp.name,
-          CODIGO_COMPONENTE: comp.code,
-          CANTIDAD: comp.quantity,
-          UNIDAD: comp.unit,
-        })),
-      );
+      const kitRows = exportKitRows.map((row) => ({
+        KIT: row.kitName,
+        CODIGO_KIT: row.kitCode,
+        COMPONENTE: row.componentName,
+        CODIGO_COMPONENTE: row.componentCode,
+        CANTIDAD: row.quantity,
+        UNIDAD: row.unit,
+      }));
 
       const wb = xlsxUtils.book_new();
       xlsxUtils.book_append_sheet(wb, xlsxUtils.json_to_sheet(inventoryRows), 'Inventario');
@@ -134,7 +142,7 @@ export function InventoryTableToolbar({
     } finally {
       setIsExporting(false);
     }
-  }, [utils]);
+  }, [exportItems, exportKitRows]);
 
   return (
     <div className="space-y-4">
