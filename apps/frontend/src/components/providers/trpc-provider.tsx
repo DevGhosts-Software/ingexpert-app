@@ -5,6 +5,8 @@ import { httpBatchLink } from '@trpc/client';
 import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { clearOfflineValidatedUser } from '@/lib/auth/offline-session';
 
 function resolveTrpcUrl(rawApiUrl: string | undefined): string {
   const fallback = 'http://localhost:3001/trpc';
@@ -21,14 +23,43 @@ function AuthSync() {
   const refreshMutation = trpc.auth.refresh.useMutation();
 
   useEffect(() => {
+    const revalidateSession = () => {
+      refreshMutation.mutate(undefined, {
+        onError: async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session) {
+            return;
+          }
+          await supabase.auth.signOut();
+          clearOfflineValidatedUser();
+          toast.error('Tu sesión expiró durante la reconexión. Inicia sesión nuevamente.');
+        },
+      });
+    };
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'TOKEN_REFRESHED') {
-        refreshMutation.mutate();
+        revalidateSession();
       }
     });
-    return () => subscription.unsubscribe();
+
+    const handleOnline = () => {
+      revalidateSession();
+    };
+    window.addEventListener('online', handleOnline);
+
+    if (navigator.onLine) {
+      revalidateSession();
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('online', handleOnline);
+    };
     // refreshMutation is stable — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

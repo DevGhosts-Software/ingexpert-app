@@ -6,9 +6,10 @@ import {
   getPowerSyncConnectorDebugSnapshot,
   subscribePowerSyncConnectorDebug,
 } from '@/lib/powersync/connector';
+import { cn } from '@/lib/utils';
 import { DEBUG_COUNT_SQL, parseCount, type CountRow } from '@/lib/powersync/debug';
 
-export function PowerSyncDebug() {
+export function PowerSyncDebug({ className }: { className?: string }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const status = useStatus();
   const connectorState = useSyncExternalStore(
@@ -74,7 +75,12 @@ export function PowerSyncDebug() {
       : '🟠 Endpoint desconectado';
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-green-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-xl backdrop-blur-sm">
+    <div
+      className={cn(
+        'fixed bottom-4 right-4 z-50 rounded-lg border border-green-500/30 bg-black/90 p-4 font-mono text-xs text-green-400 shadow-xl backdrop-blur-sm',
+        className,
+      )}
+    >
       <div className="mb-2 flex items-center justify-between border-b border-gray-700 pb-1">
         <h3 className="font-bold text-white">⚙️ PowerSync Debug</h3>
         <button

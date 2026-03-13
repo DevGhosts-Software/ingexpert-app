@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@powersync/react';
@@ -18,7 +18,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -121,6 +120,16 @@ type FormValues = z.infer<typeof MovementFormSchema>;
 type MovementItem = LocalComponent; // reuse shape: componentId = itemId
 type LocalProjectRow = { id: string; name: string };
 type LocalUserRow = { id: string; name: string | null; email: string };
+type LocalKitDetailRow = {
+  kit_id: string;
+  item_id: string;
+  quantity: number | string | null;
+  name: string;
+  code: string;
+  unit: string;
+  stock: number | string | null;
+  type: string;
+};
 
 interface MovementFormSheetProps {
   open: boolean;
@@ -130,7 +139,6 @@ interface MovementFormSheetProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
-  const utils = trpc.useUtils();
   const powerSyncDb = usePowerSyncDatabase();
 
   // ── Items list state ────────────────────────────────────────────────────────
@@ -148,10 +156,40 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   const usersQuery = useQuery<LocalUserRow>(
     'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC',
   );
+  const kitDetailsQuery = useQuery<LocalKitDetailRow>(`
+    SELECT
+      kd.kit_id,
+      kd.item_id,
+      kd.quantity,
+      component.name,
+      component.code,
+      component.unit,
+      component.stock,
+      component.type
+    FROM kit_details kd
+    INNER JOIN items component ON component.id = kd.item_id
+  `);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const projects = projectsQuery.data ?? [];
   const users = usersQuery.data ?? [];
+  const kitComponentsByKitId = useMemo(() => {
+    const source = new Map<string, MovementItem[]>();
+    for (const row of kitDetailsQuery.data ?? []) {
+      const current = source.get(row.kit_id) ?? [];
+      current.push({
+        componentId: row.item_id,
+        name: row.name,
+        code: row.code,
+        unit: row.unit,
+        stock: Number(row.stock ?? 0),
+        quantity: Number(row.quantity ?? 0),
+        type: row.type as MovementItem['type'],
+      });
+      source.set(row.kit_id, current);
+    }
+    return source;
+  }, [kitDetailsQuery.data]);
 
   useEffect(() => {
     let active = true;
@@ -217,36 +255,26 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   const handleAddItem = useCallback(
     (item: MovementItem) => {
       if (item.type === 'KIT') {
-        // Expand kit: fetch its components and add/increment each one atomically on server
-        void (async () => {
-          const comps = await utils.kits.getComponents.fetch(item.componentId);
-          if (comps.length === 0) {
-            toast.error(`El kit "${item.name}" no tiene componentes configurados`);
-            return;
-          }
-          setMovementItems((prev) => {
-            const updated = [...prev];
-            for (const c of comps) {
-              const qty = Number(c.quantity);
-              const idx = updated.findIndex((i) => i.componentId === c.componentId);
-              if (idx >= 0) {
-                // Component already in list — increment quantity
-                updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + qty };
-              } else {
-                updated.push({
-                  componentId: c.componentId,
-                  name: c.component.name,
-                  code: c.component.code,
-                  unit: c.component.unit,
-                  stock: Number(c.component.stock),
-                  quantity: qty,
-                  type: c.component.type,
-                });
-              }
+        const kitComponents = kitComponentsByKitId.get(item.componentId) ?? [];
+        if (kitComponents.length === 0) {
+          toast.error(`El kit "${item.name}" no tiene componentes configurados`);
+          return;
+        }
+        setMovementItems((prev) => {
+          const updated = [...prev];
+          for (const component of kitComponents) {
+            const idx = updated.findIndex((entry) => entry.componentId === component.componentId);
+            if (idx >= 0) {
+              updated[idx] = {
+                ...updated[idx],
+                quantity: updated[idx].quantity + component.quantity,
+              };
+            } else {
+              updated.push(component);
             }
-            return updated;
-          });
-        })();
+          }
+          return updated;
+        });
         return;
       }
       setMovementItems((prev) => {
@@ -255,7 +283,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         return [...prev, item];
       });
     },
-    [utils],
+    [kitComponentsByKitId],
   );
 
   const handleRemoveItem = useCallback((componentId: string) => {

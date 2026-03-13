@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <TooltipProvider>
                 {children}
                 <Toaster />
-                {shouldShowPowerSyncDebug ? <PowerSyncDebug /> : null}
+                {shouldShowPowerSyncDebug ? <PowerSyncDebug className="left-auto right-4" /> : null}
               </TooltipProvider>
             </ThemeProvider>
           </PowerSyncProvider>

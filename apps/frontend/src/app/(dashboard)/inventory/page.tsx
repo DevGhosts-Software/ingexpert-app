@@ -237,7 +237,7 @@ export default function InventoryPage() {
       <InventoryStats stats={statsData ?? DEFAULT_STATS} />
       <InventoryTable
         items={tableItems}
-        isLoading={inventoryQuery.isFetching}
+        isLoading={inventoryQuery.isFetching && allItems.length === 0}
         isAdmin={isAdmin}
         pageCount={pageCount}
         pagination={pagination}
