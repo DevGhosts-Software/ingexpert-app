@@ -5,8 +5,6 @@ import { httpBatchLink } from '@trpc/client';
 import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import { clearOfflineValidatedUser } from '@/lib/auth/offline-session';
 
 function resolveTrpcUrl(rawApiUrl: string | undefined): string {
   const fallback = 'http://localhost:3001/trpc';
@@ -24,19 +22,7 @@ function AuthSync() {
 
   useEffect(() => {
     const revalidateSession = () => {
-      refreshMutation.mutate(undefined, {
-        onError: async () => {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          if (!session) {
-            return;
-          }
-          await supabase.auth.signOut();
-          clearOfflineValidatedUser();
-          toast.error('Tu sesión expiró durante la reconexión. Inicia sesión nuevamente.');
-        },
-      });
+      refreshMutation.mutate();
     };
 
     const {
@@ -51,10 +37,6 @@ function AuthSync() {
       revalidateSession();
     };
     window.addEventListener('online', handleOnline);
-
-    if (navigator.onLine) {
-      revalidateSession();
-    }
 
     return () => {
       subscription.unsubscribe();

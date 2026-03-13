@@ -88,13 +88,24 @@ export function canUseOfflineValidatedUser(params: {
   sessionExpiresAt: number | undefined;
 }): boolean {
   const { cachedUser, sessionUserId, sessionExpiresAt } = params;
-  if (!cachedUser || !sessionUserId || cachedUser.id !== sessionUserId) {
+  if (!cachedUser) {
     return false;
   }
 
-  if (!sessionExpiresAt) {
-    return true;
+  if (sessionUserId && cachedUser.id !== sessionUserId) {
+    return false;
   }
 
-  return Date.now() < sessionExpiresAt * 1000;
+  const expiresAtMs =
+    sessionExpiresAt && sessionExpiresAt > 0
+      ? sessionExpiresAt * 1000
+      : cachedUser.sessionExpiresAt
+        ? Date.parse(cachedUser.sessionExpiresAt)
+        : Number.NaN;
+
+  if (!Number.isFinite(expiresAtMs)) {
+    return false;
+  }
+
+  return Date.now() < expiresAtMs;
 }

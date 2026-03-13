@@ -25,13 +25,27 @@ export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
-  const { data: authenticatedUser } = trpc.users.me.useQuery(undefined, { retry: false });
-
   useEffect(() => {
-    if (authenticatedUser) {
-      router.replace('/');
-    }
-  }, [authenticatedUser, router]);
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active && session) {
+        router.replace('/');
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.replace('/');
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const form = useForm<LoginDto>({
     resolver: zodResolver(LoginSchema),

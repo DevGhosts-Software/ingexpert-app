@@ -77,12 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [mounted]);
 
-  const {
-    data: user,
-    isPending,
-    isError,
-    error,
-  } = trpc.users.me.useQuery(undefined, {
+  const { data: user, isPending } = trpc.users.me.useQuery(undefined, {
     retry: false,
     enabled: mounted && isOnline && !!sessionUserId,
   });
@@ -105,38 +100,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }, [sessionExpiresAt, user]);
 
-  const canUseOfflineSession = useMemo(
+  const canUsePersistedSession = useMemo(
     () =>
-      !isOnline &&
       canUseOfflineValidatedUser({
         cachedUser,
         sessionUserId,
         sessionExpiresAt,
       }),
-    [cachedUser, isOnline, sessionExpiresAt, sessionUserId],
+    [cachedUser, sessionExpiresAt, sessionUserId],
   );
 
-  const effectiveUser = user ?? (canUseOfflineSession ? cachedUser : null);
+  const canUseOfflineSession = useMemo(
+    () => !isOnline && canUsePersistedSession,
+    [canUsePersistedSession, isOnline],
+  );
+
+  const effectiveUser = user ?? (canUsePersistedSession ? cachedUser : null);
 
   useEffect(() => {
-    if (isError && isOnline) {
-      clearOfflineValidatedUser();
-      toast.error(error?.message ?? 'Tu sesión ya no es válida. Inicia sesión nuevamente.');
-      router.push('/login');
+    if (!mounted || !sessionResolved || sessionUserId) {
+      return;
     }
-  }, [error?.message, isError, isOnline, router]);
-
-  useEffect(() => {
-    if (!mounted || !sessionResolved || sessionUserId) return;
-    clearOfflineValidatedUser();
+    if (!isOnline && canUseOfflineSession) {
+      return;
+    }
+    if (isOnline) {
+      clearOfflineValidatedUser();
+    }
     router.replace('/login');
-  }, [mounted, router, sessionResolved, sessionUserId]);
+  }, [canUseOfflineSession, isOnline, mounted, router, sessionResolved, sessionUserId]);
 
   useEffect(() => {
     if (!mounted || !sessionResolved || isOnline) return;
     if (!canUseOfflineSession) {
       toast.error('Sin internet y sin sesión local válida. Inicia sesión al reconectar.');
-      router.push('/login');
+      router.replace('/login');
     }
   }, [canUseOfflineSession, isOnline, mounted, router, sessionResolved]);
 
@@ -145,7 +143,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     void utils.users.me.invalidate();
   }, [isOnline, mounted, sessionUserId, utils.users.me]);
 
-  if (!mounted || !sessionResolved || (isOnline && isPending)) {
+  if (
+    !mounted ||
+    !sessionResolved ||
+    (isOnline && !!sessionUserId && isPending && !effectiveUser)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -156,7 +158,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!effectiveUser) return null;
+  if (!effectiveUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Restaurando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   const rawPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
   const pageTitle = pageTitles[rawPath] ?? 'Ingexpert';
