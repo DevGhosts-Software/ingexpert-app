@@ -1,0 +1,28 @@
+services:
+  powersync:
+    image: journeyapps/powersync-service:latest
+    container_name: ingexpert-powersync
+    depends_on:
+      - mongo
+    ports:
+      - "${PS_PORT:-8080}:8080"
+    environment:
+      PS_PORT: ${PS_PORT:-8080}
+      PS_DATA_SOURCE_URI: ${PS_DATA_SOURCE_URI}
+      PS_MONGO_URI: mongodb://mongo:27017/powersync
+    volumes:
+      - ./powersync.yaml:/config/powersync.yaml:ro
+    command: ["--config", "/config/powersync.yaml"]
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: ingexpert-powersync-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - powersync-mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  powersync-mongo-data:
