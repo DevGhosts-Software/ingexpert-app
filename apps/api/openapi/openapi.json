@@ -1,0 +1,3178 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ingexpert API",
+    "description": "Corporate Stock Management System API",
+    "version": "0.1.0"
+  },
+  "servers": [{ "url": "http://localhost:3001" }],
+  "tags": [
+    { "name": "auth" },
+    { "name": "users" },
+    { "name": "admin-users" },
+    { "name": "items" },
+    { "name": "kits" },
+    { "name": "movements" },
+    { "name": "projects" }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "auth-login",
+        "summary": "Login with email and password",
+        "tags": ["auth"],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "password": { "type": "string" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": { "type": "string" },
+                    "refresh_token": { "type": "string" },
+                    "expires_at": { "type": "number" },
+                    "user": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "email": { "type": "string" }
+                          },
+                          "required": ["id"],
+                          "additionalProperties": false
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["access_token", "refresh_token", "user"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "auth-refresh",
+        "summary": "Refresh access token",
+        "tags": ["auth"],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": { "type": "string" },
+                    "refresh_token": { "type": "string" },
+                    "expires_at": { "type": "number" },
+                    "user": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "email": { "type": "string" }
+                          },
+                          "required": ["id"],
+                          "additionalProperties": false
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["access_token", "refresh_token", "user"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "auth-logout",
+        "summary": "Logout",
+        "tags": ["auth"],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "success": { "type": "boolean" } },
+                  "required": ["success"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "users-me",
+        "summary": "Get current user",
+        "tags": ["users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "users-updateMe",
+        "summary": "Update current user profile",
+        "tags": ["users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }] },
+                  "password": {
+                    "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                  },
+                  "avatar": {
+                    "anyOf": [
+                      { "type": "string", "maxLength": 500, "format": "uri" },
+                      { "type": "null" }
+                    ]
+                  },
+                  "workArea": {
+                    "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                  },
+                  "role": { "type": "string", "enum": ["USER", "ADMIN"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/password": {
+      "post": {
+        "operationId": "users-updateMyPassword",
+        "summary": "Change own password",
+        "tags": ["users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "password": { "type": "string", "minLength": 8 } },
+                "required": ["password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/names": {
+      "get": {
+        "operationId": "users-listNames",
+        "summary": "List all user names",
+        "tags": ["users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "email": { "type": "string" }
+                    },
+                    "required": ["id", "name", "email"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "post": {
+        "operationId": "adminUsers-create",
+        "summary": "Create user with auth account",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                  "name": { "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }] },
+                  "avatar": {
+                    "anyOf": [
+                      { "type": "string", "maxLength": 500, "format": "uri" },
+                      { "type": "null" }
+                    ]
+                  },
+                  "password": { "type": "string", "minLength": 8 },
+                  "workArea": {
+                    "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" },
+                    "workArea": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth", "workArea"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "adminUsers-list",
+        "summary": "List all users",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "email": { "type": "string" },
+                      "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                      "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "hasAuth": { "type": "boolean" },
+                      "workArea": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                    },
+                    "required": ["id", "email", "role", "name", "avatar", "hasAuth", "workArea"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminUsers-update",
+        "summary": "Update user",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                      },
+                      "password": {
+                        "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                      },
+                      "avatar": {
+                        "anyOf": [
+                          { "type": "string", "maxLength": 500, "format": "uri" },
+                          { "type": "null" }
+                        ]
+                      },
+                      "workArea": {
+                        "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                      },
+                      "role": { "type": "string", "enum": ["USER", "ADMIN"] }
+                    }
+                  }
+                },
+                "required": ["id", "data"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" },
+                    "workArea": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth", "workArea"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/no-auth": {
+      "post": {
+        "operationId": "adminUsers-createWithoutAuth",
+        "summary": "Create user without auth account",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                  "name": { "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }] },
+                  "avatar": {
+                    "anyOf": [
+                      { "type": "string", "maxLength": 500, "format": "uri" },
+                      { "type": "null" }
+                    ]
+                  },
+                  "workArea": {
+                    "anyOf": [{ "type": "string", "maxLength": 100 }, { "type": "null" }]
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" },
+                    "workArea": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth", "workArea"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/grant-auth": {
+      "post": {
+        "operationId": "adminUsers-grantAuth",
+        "summary": "Grant auth account to existing user",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "password": { "type": "string", "minLength": 8 }
+                },
+                "required": ["id", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "email": { "type": "string" },
+                    "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+                    "name": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "avatar": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "hasAuth": { "type": "boolean" },
+                    "workArea": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "email", "role", "name", "avatar", "hasAuth", "workArea"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/stats": {
+      "get": {
+        "operationId": "adminUsers-getStats",
+        "summary": "Get user statistics",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "number" },
+                    "admins": { "type": "number" },
+                    "active": { "type": "number" },
+                    "inactive": { "type": "number" }
+                  },
+                  "required": ["total", "admins", "active", "inactive"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/work-areas": {
+      "get": {
+        "operationId": "adminUsers-getWorkAreas",
+        "summary": "Get available work areas",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": { "schema": { "type": "array", "items": { "type": "string" } } }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/password": {
+      "post": {
+        "operationId": "adminUsers-updatePassword",
+        "summary": "Reset user password (admin)",
+        "tags": ["admin-users"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "password": { "type": "string" }
+                },
+                "required": ["id", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/list": {
+      "post": {
+        "operationId": "items-list",
+        "summary": "List items (paginated with filters)",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "page": { "default": 1, "type": "number", "minimum": 1 },
+                  "limit": { "default": 10, "type": "number", "minimum": 1, "maximum": 100 },
+                  "search": { "type": "string" },
+                  "orderBy": { "type": "string" },
+                  "orderDir": { "type": "string", "enum": ["asc", "desc"] },
+                  "filters": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "types": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"]
+                        }
+                      },
+                      "unit": { "type": "string" },
+                      "location": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "code": { "type": "string" },
+                          "name": { "type": "string" },
+                          "location": { "type": "string" },
+                          "stock": { "type": "number" },
+                          "unit": { "type": "string" },
+                          "type": {
+                            "type": "string",
+                            "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"]
+                          },
+                          "imageUrl": { "type": "string" }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "location",
+                          "stock",
+                          "unit",
+                          "type",
+                          "imageUrl"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "number" },
+                        "page": { "type": "number" },
+                        "limit": { "type": "number" },
+                        "totalPages": { "type": "number" },
+                        "hasNextPage": { "type": "boolean" },
+                        "hasPreviousPage": { "type": "boolean" }
+                      },
+                      "required": [
+                        "total",
+                        "page",
+                        "limit",
+                        "totalPages",
+                        "hasNextPage",
+                        "hasPreviousPage"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items": {
+      "post": {
+        "operationId": "items-create",
+        "summary": "Create item",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "code": { "type": "string", "minLength": 1 },
+                  "location": { "type": "string", "minLength": 1 },
+                  "stock": { "default": 0, "type": "number" },
+                  "unit": { "type": "string", "minLength": 1 },
+                  "type": { "type": "string", "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"] },
+                  "imageUrl": { "type": "string" },
+                  "kitComponents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": ["item_id", "quantity"]
+                    }
+                  }
+                },
+                "required": ["name", "code", "location", "unit", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "code": { "type": "string" },
+                    "name": { "type": "string" },
+                    "location": { "type": "string" },
+                    "stock": { "type": "number" },
+                    "unit": { "type": "string" },
+                    "type": { "type": "string", "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"] },
+                    "imageUrl": { "type": "string" }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "location",
+                    "stock",
+                    "unit",
+                    "type",
+                    "imageUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "patch": {
+        "operationId": "items-update",
+        "summary": "Update item",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "code": { "type": "string", "minLength": 1 },
+                  "location": { "type": "string", "minLength": 1 },
+                  "stock": { "default": 0, "type": "number" },
+                  "unit": { "type": "string", "minLength": 1 },
+                  "type": { "type": "string", "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"] },
+                  "imageUrl": { "type": "string" },
+                  "kitComponents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": ["item_id", "quantity"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "code": { "type": "string" },
+                    "name": { "type": "string" },
+                    "location": { "type": "string" },
+                    "stock": { "type": "number" },
+                    "unit": { "type": "string" },
+                    "type": { "type": "string", "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"] },
+                    "imageUrl": { "type": "string" }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "location",
+                    "stock",
+                    "unit",
+                    "type",
+                    "imageUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/stats": {
+      "get": {
+        "operationId": "items-getStats",
+        "summary": "Get item statistics",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "number" },
+                    "products": { "type": "number" },
+                    "equipment": { "type": "number" },
+                    "tools": { "type": "number" },
+                    "kits": { "type": "number" }
+                  },
+                  "required": ["total", "products", "equipment", "tools", "kits"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/counts": {
+      "get": {
+        "operationId": "items-getCounts",
+        "summary": "Get item type counts",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "location", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ALL": { "type": "number" },
+                    "PRODUCT": { "type": "number" },
+                    "EQUIPMENT": { "type": "number" },
+                    "TOOL": { "type": "number" },
+                    "KIT": { "type": "number" }
+                  },
+                  "required": ["ALL", "PRODUCT", "EQUIPMENT", "TOOL", "KIT"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/locations": {
+      "get": {
+        "operationId": "items-getLocations",
+        "summary": "Get distinct item locations",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": { "schema": { "type": "array", "items": { "type": "string" } } }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/all": {
+      "get": {
+        "operationId": "items-getAll",
+        "summary": "Get all items (admin)",
+        "tags": ["items"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "code": { "type": "string" },
+                      "name": { "type": "string" },
+                      "location": { "type": "string" },
+                      "stock": { "type": "number" },
+                      "unit": { "type": "string" },
+                      "type": { "type": "string", "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"] },
+                      "imageUrl": { "type": "string" }
+                    },
+                    "required": [
+                      "id",
+                      "code",
+                      "name",
+                      "location",
+                      "stock",
+                      "unit",
+                      "type",
+                      "imageUrl"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kits": {
+      "get": {
+        "operationId": "kits-getAllWithComponents",
+        "summary": "Get all kits with their components",
+        "tags": ["kits"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "code": { "type": "string" },
+                      "name": { "type": "string" },
+                      "components": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": { "type": "string" },
+                            "code": { "type": "string" },
+                            "quantity": { "type": "number" },
+                            "unit": { "type": "string" }
+                          },
+                          "required": ["name", "code", "quantity", "unit"],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": ["id", "code", "name", "components"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/movements": {
+      "get": {
+        "operationId": "movements-getAll",
+        "summary": "List movements",
+        "tags": ["movements"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "createdById",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          { "in": "query", "name": "dateFrom", "schema": { "type": "string" } },
+          { "in": "query", "name": "dateTo", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": ["EXIT", "PURCHASE", "RETURN", "WRITEOFF"]
+                      },
+                      "createdById": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "destination": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "observations": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "responsibleDeliveryId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          { "type": "null" }
+                        ]
+                      },
+                      "responsibleReceiptId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          { "type": "null" }
+                        ]
+                      },
+                      "date": { "type": "string" },
+                      "projectId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          { "type": "null" }
+                        ]
+                      },
+                      "itemsCount": { "type": "number" },
+                      "projectName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "creatorName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                      "responsibleDeliveryName": {
+                        "anyOf": [{ "type": "string" }, { "type": "null" }]
+                      },
+                      "responsibleReceiptName": {
+                        "anyOf": [{ "type": "string" }, { "type": "null" }]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "type",
+                      "createdById",
+                      "destination",
+                      "observations",
+                      "responsibleDeliveryId",
+                      "responsibleReceiptId",
+                      "date",
+                      "projectId",
+                      "itemsCount",
+                      "projectName",
+                      "creatorName",
+                      "responsibleDeliveryName",
+                      "responsibleReceiptName"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "movements-create",
+        "summary": "Create movement",
+        "tags": ["movements"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["EXIT", "PURCHASE", "RETURN", "WRITEOFF"] },
+                  "destination": { "type": "string" },
+                  "observations": { "type": "string" },
+                  "responsibleDeliveryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "responsibleReceiptId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "details": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": { "type": "number", "exclusiveMinimum": 0 }
+                      },
+                      "required": ["itemId", "quantity"]
+                    }
+                  }
+                },
+                "required": ["type", "details"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["EXIT", "PURCHASE", "RETURN", "WRITEOFF"]
+                    },
+                    "createdById": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "destination": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "observations": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "responsibleDeliveryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "responsibleReceiptId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "date": { "type": "string" },
+                    "projectId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "itemsCount": { "type": "number" },
+                    "projectName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "creatorName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "responsibleDeliveryName": {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }]
+                    },
+                    "responsibleReceiptName": {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }]
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "quantity": { "type": "number" },
+                          "item": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "code": { "type": "string" },
+                              "name": { "type": "string" },
+                              "location": { "type": "string" },
+                              "stock": { "type": "number" },
+                              "unit": { "type": "string" },
+                              "type": {
+                                "type": "string",
+                                "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"]
+                              },
+                              "imageUrl": { "type": "string" }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "location",
+                              "stock",
+                              "unit",
+                              "type",
+                              "imageUrl"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["id", "movementId", "itemId", "quantity", "item"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "createdById",
+                    "destination",
+                    "observations",
+                    "responsibleDeliveryId",
+                    "responsibleReceiptId",
+                    "date",
+                    "projectId",
+                    "itemsCount",
+                    "projectName",
+                    "creatorName",
+                    "responsibleDeliveryName",
+                    "responsibleReceiptName",
+                    "details"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "movements-update",
+        "summary": "Update movement",
+        "tags": ["movements"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["EXIT", "PURCHASE", "RETURN", "WRITEOFF"]
+                      },
+                      "destination": { "type": "string" },
+                      "observations": { "type": "string" },
+                      "responsibleDeliveryId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "responsibleReceiptId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "projectId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "details": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "quantity": { "type": "number", "exclusiveMinimum": 0 }
+                          },
+                          "required": ["itemId", "quantity"]
+                        }
+                      }
+                    },
+                    "required": ["type", "details"]
+                  }
+                },
+                "required": ["id", "data"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["EXIT", "PURCHASE", "RETURN", "WRITEOFF"]
+                    },
+                    "createdById": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "destination": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "observations": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "responsibleDeliveryId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "responsibleReceiptId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "date": { "type": "string" },
+                    "projectId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    },
+                    "itemsCount": { "type": "number" },
+                    "projectName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "creatorName": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+                    "responsibleDeliveryName": {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }]
+                    },
+                    "responsibleReceiptName": {
+                      "anyOf": [{ "type": "string" }, { "type": "null" }]
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "movementId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "quantity": { "type": "number" },
+                          "item": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "code": { "type": "string" },
+                              "name": { "type": "string" },
+                              "location": { "type": "string" },
+                              "stock": { "type": "number" },
+                              "unit": { "type": "string" },
+                              "type": {
+                                "type": "string",
+                                "enum": ["PRODUCT", "EQUIPMENT", "TOOL", "KIT"]
+                              },
+                              "imageUrl": { "type": "string" }
+                            },
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "location",
+                              "stock",
+                              "unit",
+                              "type",
+                              "imageUrl"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["id", "movementId", "itemId", "quantity", "item"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "type",
+                    "createdById",
+                    "destination",
+                    "observations",
+                    "responsibleDeliveryId",
+                    "responsibleReceiptId",
+                    "date",
+                    "projectId",
+                    "itemsCount",
+                    "projectName",
+                    "creatorName",
+                    "responsibleDeliveryName",
+                    "responsibleReceiptName",
+                    "details"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/movements/stats": {
+      "get": {
+        "operationId": "movements-getStats",
+        "summary": "Get movement statistics",
+        "tags": ["movements"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "createdById",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          { "in": "query", "name": "dateFrom", "schema": { "type": "string" } },
+          { "in": "query", "name": "dateTo", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "number" },
+                    "purchases": { "type": "number" },
+                    "returns": { "type": "number" },
+                    "exits": { "type": "number" },
+                    "writeoffs": { "type": "number" },
+                    "thisMonth": { "type": "number" }
+                  },
+                  "required": ["total", "purchases", "returns", "exits", "writeoffs", "thisMonth"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/movements/projects": {
+      "get": {
+        "operationId": "movements-getProjects",
+        "summary": "Get projects with movements",
+        "tags": ["movements"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": { "type": "string" }
+                    },
+                    "required": ["id", "name"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "operationId": "projects-list",
+        "summary": "List projects (paginated)",
+        "tags": ["projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": { "default": 1, "type": "number", "minimum": 1 }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": { "default": 10, "type": "number", "minimum": 1, "maximum": 100 }
+          },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "orderBy", "schema": { "type": "string" } },
+          {
+            "in": "query",
+            "name": "orderDir",
+            "schema": { "type": "string", "enum": ["asc", "desc"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": { "type": "string" },
+                          "contact": { "type": "string" },
+                          "address": { "type": "string" },
+                          "managerId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "manager": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                        },
+                        "required": ["id", "name", "contact", "address", "managerId", "manager"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "number" },
+                        "page": { "type": "number" },
+                        "limit": { "type": "number" },
+                        "totalPages": { "type": "number" },
+                        "hasNextPage": { "type": "boolean" },
+                        "hasPreviousPage": { "type": "boolean" }
+                      },
+                      "required": [
+                        "total",
+                        "page",
+                        "limit",
+                        "totalPages",
+                        "hasNextPage",
+                        "hasPreviousPage"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "projects-create",
+        "summary": "Create project",
+        "tags": ["projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "contact": { "type": "string", "minLength": 1 },
+                  "address": { "type": "string", "minLength": 1 },
+                  "managerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": ["name", "contact", "address", "managerId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": { "type": "string" },
+                    "contact": { "type": "string" },
+                    "address": { "type": "string" },
+                    "managerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "manager": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "name", "contact", "address", "managerId", "manager"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/all": {
+      "get": {
+        "operationId": "projects-getAll",
+        "summary": "Get all projects",
+        "tags": ["projects"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": { "type": "string" },
+                      "contact": { "type": "string" },
+                      "address": { "type": "string" },
+                      "managerId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "manager": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                    },
+                    "required": ["id", "name", "contact", "address", "managerId", "manager"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/stats": {
+      "get": {
+        "operationId": "projects-getStats",
+        "summary": "Get project statistics",
+        "tags": ["projects"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "total": { "type": "number" } },
+                  "required": ["total"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{id}": {
+      "patch": {
+        "operationId": "projects-update",
+        "summary": "Update project",
+        "tags": ["projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "contact": { "type": "string", "minLength": 1 },
+                  "address": { "type": "string", "minLength": 1 },
+                  "managerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": { "type": "string" },
+                    "contact": { "type": "string" },
+                    "address": { "type": "string" },
+                    "managerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "manager": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+                  },
+                  "required": ["id", "name", "contact", "address", "managerId", "manager"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.BAD_REQUEST" } }
+            }
+          },
+          "401": {
+            "description": "Authorization not provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.UNAUTHORIZED" }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient access",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.FORBIDDEN" } }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/error.NOT_FOUND" } }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/error.INTERNAL_SERVER_ERROR" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "error.BAD_REQUEST": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Invalid input data"
+          },
+          "code": { "type": "string", "description": "The error code", "example": "BAD_REQUEST" },
+          "issues": {
+            "description": "An array of issues that were responsible for the error",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "message": { "type": "string" } },
+              "required": ["message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false,
+        "title": "Invalid input data error (400)",
+        "description": "The error information",
+        "example": { "code": "BAD_REQUEST", "message": "Invalid input data", "issues": [] }
+      },
+      "error.INTERNAL_SERVER_ERROR": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Internal server error"
+          },
+          "code": {
+            "type": "string",
+            "description": "The error code",
+            "example": "INTERNAL_SERVER_ERROR"
+          },
+          "issues": {
+            "description": "An array of issues that were responsible for the error",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "message": { "type": "string" } },
+              "required": ["message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false,
+        "title": "Internal server error error (500)",
+        "description": "The error information",
+        "example": {
+          "code": "INTERNAL_SERVER_ERROR",
+          "message": "Internal server error",
+          "issues": []
+        }
+      },
+      "error.UNAUTHORIZED": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Authorization not provided"
+          },
+          "code": { "type": "string", "description": "The error code", "example": "UNAUTHORIZED" },
+          "issues": {
+            "description": "An array of issues that were responsible for the error",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "message": { "type": "string" } },
+              "required": ["message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false,
+        "title": "Authorization not provided error (401)",
+        "description": "The error information",
+        "example": { "code": "UNAUTHORIZED", "message": "Authorization not provided", "issues": [] }
+      },
+      "error.FORBIDDEN": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Insufficient access"
+          },
+          "code": { "type": "string", "description": "The error code", "example": "FORBIDDEN" },
+          "issues": {
+            "description": "An array of issues that were responsible for the error",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "message": { "type": "string" } },
+              "required": ["message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false,
+        "title": "Insufficient access error (403)",
+        "description": "The error information",
+        "example": { "code": "FORBIDDEN", "message": "Insufficient access", "issues": [] }
+      },
+      "error.NOT_FOUND": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "The error message",
+            "example": "Not found"
+          },
+          "code": { "type": "string", "description": "The error code", "example": "NOT_FOUND" },
+          "issues": {
+            "description": "An array of issues that were responsible for the error",
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "message": { "type": "string" } },
+              "required": ["message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["message", "code"],
+        "additionalProperties": false,
+        "title": "Not found error (404)",
+        "description": "The error information",
+        "example": { "code": "NOT_FOUND", "message": "Not found", "issues": [] }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  }
+}
