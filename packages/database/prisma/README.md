@@ -19,10 +19,20 @@ If debug output shows errors like:
 - `permission denied for schema public`
 - `permission denied for table movements`
 - `duplicate key value violates unique constraint "movements_pkey"`
+- `new row violates row-level security policy for table "movements"`
 
 apply `powersync-upload-permissions.sql` in Supabase SQL Editor.
 
 For duplicate-key movement errors, this usually means the row already exists in cloud and the local queue replayed the same ID after a prior partial upload. The connector now uses idempotent create writes (`upsert` with conflict handling) so replayed IDs can converge without manual cleanup.
+
+If you started seeing RLS errors right after running the remediation script and your project previously worked without RLS, you likely enabled RLS unintentionally. Recover with:
+
+```sql
+ALTER TABLE public.movements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.movement_details DISABLE ROW LEVEL SECURITY;
+```
+
+Then retry upload.
 
 The script is idempotent and includes:
 

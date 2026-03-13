@@ -18,9 +18,11 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.projects TO authenticated;
 -- 3) Sequence privileges for generated/identity columns (future-safe).
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
--- 4) RLS compatibility (only relevant if table RLS is enabled).
-ALTER TABLE public.movements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.movement_details ENABLE ROW LEVEL SECURITY;
+-- 4) RLS compatibility (only relevant if table RLS is already enabled).
+-- IMPORTANT:
+-- This script does NOT force-enable RLS. If your project was running without RLS,
+-- enabling it here can block uploads until full policies are in place.
+-- If you intentionally use RLS, keep it enabled and use the policies below.
 
 DO $$
 BEGIN
@@ -92,3 +94,9 @@ COMMIT;
 --     'powersync_movements_insert_authenticated',
 --     'powersync_movement_details_insert_authenticated'
 --   );
+
+-- ------------------------------------------------------------------
+-- Emergency rollback (if you enabled RLS by mistake and uploads broke)
+-- ------------------------------------------------------------------
+-- ALTER TABLE public.movements DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.movement_details DISABLE ROW LEVEL SECURITY;
