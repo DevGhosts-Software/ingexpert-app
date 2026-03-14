@@ -11,7 +11,7 @@ trigger: always_on
 
 1. **[`openspec/specs/core-architecture/spec.md`](./openspec/specs/core-architecture/spec.md)** — monorepo layout, commands, feature flow, layered architecture, schema two-track system, frontend global patterns, key rules.
 2. **Capability specs** (read only the ones relevant to your task):
-   - [`auth/spec.md`](./openspec/specs/auth/spec.md) — JWT/JWKS, procedure guards, users module, `hasAuth`, permission matrix
+   - [`auth/spec.md`](./openspec/specs/auth/spec.md) — JWT/JWKS, procedure guards, users module, `has_auth`, permission matrix
    - [`inventory/spec.md`](./openspec/specs/inventory/spec.md) — items, kits, stock handling, bulk import, Excel mapping
    - [`movements/spec.md`](./openspec/specs/movements/spec.md) — movement ledger, stock direction, kit expansion, role filters
    - [`projects/spec.md`](./openspec/specs/projects/spec.md) — project management, delete restriction, managerId constraint

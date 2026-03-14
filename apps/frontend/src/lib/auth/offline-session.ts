@@ -8,7 +8,7 @@ export type OfflineValidatedUser = {
   role: 'ADMIN' | 'USER';
   name: string | null;
   avatar: string | null;
-  hasAuth: boolean;
+  has_auth: boolean;
   validatedAt: string;
   sessionExpiresAt: string | null;
 };
@@ -49,7 +49,7 @@ export function readOfflineValidatedUser(): OfflineValidatedUser | null {
       role: candidate.role,
       name: candidate.name ?? null,
       avatar: candidate.avatar ?? null,
-      hasAuth: candidate.hasAuth ?? true,
+      has_auth: candidate.has_auth ?? true,
       validatedAt: candidate.validatedAt ?? new Date(0).toISOString(),
       sessionExpiresAt: candidate.sessionExpiresAt ?? null,
     };

@@ -65,7 +65,7 @@ export function useLocalUsers() {
         role: row.role,
         name: row.name ?? null,
         avatar: row.avatar ?? null,
-        hasAuth: Number(row.has_auth ?? 0) === 1,
+        has_auth: Number(row.has_auth ?? 0) === 1,
         workArea: row.work_area ?? null,
       })),
     [query.data],

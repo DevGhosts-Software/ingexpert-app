@@ -26,7 +26,7 @@ All specs live in `openspec/specs/<capability>/spec.md` using a kebab-case direc
 | Capability             | Path                                                              | Covers                                                                                             |
 | ---------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `core-architecture`    | [`core-architecture/spec.md`](../core-architecture/spec.md)       | Monorepo layout, commands, layered architecture, schema two-track system, frontend global patterns |
-| `auth`                 | [`auth/spec.md`](../auth/spec.md)                                 | JWT/JWKS, procedure guards, users module, `hasAuth`, permissions                                   |
+| `auth`                 | [`auth/spec.md`](../auth/spec.md)                                 | JWT/JWKS, procedure guards, users module, `has_auth`, permissions                                  |
 | `inventory`            | [`inventory/spec.md`](../inventory/spec.md)                       | Items, kits, stock handling, bulk import, Excel mapping                                            |
 | `movements`            | [`movements/spec.md`](../movements/spec.md)                       | Movement ledger, stock direction, kit expansion, role filters                                      |
 | `projects`             | [`projects/spec.md`](../projects/spec.md)                         | Project management, delete restriction, managerId constraint                                       |

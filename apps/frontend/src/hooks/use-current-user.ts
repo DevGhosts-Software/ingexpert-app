@@ -19,7 +19,7 @@ type CurrentUser = {
   role: 'ADMIN' | 'USER';
   name: string | null;
   avatar: string | null;
-  hasAuth: boolean;
+  has_auth: boolean;
 };
 
 export function useCurrentUser() {
@@ -71,7 +71,7 @@ export function useCurrentUser() {
       role: first.role,
       name: first.name ?? null,
       avatar: first.avatar ?? null,
-      hasAuth: Number(first.has_auth ?? 0) === 1,
+      has_auth: Number(first.has_auth ?? 0) === 1,
     };
   }, [localUserQuery.data]);
 

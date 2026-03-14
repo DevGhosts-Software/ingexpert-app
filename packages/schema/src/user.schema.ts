@@ -40,7 +40,7 @@ export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 /**
  * Wire representation of a User returned by the API.
  * Extends the Prisma `User` model with `workArea` flattened from the Staff→WorkArea relation.
- * `hasAuth` reflects whether the user has a Supabase auth account.
+ * `has_auth` reflects whether the user has a Supabase auth account.
  */
 export type UserEntity = User & { workArea: string | null };
 
@@ -60,7 +60,7 @@ export const UserEntitySchema = z.object({
   role: z.nativeEnum(UserRole),
   name: z.string().nullable(),
   avatar: z.string().nullable(),
-  hasAuth: z.boolean(),
+  has_auth: z.boolean(),
   workArea: z.string().nullable(),
 });
 
@@ -71,7 +71,7 @@ export const CurrentUserSchema = z.object({
   role: z.nativeEnum(UserRole),
   name: z.string().nullable(),
   avatar: z.string().nullable(),
-  hasAuth: z.boolean(),
+  has_auth: z.boolean(),
 });
 
 export const UserStatsSchema = z.object({

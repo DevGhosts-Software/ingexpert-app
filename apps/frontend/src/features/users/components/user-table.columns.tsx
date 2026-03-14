@@ -458,7 +458,7 @@ function RowActions({ user }: { user: UserEntity }) {
   const currentId = me?.id ?? '';
   const isEditAllowed = canEdit(currentId, user);
   const isDeleteAllowed = canDelete(currentId, user);
-  const isResetPasswordAllowed = user.hasAuth && (user.id === currentId || user.role !== 'ADMIN');
+  const isResetPasswordAllowed = user.has_auth && (user.id === currentId || user.role !== 'ADMIN');
   const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
 
   return (
@@ -480,7 +480,7 @@ function RowActions({ user }: { user: UserEntity }) {
             Restablecer contraseña
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {user.hasAuth ? (
+          {user.has_auth ? (
             <DropdownMenuItem
               onClick={() => setRevokeOpen(true)}
               disabled={user.id === currentId || user.role === 'ADMIN'}
@@ -631,7 +631,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       enableSorting: false,
     },
     {
-      id: 'hasAuth',
+      id: 'has_auth',
       header: () => (
         <div className="flex justify-center">
           <span className="font-medium">Acceso</span>
@@ -639,7 +639,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       ),
       cell: ({ row }) => (
         <div className="flex justify-center">
-          {row.original.hasAuth ? (
+          {row.original.has_auth ? (
             <Badge
               variant="outline"
               className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"

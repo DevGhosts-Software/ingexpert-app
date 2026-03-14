@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         role: user.role,
         name: user.name,
         avatar: user.avatar,
-        hasAuth: user.hasAuth,
+        has_auth: user.has_auth,
       },
       sessionExpiresAt ?? null,
     );

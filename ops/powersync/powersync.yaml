@@ -22,7 +22,7 @@ sync_config:
           - SELECT id, movement_id, item_id, quantity FROM movement_details
           - SELECT id, name, contact, address, manager_id FROM projects
           - SELECT id, work_area_id FROM staff
-          - SELECT id, email, CAST(role as TEXT) AS role, name, avatar, CAST("hasAuth" as INTEGER) AS has_auth FROM users
+          - SELECT id, email, CAST(role as TEXT) AS role, name, avatar, CAST(has_auth as INTEGER) AS has_auth FROM users
           - SELECT id, name FROM work_areas
 
 client_auth:

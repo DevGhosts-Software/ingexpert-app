@@ -13,7 +13,7 @@ model User {
   role    UserRole @default(USER)
   name    String?
   avatar  String?
-  hasAuth Boolean  @default(true)
+  has_auth Boolean @default(true)
 
   staff Staff?
 

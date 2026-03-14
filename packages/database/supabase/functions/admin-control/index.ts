@@ -65,19 +65,17 @@ type UserRow = {
   name: string | null;
   avatar: string | null;
   has_auth?: boolean | null;
-  hasAuth?: boolean | null;
   staff?: Array<{ work_area?: { name?: string | null } | null }> | null;
 };
 
 const mapUserEntity = (row: UserRow) => {
-  const hasAuthValue = typeof row.hasAuth === 'boolean' ? row.hasAuth : row.has_auth;
   return {
     id: row.id,
     email: row.email,
     role: row.role,
     name: row.name ?? null,
     avatar: row.avatar ?? null,
-    hasAuth: hasAuthValue === true,
+    has_auth: row.has_auth === true,
     workArea: row.staff?.[0]?.work_area?.name ?? null,
   };
 };
