@@ -1,207 +1,29 @@
-# Auth Spec — Ingexpert
+## MODIFIED Requirements
 
-> **Source of Truth for Endpoint Contracts**: Before implementing any authentication route, JWT handling change, or user management endpoint, read **`openapi/openapi.json`** for the exact endpoint shapes, request/response schemas, and authentication requirements for this domain.
+### Requirement: Auth authority SHALL remain API-owned during read migration
 
-Covers: Supabase Auth integration, JWT validation, tRPC procedure guards, Users module (self-service + admin CRUD), `hasAuth` flag lifecycle, permission matrix, and auth-related frontend patterns.
+API-scope reduction initiatives MAY relocate `auth.login`, `auth.refresh`, `auth.logout`, and `users.me` authority only through an approved frontend-auth-authority migration with explicit security-equivalence evidence.
 
----
+#### Scenario: Auth migration proposal is evaluated
 
-## JWT Authentication
+- **WHEN** a migration plan proposes frontend ownership of auth/session procedures
+- **THEN** the proposal MUST document equivalent session lifecycle, JWT/JWKS/claims handling, and RBAC outcomes
+- **THEN** migration MUST remain blocked until security-equivalence criteria are approved
 
-- JWT is validated by fetching Supabase public keys from JWKS (RS256). No shared secret.
-- `ctx.user` is the decoded JWT payload: `{ id, email, role }`.
-- `ctx.user.id` is the source of truth for `createdById` — the client cannot override it.
+#### Scenario: Auth authority cutover is approved
 
----
+- **WHEN** security-equivalence gates are satisfied for auth/session flows
+- **THEN** auth/session authority MAY move from API procedures to frontend Supabase-based flows
+- **THEN** retired API auth procedures MUST be removed from active contract surface
 
-## Procedure Types
+## ADDED Requirements
 
-| Procedure                 | Guard                  | Used for                                   |
-| ------------------------- | ---------------------- | ------------------------------------------ |
-| `trpc.procedure`          | None (public)          | Unauthenticated endpoints (login, refresh) |
-| `trpc.protectedProcedure` | Valid JWT required     | All authenticated users                    |
-| `trpc.adminProcedure`     | JWT + `role === ADMIN` | Admin-only operations                      |
+### Requirement: API cutdown phase-2 SHALL retain admin auth management in API
 
-Use distinct procedure types for different access levels — never add an inline role check inside a `protectedProcedure`.
+Even when auth/session user flows migrate to frontend authority, admin-user management capabilities MUST remain API-owned in this phase.
 
----
+#### Scenario: Endpoint retirement plan includes admin user management
 
-## Users Module — Two-Router Architecture
-
-| Router             | Procedure type       | Procedures                                                                                                                                |
-| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `UsersRouter`      | `protectedProcedure` | `me`, `updateMe`, `updateMyPassword`, `listNames`                                                                                         |
-| `AdminUsersRouter` | `adminProcedure`     | `create`, `createWithoutAuth`, `grantAuth`, `revokeAuth`, `list`, `get`, `update`, `remove`, `updatePassword`, `getStats`, `getWorkAreas` |
-
-**Rules:**
-
-- `updateMyPassword` (self) → `protectedProcedure` in `UsersRouter`, delegates to `AdminUsersService.changePassword`.
-- `updatePassword` (admin resets any user) → `adminProcedure` in `AdminUsersRouter`.
-- Never add a `protectedProcedure` to `AdminUsersRouter`.
-
----
-
-## `hasAuth` Flag — Auth-Decoupled Users
-
-Users can exist without a Supabase Auth account (tracked in system but cannot log in):
-
-| Operation           | Effect                                                                           |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `create`            | DB record + Supabase Auth account → `hasAuth: true`                              |
-| `createWithoutAuth` | DB record only, UUID generated locally → `hasAuth: false`                        |
-| `grantAuth`         | `supabaseAdmin.auth.admin.createUser({ id, email, password })` → `hasAuth: true` |
-| `revokeAuth`        | `supabaseAdmin.auth.admin.deleteUser(id)` → `hasAuth: false`, DB preserved       |
-| `remove`            | Deletes DB record. Only calls Supabase `deleteUser` if `hasAuth: true`           |
-
----
-
-## Permission Rules
-
-| Action              | Who                                                                   |
-| ------------------- | --------------------------------------------------------------------- |
-| Edit user           | Self + non-admin users. Admins cannot edit other admins.              |
-| Delete user         | Non-admin users only. Cannot delete self. Cannot delete other admins. |
-| Reset password      | Self + non-admin users. Cannot reset another admin's password.        |
-| Change own password | Any authenticated user (`updateMyPassword`).                          |
-
----
-
-## Schema — Auth & User Domain Modules
-
-| File                   | DTOs                                                                                     | Entities                  | Output schemas                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| `auth.schema.ts`       | `LoginSchema`                                                                            | —                         | `AuthSessionSchema`                                                          |
-| `user.schema.ts`       | `CreateUserSchema`, `UpdateUserSchema`, `CreateUserWithoutAuthSchema`, `GrantAuthSchema` | `UserEntity`, `UserStats` | `UserEntitySchema`, `CurrentUserSchema`, `UserStatsSchema`, `UserNameSchema` |
-| `pagination.schema.ts` | `BasePaginationSchema`                                                                   | `PaginationMeta`          | `PaginationMetaSchema`, `paginatedSchema<T>()`                               |
-
-`UserEntity` is defined as:
-
-```typescript
-export type UserEntity = User & { workArea: string | null };
-// Note: hasAuth is a DB column on User — included automatically in User base
-```
-
----
-
-## Frontend — Role-Based UI
-
-Use `useIsAdmin()` (`src/hooks/use-is-admin.ts`) to gate admin-only UI. It reads `trpc.users.me` with `staleTime: Infinity` — no extra network request.
-
-```typescript
-// ✅ correct — isAdmin flows from Container to Presenter as prop
-const isAdmin = useIsAdmin(); // in page container
-<InventoryTable isAdmin={isAdmin} ... />
-
-// In presenter — receives as prop, never calls useIsAdmin() directly
-{isAdmin && <Button>Agregar item</Button>}
-```
-
-Exception: layout-level components (e.g. `AppSidebar`) may call `useIsAdmin()` directly.
-
----
-
-## Frontend — Navbar & User Profile
-
-`DashboardNavbar` (`src/components/dashboard-navbar.tsx`) accepts `user` and `onLogout` props. It renders a clickable `Avatar` (shadcn `Avatar` + `AvatarFallback` with initials) that opens `UserProfileSheet`.
-
-`UserProfileSheet` (`src/features/users/components/user-profile-sheet.tsx`) is the **only** place any user edits their own name, avatar URL, and password:
-
-- `trpc.users.updateMe` — name and avatar
-- `trpc.users.updateMyPassword` — password change (self only, always allowed)
-
-The logout button lives inside `UserProfileSheet`, passed as `onLogout` from layout → navbar → sheet.
-
----
-
-## Frontend — Sidebar Active State
-
-```typescript
-isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
-```
-
----
-
-## Frontend — API tRPC Transport URL Contract
-
-`NEXT_PUBLIC_API_URL` MAY be configured as either:
-
-- API origin only (e.g. `http://localhost:3001`)
-- Full tRPC URL (e.g. `http://localhost:3001/trpc`)
-
-When origin-only is provided, frontend transport MUST normalize to the `/trpc` endpoint before dispatching requests.
-
-Frontend authentication session authority MUST use Supabase client flows directly (`supabase.auth.signInWithPassword`, token lifecycle handled by Supabase SDK, `supabase.auth.signOut`) and MUST NOT call API `auth.*` procedures.
-
----
-
-## Requirement: Auth guard SHALL tolerate offline local sessions
-
-Frontend auth guarding MUST allow users with a previously validated local session to access local-first screens when internet connectivity is unavailable, without forcing immediate online revalidation.
-
-#### Scenario: Offline startup with valid local session
-
-- **WHEN** the application starts offline and a non-expired locally persisted session exists that was previously validated online
-- **THEN** the auth guard MUST allow navigation to authenticated local-first screens
-- **THEN** the guard MUST defer remote token/JWKS validation until connectivity is restored
-
-#### Scenario: Offline startup with invalid or missing local session
-
-- **WHEN** the application starts offline and no valid local session is available
-- **THEN** the auth guard MUST deny authenticated access
-- **THEN** the UI MUST show explicit authentication-required feedback instead of a bounce loop
-
-## Requirement: Auth recovery SHALL revalidate once online
-
-When connectivity returns, the client MUST revalidate the active session against normal online auth flow and handle failure explicitly.
-
-#### Scenario: Connectivity restored after offline continuation
-
-- **WHEN** a user is operating under offline-continued session and network connectivity returns
-- **THEN** the client MUST attempt normal session/token revalidation
-- **THEN** invalid sessions MUST be revoked with clear user feedback and local cleanup
-
-## Requirement: Auth session lifecycle SHALL be frontend-owned with Supabase authority
-
-Auth login/logout/token lifecycle MUST be executed by frontend Supabase SDK flows, while API retains protected user/admin management operations.
-
-#### Scenario: User signs in from login form
-
-- **WHEN** a user submits valid credentials on login
-- **THEN** the frontend MUST authenticate through Supabase client SDK directly
-- **THEN** no API `auth.login` procedure call may be made
-
-#### Scenario: User signs out from dashboard profile
-
-- **WHEN** logout is requested
-- **THEN** the frontend MUST call Supabase `signOut`
-- **THEN** local offline-auth cache MUST be cleared before redirecting to login
-
-## Requirement: Read migration SHALL not weaken RBAC checks
-
-Any local-first cutover in adjacent domains MUST preserve existing RBAC-protected behavior and continue relying on API authority for protected write/auth decisions.
-
-#### Scenario: Local-first read cutover reaches production
-
-- **WHEN** migrated read paths are active in production
-- **THEN** role-based access behavior MUST remain unchanged from approved auth policy
-- **THEN** any RBAC regression MUST trigger immediate rollback
-
-## Requirement: API cutdown SHALL retire API auth procedures after frontend cutover
-
-Once frontend Supabase auth authority is active, API `auth.login`, `auth.refresh`, and `auth.logout` procedures MUST be removed from active router/service/OpenAPI surface.
-
-#### Scenario: Auth cutover is finalized
-
-- **WHEN** frontend auth/session lifecycle is verified with Supabase authority
-- **THEN** API `auth.*` procedures MUST be deleted from backend router/service wiring
-- **THEN** generated OpenAPI MUST not expose `/auth/login`, `/auth/refresh`, or `/auth/logout`
-
-## Requirement: Read cutdown SHALL preserve RBAC enforcement ownership
-
-Any read-path migration and endpoint retirement MUST preserve RBAC enforcement in API-owned auth and authority flows.
-
-#### Scenario: Read endpoint is retired after local migration
-
-- **WHEN** a read endpoint is removed from API
-- **THEN** RBAC decisions for remaining protected endpoints MUST continue to be enforced by API guards
-- **THEN** no local fallback logic may bypass API-owned authorization behavior
+- **WHEN** maintainers prepare endpoint removals for auth migration
+- **THEN** admin management procedures (`adminUsers.*`) MUST be excluded from this phase’s retirement scope
+- **THEN** phase-2 completion MUST preserve admin management behavior unchanged

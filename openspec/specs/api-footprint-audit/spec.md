@@ -1,82 +1,21 @@
 ## ADDED Requirements
 
-### Requirement: Frontend tRPC usage SHALL be fully inventoried
+### Requirement: Phase-2 audit SHALL classify auth and non-admin endpoints for retirement
 
-The system MUST maintain a complete inventory of frontend `trpc.*` procedure usage including file path, procedure name, operation type (query/mutation/utility), and current offline behavior.
+The API footprint audit MUST include explicit classification for remaining auth and non-admin endpoints as `retain`, `remove-ready`, or `remove-after-cutover`.
 
-#### Scenario: Repository scan produces complete call inventory
+#### Scenario: Phase-2 cutdown inventory is generated
 
-- **WHEN** an audit pass is run against `apps/frontend/src/**`
-- **THEN** every `trpc.*` call site MUST appear in the audit output with file and procedure metadata
-- **THEN** no procedure used by the frontend may be omitted from the inventory
+- **WHEN** maintainers run the phase-2 audit
+- **THEN** auth/session and non-admin endpoint candidates MUST be explicitly tagged for migration state
+- **THEN** admin-management endpoints MUST be explicitly tagged as retained for this phase
 
-### Requirement: Each procedure SHALL be classified by backend necessity
+### Requirement: Endpoint retirement SHALL require active-usage verification
 
-Every inventoried procedure MUST be labeled with a migration classification: `Identity/Auth`, `Server Authority Write`, `Server Compute Read`, `Local-Computable Read`, or `Migration Candidate`.
+Any endpoint proposed for removal in phase-2 MUST have verified zero active runtime frontend dependency at removal time.
 
-#### Scenario: Classification is assigned to each call
+#### Scenario: Endpoint reaches remove-ready state
 
-- **WHEN** the inventory is reviewed
-- **THEN** each procedure entry MUST include exactly one classification label
-- **THEN** each label MUST include a short rationale tied to security, consistency, or compute constraints
-
-### Requirement: Stats endpoints SHALL require parity validation before migration
-
-Any frontend flow that replaces API-provided stats with local SQLite-derived aggregates MUST pass parity validation against current API responses before production cutover.
-
-#### Scenario: Local stats candidate enters dual-run validation
-
-- **WHEN** a stats procedure is marked as `Local-Computable Read` or `Migration Candidate`
-- **THEN** the system MUST run a dual-run comparison between local aggregate output and API output
-- **THEN** migration may proceed only after parity acceptance criteria are met
-
-### Requirement: Auth endpoint migration MUST be gated by security-equivalence evidence
-
-Auth/session procedures may migrate away from API ownership only when equivalent security controls are documented and implemented.
-
-#### Scenario: Auth migration proposal is evaluated
-
-- **WHEN** a proposal suggests moving `auth.login`, `auth.refresh`, `auth.logout`, or `users.me` authority
-- **THEN** the proposal MUST document equivalent JWT/JWKS validation, token lifecycle, and RBAC enforcement controls
-- **THEN** the migration MUST remain blocked until security-equivalence criteria are approved
-- **THEN** once approved and cut over, audit evidence MUST show zero active frontend `trpc.auth.*` usage before endpoint retirement
-
-### Requirement: Audit outputs SHALL drive executable migration state
-
-The audit inventory MUST be used as an executable migration plan with per-procedure phase and rollback metadata.
-
-#### Scenario: Migration cycle starts from latest inventory
-
-- **WHEN** maintainers start a migration rollout
-- **THEN** each candidate procedure MUST include an explicit phase (`observe`, `dual-run`, `cutover`, `rollback`)
-- **THEN** phase transitions MUST be traceable to parity evidence and ownership rationale
-
-### Requirement: Classification changes SHALL be versioned
-
-Any change to procedure classification or migration candidacy MUST be recorded as a versioned update to prevent undocumented scope drift.
-
-#### Scenario: Procedure classification is updated
-
-- **WHEN** maintainers reclassify a procedure
-- **THEN** the updated classification and rationale MUST be persisted with a revision marker
-- **THEN** migration decisions MUST reference the latest revision
-
-### Requirement: Endpoint retention matrix SHALL define removal eligibility
-
-The audit process MUST maintain an endpoint retention matrix that marks each procedure as `retain` or `remove-ready` with explicit evidence.
-
-#### Scenario: Procedure is reviewed for deletion
-
-- **WHEN** maintainers evaluate an API procedure for removal
-- **THEN** the matrix MUST include current frontend usage status and local replacement status
-- **THEN** deletion MUST remain blocked until the procedure is marked `remove-ready`
-
-### Requirement: Removal-ready procedures SHALL be backed by zero-usage proof
-
-Any procedure marked `remove-ready` MUST have verified zero active frontend call sites and no active runtime fallback path.
-
-#### Scenario: Team marks read procedure as remove-ready
-
-- **WHEN** a read procedure is proposed as removable
-- **THEN** repository scan evidence MUST show no active `trpc.<procedure>` usage in frontend runtime paths
-- **THEN** fallback branch evidence MUST show no runtime API fallback remains for that behavior
+- **WHEN** a candidate endpoint is marked remove-ready
+- **THEN** call-site evidence MUST show no active runtime usage in frontend application paths
+- **THEN** retirement MUST be blocked if active usage still exists
