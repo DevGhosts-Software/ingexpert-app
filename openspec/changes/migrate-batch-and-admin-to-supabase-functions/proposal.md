@@ -25,6 +25,6 @@ The remaining API dependency is concentrated in batch import procedures and admi
 
 ## Impact
 
-- Affected code: `apps/frontend` batch import/admin screens/hooks, `apps/api` routers/services (`items`, `kits`, `users/admin-users`, app router wiring), and new Supabase cloud function folder (proposed under repository-level `supabase/functions/admin-control/`).
+- Affected code: `apps/frontend` batch import/admin screens/hooks, `apps/api` routers/services (`items`, `kits`, `users/admin-users`, app router wiring), and new Supabase cloud function folder under `packages/database/supabase/functions/admin-control/`.
 - API/OpenAPI: remove `/admin/users*` operations and any residual batch mutation exposure from generated contract.
 - Data model: no Prisma schema changes expected; cloud function and local-write migration reuse existing tables/contracts.

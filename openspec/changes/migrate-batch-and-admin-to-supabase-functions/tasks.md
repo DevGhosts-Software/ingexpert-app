@@ -1,7 +1,7 @@
 ## 1. Shared contracts and Supabase function scaffold
 
 - [x] 1.1 Add admin cloud-function action request/response schemas in `packages/schema` (new admin-control schemas) and export them for frontend/function reuse.
-- [x] 1.2 Create Supabase cloud function folder at `supabase/functions/admin-control/` with action-dispatch handler and strict admin authorization guard.
+- [x] 1.2 Create Supabase cloud function folder at `packages/database/supabase/functions/admin-control/` with action-dispatch handler and strict admin authorization guard.
 - [x] 1.3 Wire function config/docs for local and deployed invocation (including required env vars/secrets) in repository Supabase configuration files.
 
 ## 2. Frontend migration for batch and admin flows

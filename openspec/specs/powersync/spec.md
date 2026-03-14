@@ -17,7 +17,7 @@ The PowerSync publication source MUST include the Prisma-mapped physical tables:
 - `users` (`User`)
 - `work_areas` (`WorkArea`)
 
-The publication definition SHALL be maintained in `packages/database/prisma/supabase/02_powersync pubilcation.sql`.
+The publication definition SHALL be maintained in `packages/database/supabase/migrations/02_powersync pubilcation.sql`.
 
 ---
 

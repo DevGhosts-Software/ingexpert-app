@@ -10,6 +10,7 @@ Single Supabase Edge Function that replaces runtime `adminUsers.*` API ownership
 ## Deploy
 
 ```bash
+cd packages/database
 supabase functions deploy admin-control --no-verify-jwt=false
 ```
 

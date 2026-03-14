@@ -22,7 +22,7 @@ The remaining API-owned runtime mutations are concentrated in batch import proce
 - Use local SQLite transaction-based imports for items/kits batch flows and rely on PowerSync replay.
   - Rationale: matches the established offline-first architecture and removes API mediation latency.
   - Alternative considered: keeping API batch endpoints with thinner wrappers; rejected because it preserves API runtime ownership.
-- Create one Supabase cloud function (proposed path: `supabase/functions/admin-control/`) with action-dispatch request contract.
+- Create one Supabase cloud function (proposed path: `packages/database/supabase/functions/admin-control/`) with action-dispatch request contract.
   - Rationale: centralizes privileged admin logic and reduces endpoint sprawl.
   - Alternative considered: one function per admin action; rejected for now to minimize deployment/config overhead.
 - Keep schema DTOs in `@ingexpert/schema` and reuse existing admin payload shapes where possible.

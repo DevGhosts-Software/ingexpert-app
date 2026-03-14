@@ -2,7 +2,7 @@
 
 All Supabase SQL setup scripts now live in:
 
-- `packages/database/prisma/supabase/`
+- `packages/database/supabase/migrations/`
 
 Scripts are executed in filename order by `pnpm --filter @ingexpert/database db:seed`.
 You can also run `pnpm --filter @ingexpert/database db:init` (same behavior).
@@ -31,7 +31,7 @@ If debug output shows errors like:
 - `duplicate key value violates unique constraint "movements_pkey"`
 - `new row violates row-level security policy for table "movements"`
 
-apply `supabase/03_powersync-upload-permissions.sql` in Supabase SQL Editor.
+apply `packages/database/supabase/migrations/03_powersync-upload-permissions.sql` in Supabase SQL Editor.
 
 For duplicate-key movement errors, this usually means the row already exists in cloud and the local queue replayed the same ID after a prior partial upload. The connector now uses idempotent create writes (`upsert` with conflict handling) so replayed IDs can converge without manual cleanup.
 

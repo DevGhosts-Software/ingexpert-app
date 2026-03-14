@@ -440,7 +440,7 @@ async function main() {
   }
 
   // ── 5. Supabase SQL setup scripts (ordered by filename) ─────────────────────
-  const sqlDir = path.join(__dirname, 'supabase');
+  const sqlDir = path.join(__dirname, '..', 'supabase', 'migrations');
   if (!fs.existsSync(sqlDir)) {
     console.warn('\nSupabase SQL folder not found, skipping SQL setup.');
   } else {
@@ -450,7 +450,7 @@ async function main() {
       .sort((left, right) => left.localeCompare(right));
 
     if (sqlFiles.length === 0) {
-      console.warn('\nNo SQL files found in prisma/supabase, skipping SQL setup.');
+      console.warn('\nNo SQL files found in supabase/migrations, skipping SQL setup.');
     } else {
       console.log('\n── Supabase SQL Setup ─────────────────────────');
       const dbClient = new Client({
