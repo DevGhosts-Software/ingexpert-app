@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { UserEditSheet } from './user-edit-sheet';
 import type { UserEntity, UserRole } from './user-table.types';
 
@@ -430,7 +431,7 @@ function RowActions({ user }: { user: UserEntity }) {
   const [grantOpen, setGrantOpen] = useState(false);
   const [revokeOpen, setRevokeOpen] = useState(false);
 
-  const { data: me } = trpc.users.me.useQuery();
+  const { user: me } = useCurrentUser();
   const currentId = me?.id ?? '';
   const isEditAllowed = canEdit(currentId, user);
   const isDeleteAllowed = canDelete(currentId, user);

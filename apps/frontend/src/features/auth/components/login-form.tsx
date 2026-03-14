@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginDto, LoginSchema } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -52,7 +51,6 @@ export function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
-  const utils = trpc.useUtils();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function onSubmit(values: LoginDto) {
@@ -65,8 +63,6 @@ export function LoginForm() {
       return;
     }
 
-    // Reset the cached users.me error so the dashboard fetches fresh
-    void utils.users.me.reset();
     toast.success('Sesión iniciada correctamente');
     router.push('/');
   }

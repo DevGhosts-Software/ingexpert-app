@@ -10,7 +10,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { type CreateItemDto, CreateItemSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
-import { trpc } from '@/lib/trpc';
 import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
@@ -199,14 +198,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     }
   }, [open, isEdit, item, form]);
 
-  const setComponentsMutation = trpc.kits.setComponents.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al guardar los componentes'),
-  });
-
-  const clearKitMutation = trpc.kits.clearKit.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al limpiar los componentes'),
-  });
-
   const onSubmit = useCallback(
     async (values: FormValues) => {
       const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
@@ -250,21 +241,22 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
             ],
           );
         }
-      });
 
-      if (values.type === 'KIT') {
-        if (kitComponents.length > 0) {
-          setComponentsMutation.mutate({
-            kit_id: itemId,
-            components: kitComponents.map((c) => ({
-              item_id: c.componentId,
-              quantity: c.quantity,
-            })),
-          });
+        if (values.type === 'KIT') {
+          await tx.execute('DELETE FROM kit_details WHERE kit_id = ?', [itemId]);
+          for (const component of kitComponents) {
+            await tx.execute(
+              `
+                INSERT INTO kit_details (id, kit_id, item_id, quantity)
+                VALUES (?, ?, ?, ?)
+              `,
+              [uuidv4(), itemId, component.componentId, component.quantity],
+            );
+          }
         } else {
-          clearKitMutation.mutate(itemId);
+          await tx.execute('DELETE FROM kit_details WHERE kit_id = ?', [itemId]);
         }
-      }
+      });
 
       if (pendingFile) {
         void (async () => {
@@ -296,17 +288,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
       );
       onClose();
     },
-    [
-      clearKitMutation,
-      deleteFile,
-      isEdit,
-      item,
-      kitComponents,
-      onClose,
-      powerSyncDb,
-      setComponentsMutation,
-      uploadFile,
-    ],
+    [deleteFile, isEdit, item, kitComponents, onClose, powerSyncDb, uploadFile],
   );
 
   const isPending = isUploading;

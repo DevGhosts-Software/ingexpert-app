@@ -4,12 +4,13 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 import { FolderOpen, FolderPlus, Pencil, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateProjectSchema, type CreateProjectDto } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
 import { useLocalUserNames } from '@/lib/api-migration-local-reads';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -60,9 +61,9 @@ interface ProjectFormSheetProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSheetProps) {
-  const utils = trpc.useUtils();
   const isEdit = mode === 'edit';
   const localUsers = useLocalUserNames();
+  const powerSyncDb = usePowerSyncDatabase();
   const users = localUsers;
 
   const form = useForm<FormValues>({
@@ -84,40 +85,41 @@ export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSh
     }
   }, [open, isEdit, project, form]);
 
-  function invalidateAll() {
-    return Promise.all([
-      utils.projects.list.invalidate(),
-      utils.projects.getAll.invalidate(),
-      // Also invalidate movements since they display project names
-      utils.movements.getAll.invalidate(),
-    ]);
-  }
+  const isPending = form.formState.isSubmitting;
 
-  const createMutation = trpc.projects.create.useMutation({
-    onSuccess: () => {
-      toast.success('Proyecto creado correctamente');
-      void invalidateAll();
+  async function onSubmit(values: FormValues) {
+    try {
+      await powerSyncDb.writeTransaction(async (tx) => {
+        if (isEdit && project) {
+          await tx.execute(
+            `
+              UPDATE projects
+              SET name = ?, contact = ?, address = ?, manager_id = ?
+              WHERE id = ?
+            `,
+            [values.name, values.contact, values.address, values.managerId, project.id],
+          );
+          return;
+        }
+
+        await tx.execute(
+          `
+            INSERT INTO projects (id, name, contact, address, manager_id)
+            VALUES (?, ?, ?, ?, ?)
+          `,
+          [uuidv4(), values.name, values.contact, values.address, values.managerId],
+        );
+      });
+
+      toast.success(
+        isEdit
+          ? 'Proyecto guardado localmente. Se sincronizará automáticamente.'
+          : 'Proyecto creado localmente. Se sincronizará automáticamente.',
+      );
       onClose();
-    },
-    onError: (e) => toast.error(e.message ?? 'Error al crear proyecto'),
-  });
-
-  const updateMutation = trpc.projects.update.useMutation({
-    onSuccess: () => {
-      toast.success('Proyecto actualizado correctamente');
-      void invalidateAll();
-      onClose();
-    },
-    onError: (e) => toast.error(e.message ?? 'Error al actualizar proyecto'),
-  });
-
-  const isPending = createMutation.isPending || updateMutation.isPending;
-
-  function onSubmit(values: FormValues) {
-    if (isEdit && project) {
-      updateMutation.mutate({ id: project.id, ...values });
-    } else {
-      createMutation.mutate(values);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al guardar proyecto';
+      toast.error(message);
     }
   }
 

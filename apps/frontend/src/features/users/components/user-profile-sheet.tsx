@@ -7,8 +7,9 @@ import { z } from 'zod';
 import { Eye, EyeOff, LogOut, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { trpc } from '@/lib/trpc';
+import { supabase } from '@/lib/supabase';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -98,9 +99,11 @@ interface UserProfileSheetProps {
 }
 
 export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileSheetProps) {
-  const utils = trpc.useUtils();
   const imageFieldRef = useRef<ImageUploadFieldHandle>(null);
   const { uploadFile, deleteFile, isUploading } = useStorageUpload({ folder: 'uploads' });
+  const powerSyncDb = usePowerSyncDatabase();
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // ── Avatar form ──
   const avatarForm = useForm<AvatarValues>({
@@ -108,18 +111,9 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
     defaultValues: { avatar: user.avatar ?? null },
   });
 
-  const updateMeMutation = trpc.users.updateMe.useMutation({
-    onSuccess: (_, variables) => {
-      toast.success('Avatar actualizado');
-      imageFieldRef.current?.reset();
-      avatarForm.setValue('avatar', variables.avatar ?? null);
-      utils.users.me.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const onAvatarSubmit = useCallback(
     async (values: AvatarValues) => {
+      setIsSavingAvatar(true);
       const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
       let finalAvatarUrl = values.avatar ?? null;
 
@@ -127,6 +121,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
         try {
           finalAvatarUrl = await uploadFile(pendingFile);
         } catch {
+          setIsSavingAvatar(false);
           return; // uploadFile toasts the error
         }
         // Delete old avatar if replaced
@@ -138,9 +133,21 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
         void deleteFile(user.avatar);
       }
 
-      updateMeMutation.mutate({ avatar: finalAvatarUrl });
+      try {
+        await powerSyncDb.writeTransaction(async (tx) => {
+          await tx.execute('UPDATE users SET avatar = ? WHERE id = ?', [finalAvatarUrl, user.id]);
+        });
+        toast.success('Avatar actualizado');
+        imageFieldRef.current?.reset();
+        avatarForm.setValue('avatar', finalAvatarUrl);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Error al actualizar avatar';
+        toast.error(message);
+      } finally {
+        setIsSavingAvatar(false);
+      }
     },
-    [uploadFile, deleteFile, user.avatar, updateMeMutation],
+    [uploadFile, deleteFile, powerSyncDb, user.avatar, user.id, avatarForm],
   );
 
   const handleAvatarFormSubmit = useCallback(
@@ -157,19 +164,19 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const updatePasswordMutation = trpc.users.updateMyPassword.useMutation({
-    onSuccess: () => {
-      toast.success('Contraseña actualizada');
-      passwordForm.reset();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const onPasswordSubmit = (values: PasswordValues) => {
-    updatePasswordMutation.mutate({ password: values.password });
+  const onPasswordSubmit = async (values: PasswordValues) => {
+    setIsUpdatingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: values.password });
+    setIsUpdatingPassword(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Contraseña actualizada');
+    passwordForm.reset();
   };
 
-  const isAvatarPending = updateMeMutation.isPending || isUploading;
+  const isAvatarPending = isSavingAvatar || isUploading;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -249,7 +256,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
                     <FormControl>
                       <PasswordInput
                         placeholder="Mínimo 8 caracteres"
-                        disabled={updatePasswordMutation.isPending}
+                        disabled={isUpdatingPassword}
                         {...field}
                       />
                     </FormControl>
@@ -267,7 +274,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
                     <FormControl>
                       <PasswordInput
                         placeholder="Repite la contraseña"
-                        disabled={updatePasswordMutation.isPending}
+                        disabled={isUpdatingPassword}
                         {...field}
                       />
                     </FormControl>
@@ -277,8 +284,8 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
               />
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={updatePasswordMutation.isPending} size="sm">
-                  {updatePasswordMutation.isPending ? 'Actualizando…' : 'Cambiar contraseña'}
+                <Button type="submit" disabled={isUpdatingPassword} size="sm">
+                  {isUpdatingPassword ? 'Actualizando…' : 'Cambiar contraseña'}
                 </Button>
               </div>
             </form>

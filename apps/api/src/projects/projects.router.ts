@@ -2,13 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { TrpcService } from '../trpc/trpc.service';
 import { ProjectsService } from './projects.service';
-import {
-  CreateProjectSchema,
-  ProjectEntitySchema,
-  ProjectListSchema,
-  UpdateProjectSchema,
-  ProjectPaginationSchema,
-} from '@ingexpert/schema';
+import { ProjectEntitySchema, ProjectListSchema, ProjectPaginationSchema } from '@ingexpert/schema';
 
 @Injectable()
 export class ProjectsRouter {
@@ -46,45 +40,6 @@ export class ProjectsRouter {
         .output(z.array(ProjectEntitySchema))
         .query(async () => {
           return this.projectsService.findAll();
-        }),
-
-      create: this.trpc.adminProcedure
-        .meta({
-          openapi: {
-            method: 'POST',
-            path: '/projects',
-            tags: ['projects'],
-            summary: 'Create project',
-          },
-        })
-        .input(CreateProjectSchema)
-        .output(ProjectEntitySchema)
-        .mutation(async ({ input }) => {
-          return this.projectsService.create(input);
-        }),
-
-      update: this.trpc.adminProcedure
-        .meta({
-          openapi: {
-            method: 'PATCH',
-            path: '/projects/{id}',
-            tags: ['projects'],
-            summary: 'Update project',
-          },
-        })
-        .input(UpdateProjectSchema.extend({ id: z.string().uuid() }))
-        .output(ProjectEntitySchema)
-        .mutation(async ({ input }) => {
-          const { id, ...data } = input;
-          return this.projectsService.update(id, data);
-        }),
-
-      // Primitive input — excluded from OpenAPI spec
-      remove: this.trpc.adminProcedure
-        .input(z.string().uuid())
-        .output(z.object({ id: z.string().uuid() }))
-        .mutation(async ({ input }) => {
-          return this.projectsService.remove(input);
         }),
     });
   }

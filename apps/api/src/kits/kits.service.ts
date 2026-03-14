@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ItemType } from '@ingexpert/database';
 import { PrismaService } from '../prisma/prisma.service';
-import { KitImportRow, SetKitComponentsDto } from '@ingexpert/schema';
+import { KitImportRow } from '@ingexpert/schema';
 
 @Injectable()
 export class KitsService {
@@ -104,37 +104,6 @@ export class KitsService {
           });
         }
       }
-    });
-  }
-
-  async setComponents(data: SetKitComponentsDto) {
-    const { kit_id, components } = data;
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.kitDetail.deleteMany({
-        where: { kitId: kit_id },
-      });
-
-      if (components.length > 0) {
-        await tx.kitDetail.createMany({
-          data: components.map((comp) => ({
-            kitId: kit_id,
-            componentId: comp.item_id,
-            quantity: comp.quantity,
-          })),
-        });
-      }
-
-      return tx.kitDetail.findMany({
-        where: { kitId: kit_id },
-        include: { component: true },
-      });
-    });
-  }
-
-  async clearKit(kitId: string) {
-    return this.prisma.kitDetail.deleteMany({
-      where: { kitId },
     });
   }
 }

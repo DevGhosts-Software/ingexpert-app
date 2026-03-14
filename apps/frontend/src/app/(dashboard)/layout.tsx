@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -11,6 +10,7 @@ import {
   readOfflineValidatedUser,
   writeOfflineValidatedUser,
 } from '@/lib/auth/offline-session';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { DashboardNavbar } from '@/components/dashboard-navbar';
@@ -29,41 +29,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
-  const [sessionExpiresAt, setSessionExpiresAt] = useState<number | undefined>(undefined);
-  const [sessionResolved, setSessionResolved] = useState(false);
   const cachedUser = readOfflineValidatedUser();
+  const { user, sessionUserId, sessionExpiresAt, sessionResolved, isFetching } = useCurrentUser();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    let isActive = true;
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isActive) return;
-      setSessionUserId(session?.user.id ?? null);
-      setSessionExpiresAt(session?.expires_at);
-      setSessionResolved(true);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSessionUserId(session?.user.id ?? null);
-      setSessionExpiresAt(session?.expires_at);
-      setSessionResolved(true);
-    });
-
-    return () => {
-      isActive = false;
-      subscription.unsubscribe();
-    };
-  }, [mounted]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -76,13 +49,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.removeEventListener('offline', handleOffline);
     };
   }, [mounted]);
-
-  const { data: user, isPending } = trpc.users.me.useQuery(undefined, {
-    retry: false,
-    enabled: mounted && isOnline && !!sessionUserId,
-  });
-
-  const utils = trpc.useUtils();
 
   useEffect(() => {
     if (!user) return;
@@ -137,15 +103,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [canUseOfflineSession, isOnline, mounted, router, sessionResolved]);
 
-  useEffect(() => {
-    if (!mounted || !isOnline || !sessionUserId) return;
-    void utils.users.me.invalidate();
-  }, [isOnline, mounted, sessionUserId, utils.users.me]);
-
   if (
     !mounted ||
     !sessionResolved ||
-    (isOnline && !!sessionUserId && isPending && !effectiveUser)
+    (isOnline && !!sessionUserId && isFetching && !effectiveUser)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -177,7 +138,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
     clearOfflineValidatedUser();
-    void utils.users.me.reset();
     router.push('/login');
     toast.success('Logged out successfully');
   };

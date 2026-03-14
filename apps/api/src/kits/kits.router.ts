@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { TrpcService } from '../trpc/trpc.service';
 import { KitsService } from './kits.service';
-import { KitImportRowSchema, KitSummarySchema, SetKitComponentsSchema } from '@ingexpert/schema';
+import { KitImportRowSchema, KitSummarySchema } from '@ingexpert/schema';
 
 @Injectable()
 export class KitsRouter {
@@ -25,23 +25,6 @@ export class KitsRouter {
         .output(z.array(KitSummarySchema))
         .query(async () => {
           return this.kitsService.getAllWithComponents();
-        }),
-
-      setComponents: this.trpc.protectedProcedure
-        .input(SetKitComponentsSchema)
-        .output(z.object({ success: z.boolean() }))
-        .mutation(async ({ input }) => {
-          await this.kitsService.setComponents(input);
-          return { success: true };
-        }),
-
-      // Primitive input — excluded from OpenAPI spec
-      clearKit: this.trpc.protectedProcedure
-        .input(z.string().uuid())
-        .output(z.object({ success: z.boolean() }))
-        .mutation(async ({ input }) => {
-          await this.kitsService.clearKit(input);
-          return { success: true };
         }),
 
       // Array input — excluded from OpenAPI spec

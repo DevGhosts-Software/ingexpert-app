@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import { trpc } from '@/lib/trpc';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -86,7 +86,7 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: me } = trpc.users.me.useQuery();
+  const { user: me } = useCurrentUser();
   const isAdmin = me?.role === 'ADMIN';
 
   const localItemStatsQuery = useQuery<LocalItemStatsRow>(`

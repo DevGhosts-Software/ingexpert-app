@@ -1,12 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@ingexpert/database';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  CreateProjectDto,
-  UpdateProjectDto,
-  ProjectEntity,
-  ProjectPaginationInput,
-} from '@ingexpert/schema';
+import { ProjectEntity, ProjectPaginationInput } from '@ingexpert/schema';
 
 const MANAGER_INCLUDE = {
   manager: { select: { name: true } },
@@ -64,36 +59,5 @@ export class ProjectsService {
       include: MANAGER_INCLUDE,
     });
     return projects.map((p) => this.mapProject(p));
-  }
-
-  async create(input: CreateProjectDto): Promise<ProjectEntity> {
-    const project = await this.prisma.project.create({ data: input, include: MANAGER_INCLUDE });
-    return this.mapProject(project);
-  }
-
-  async update(id: string, input: UpdateProjectDto): Promise<ProjectEntity> {
-    const existing = await this.prisma.project.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(`El proyecto con ID ${id} no existe.`);
-    const project = await this.prisma.project.update({
-      where: { id },
-      data: input,
-      include: MANAGER_INCLUDE,
-    });
-    return this.mapProject(project);
-  }
-
-  async remove(id: string): Promise<{ id: string }> {
-    const existing = await this.prisma.project.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException(`El proyecto con ID ${id} no existe.`);
-
-    const movementCount = await this.prisma.movement.count({ where: { projectId: id } });
-    if (movementCount > 0) {
-      throw new BadRequestException(
-        `No se puede eliminar "${existing.name}": tiene ${movementCount} movimiento${movementCount > 1 ? 's' : ''} asociado${movementCount > 1 ? 's' : ''}.`,
-      );
-    }
-
-    await this.prisma.project.delete({ where: { id } });
-    return { id };
   }
 }

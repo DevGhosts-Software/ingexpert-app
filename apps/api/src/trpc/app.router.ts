@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { TrpcService } from './trpc.service';
-import { UsersRouter } from '../users/users.router';
 import { AdminUsersRouter } from '../users/admin-users.router';
 import { ItemsRouter } from '../items/items.router';
 import { MovementsRouter } from '../movements/movements.router';
@@ -11,7 +10,6 @@ import { ProjectsRouter } from '../projects/projects.router';
 export class AppRouter {
   constructor(
     private readonly trpc: TrpcService,
-    private readonly usersRouter: UsersRouter,
     private readonly adminUsersRouter: AdminUsersRouter,
     private readonly itemsRouter: ItemsRouter,
     private readonly movementsRouter: MovementsRouter,
@@ -30,7 +28,6 @@ export class AppRouter {
           headers: ctx.req.headers,
         };
       }),
-      users: this.usersRouter.router,
       adminUsers: this.adminUsersRouter.router,
       items: this.itemsRouter.router,
       kits: this.kitsRouter.router,

@@ -64,14 +64,6 @@ export class ItemsRouter {
           return this.itemsService.update(id, data);
         }),
 
-      // DELETE /items/:id — primitive input, excluded from OpenAPI spec
-      remove: this.trpc.adminProcedure
-        .input(z.string().uuid())
-        .output(ItemEntitySchema)
-        .mutation(async ({ input }) => {
-          return this.itemsService.remove(input);
-        }),
-
       // Array inputs — excluded from OpenAPI spec
       createBatch: this.trpc.adminProcedure
         .input(z.array(CreateItemSchema))
