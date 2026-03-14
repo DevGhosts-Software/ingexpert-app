@@ -146,6 +146,9 @@ const resolveCallerIdentity = async (
   return { ok: true, callerId: callerData.user.id, strategy: 'bearer-token' };
 };
 
+const isAuthUserNotFoundError = (error: { message?: string } | null | undefined): boolean =>
+  /user not found/i.test(error?.message ?? '');
+
 const ensureWorkArea = async (adminClient: ReturnType<typeof createClient>, workArea: string) => {
   const { data: existing, error: existingError } = await adminClient
     .from('work_areas')
@@ -338,8 +341,18 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === 'revokeAuth') {
+      const { data: existingUser, error: existingUserError } = await adminClient
+        .from('users')
+        .select('id,has_auth')
+        .eq('id', payload.id)
+        .maybeSingle();
+      if (existingUserError) throw new Error(existingUserError.message);
+      if (!existingUser) throw new Error('User not found');
+
       const { error: authError } = await adminClient.auth.admin.deleteUser(payload.id);
-      if (authError) throw new Error(authError.message);
+      if (authError && !isAuthUserNotFoundError(authError)) {
+        throw new Error(authError.message);
+      }
       const { error: updateError } = await adminClient
         .from('users')
         .update({ has_auth: false })
@@ -410,7 +423,9 @@ Deno.serve(async (req) => {
 
       if (existing?.has_auth) {
         const { error: authError } = await adminClient.auth.admin.deleteUser(payload.id);
-        if (authError) throw new Error(authError.message);
+        if (authError && !isAuthUserNotFoundError(authError)) {
+          throw new Error(authError.message);
+        }
       }
 
       const { error: deleteError } = await adminClient.from('users').delete().eq('id', payload.id);
