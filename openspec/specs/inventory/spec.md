@@ -238,3 +238,13 @@ Migration of inventory stats MUST preserve exact aggregate semantics currently e
 - **WHEN** local computation is enabled for inventory stats
 - **THEN** field-level totals (`total`, `products`, `equipment`, `tools`, `kits`) MUST match API parity criteria
 - **THEN** mismatches MUST trigger rollback handling
+
+## Requirement: Inventory export SHALL run from local synchronized data
+
+Inventory export flows in migrated dashboard/inventory screens MUST source data from local PowerSync SQLite state without runtime API export dependency.
+
+#### Scenario: User triggers inventory export while synced
+
+- **WHEN** export is requested from inventory surfaces
+- **THEN** export rows MUST be generated from local synchronized tables
+- **THEN** no API export/stats fallback request may be used for that export path

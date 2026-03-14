@@ -239,3 +239,13 @@ Movement API read procedures marked removal-ready MUST be deleted from active AP
 - **WHEN** retention evidence shows zero active frontend usage and parity-complete local replacement
 - **THEN** maintainers MUST delete the retired movement read router/service procedure
 - **THEN** the retired procedure MUST be absent from generated OpenAPI
+
+## Requirement: Movement workflows SHALL remain independent from API auth procedures
+
+Movement screens and sync workflows MUST not depend on API `auth.*` procedures after frontend Supabase auth authority cutover.
+
+#### Scenario: User resumes movement workflow after token refresh
+
+- **WHEN** Supabase refreshes or restores session in frontend
+- **THEN** movement local read/write behavior MUST continue without calling API `auth.refresh`
+- **THEN** movement permissions must continue to follow existing RBAC constraints

@@ -30,15 +30,16 @@ Any frontend flow that replaces API-provided stats with local SQLite-derived agg
 - **THEN** the system MUST run a dual-run comparison between local aggregate output and API output
 - **THEN** migration may proceed only after parity acceptance criteria are met
 
-### Requirement: Auth endpoints MUST remain protected by security-equivalence gates
+### Requirement: Auth endpoint migration MUST be gated by security-equivalence evidence
 
-Auth/session procedures MUST NOT be migrated away from the API by default; they require explicit proof of equivalent security guarantees prior to relocation.
+Auth/session procedures may migrate away from API ownership only when equivalent security controls are documented and implemented.
 
 #### Scenario: Auth migration proposal is evaluated
 
 - **WHEN** a proposal suggests moving `auth.login`, `auth.refresh`, `auth.logout`, or `users.me` authority
 - **THEN** the proposal MUST document equivalent JWT/JWKS validation, token lifecycle, and RBAC enforcement controls
 - **THEN** the migration MUST remain blocked until security-equivalence criteria are approved
+- **THEN** once approved and cut over, audit evidence MUST show zero active frontend `trpc.auth.*` usage before endpoint retirement
 
 ### Requirement: Audit outputs SHALL drive executable migration state
 

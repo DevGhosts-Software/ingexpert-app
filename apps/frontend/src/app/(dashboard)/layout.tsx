@@ -83,7 +83,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   const utils = trpc.useUtils();
-  const logoutMutation = trpc.auth.logout.useMutation();
 
   useEffect(() => {
     if (!user) return;
@@ -171,16 +170,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const rawPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
   const pageTitle = pageTitles[rawPath] ?? 'Ingexpert';
-  const handleLogout = () => {
-    logoutMutation.mutate(undefined, {
-      onSuccess: async () => {
-        await supabase.auth.signOut();
-        clearOfflineValidatedUser();
-        void utils.users.me.reset();
-        router.push('/login');
-        toast.success('Logged out successfully');
-      },
-    });
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    clearOfflineValidatedUser();
+    void utils.users.me.reset();
+    router.push('/login');
+    toast.success('Logged out successfully');
   };
 
   return (

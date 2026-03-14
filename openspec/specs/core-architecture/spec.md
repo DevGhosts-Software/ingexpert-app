@@ -21,7 +21,7 @@ If you need historical context on why these architectural boundaries exist, refe
 ingexpert-app/
 ├── apps/
 │   ├── api/          NestJS 11 + tRPC — backend, all DB writes
-│   └── frontend/     Next.js + React 19 — UI, reads via tRPC only
+│   └── frontend/     Next.js + React 19 — UI, local-first reads + tRPC admin/ops mutations
 │       └── src-tauri/  Tauri 2 desktop configuration (native packaging)
 ├── packages/
 │   ├── schema/       Shared Zod DTOs + Prisma-derived entity types
@@ -525,6 +525,8 @@ const handleExport = async () => {
 ## Frontend — Row-Level Actions Exception
 
 Row action menus may call `trpc.users.me.useQuery()` **directly** — it is cached by the dashboard layout, so no extra network request is made. Only `trpc.users.me` (or equivalent `staleTime: Infinity` queries) may be used this way.
+
+Frontend auth session lifecycle (login/logout/refresh behavior) is Supabase-client-owned and must not be routed through API `auth.*` procedures.
 
 ---
 

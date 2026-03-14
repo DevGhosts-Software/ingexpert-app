@@ -53,24 +53,22 @@ export function LoginForm() {
   });
 
   const utils = trpc.useUtils();
-  const loginMutation = trpc.auth.login.useMutation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function onSubmit(values: LoginDto) {
-    loginMutation.mutate(values, {
-      onSuccess: async (data) => {
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
-        // Reset the cached users.me error so the dashboard fetches fresh
-        void utils.users.me.reset();
-        toast.success('Sesión iniciada correctamente');
-        router.push('/');
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');
-      },
-    });
+  async function onSubmit(values: LoginDto) {
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.signInWithPassword(values);
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');
+      return;
+    }
+
+    // Reset the cached users.me error so the dashboard fetches fresh
+    void utils.users.me.reset();
+    toast.success('Sesión iniciada correctamente');
+    router.push('/');
   }
 
   return (
@@ -105,7 +103,7 @@ export function LoginForm() {
                       type="email"
                       placeholder="usuario@empresa.com"
                       autoComplete="email"
-                      disabled={loginMutation.isPending}
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -126,7 +124,7 @@ export function LoginForm() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="pr-10"
-                        disabled={loginMutation.isPending}
+                        disabled={isSubmitting}
                         {...field}
                       />
                       <button
@@ -147,8 +145,8 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full mt-2" disabled={loginMutation.isPending}>
-              {loginMutation.isPending ? 'Iniciando sesión…' : 'Iniciar sesión'}
+            <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+              {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
             </Button>
           </form>
         </Form>

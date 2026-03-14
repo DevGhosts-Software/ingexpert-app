@@ -121,16 +121,16 @@ isActive={item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)}
 
 ---
 
-## Frontend — tRPC Transport URL Contract
-
-Frontend authentication calls (`auth.login`, `auth.refresh`, `auth.logout`) MUST be sent through the API tRPC middleware path (`/trpc`).
+## Frontend — API tRPC Transport URL Contract
 
 `NEXT_PUBLIC_API_URL` MAY be configured as either:
 
 - API origin only (e.g. `http://localhost:3001`)
 - Full tRPC URL (e.g. `http://localhost:3001/trpc`)
 
-When origin-only is provided, frontend transport MUST normalize to the `/trpc` endpoint before dispatching requests, and MUST NOT call root-level procedure paths such as `/auth.login`.
+When origin-only is provided, frontend transport MUST normalize to the `/trpc` endpoint before dispatching requests.
+
+Frontend authentication session authority MUST use Supabase client flows directly (`supabase.auth.signInWithPassword`, token lifecycle handled by Supabase SDK, `supabase.auth.signOut`) and MUST NOT call API `auth.*` procedures.
 
 ---
 
@@ -160,15 +160,21 @@ When connectivity returns, the client MUST revalidate the active session against
 - **THEN** the client MUST attempt normal session/token revalidation
 - **THEN** invalid sessions MUST be revoked with clear user feedback and local cleanup
 
-## Requirement: Auth authority SHALL remain API-owned during read migration
+## Requirement: Auth session lifecycle SHALL be frontend-owned with Supabase authority
 
-API-scope reduction initiatives MUST NOT relocate `auth.login`, `auth.refresh`, `auth.logout`, or `users.me` authority without an approved security-equivalence change.
+Auth login/logout/token lifecycle MUST be executed by frontend Supabase SDK flows, while API retains protected user/admin management operations.
 
-#### Scenario: Read-migration rollout plan includes auth procedure
+#### Scenario: User signs in from login form
 
-- **WHEN** a migration plan attempts to include an auth/session procedure
-- **THEN** the procedure MUST be marked blocked from cutover by default
-- **THEN** migration MAY proceed only after explicit security-equivalence approval
+- **WHEN** a user submits valid credentials on login
+- **THEN** the frontend MUST authenticate through Supabase client SDK directly
+- **THEN** no API `auth.login` procedure call may be made
+
+#### Scenario: User signs out from dashboard profile
+
+- **WHEN** logout is requested
+- **THEN** the frontend MUST call Supabase `signOut`
+- **THEN** local offline-auth cache MUST be cleared before redirecting to login
 
 ## Requirement: Read migration SHALL not weaken RBAC checks
 
@@ -180,15 +186,15 @@ Any local-first cutover in adjacent domains MUST preserve existing RBAC-protecte
 - **THEN** role-based access behavior MUST remain unchanged from approved auth policy
 - **THEN** any RBAC regression MUST trigger immediate rollback
 
-## Requirement: API cutdown SHALL not remove auth and authority management endpoints
+## Requirement: API cutdown SHALL retire API auth procedures after frontend cutover
 
-API simplification MUST retain centralized authority for `auth.login`, `auth.refresh`, `auth.logout`, `users.me`, and user/admin management operations.
+Once frontend Supabase auth authority is active, API `auth.login`, `auth.refresh`, and `auth.logout` procedures MUST be removed from active router/service/OpenAPI surface.
 
-#### Scenario: Endpoint removal list is prepared
+#### Scenario: Auth cutover is finalized
 
-- **WHEN** maintainers compile candidate endpoint removals
-- **THEN** auth/session and user/admin authority operations MUST be excluded from removal
-- **THEN** the change MUST fail review if any protected authority endpoint is included
+- **WHEN** frontend auth/session lifecycle is verified with Supabase authority
+- **THEN** API `auth.*` procedures MUST be deleted from backend router/service wiring
+- **THEN** generated OpenAPI MUST not expose `/auth/login`, `/auth/refresh`, or `/auth/logout`
 
 ## Requirement: Read cutdown SHALL preserve RBAC enforcement ownership
 

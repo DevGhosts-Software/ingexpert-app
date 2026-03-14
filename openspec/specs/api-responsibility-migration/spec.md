@@ -8,7 +8,8 @@ The system MUST execute API simplification in phased order based on audited proc
 
 - **WHEN** maintainers start a migration cycle
 - **THEN** each frontend procedure MUST be assigned a rollout tier derived from its classification
-- **THEN** `Identity/Auth` and `Server Authority Write` procedures MUST be marked non-migratable in this cycle
+- **THEN** `Server Authority Write` procedures MUST be marked non-migratable in this cycle unless explicitly approved
+- **THEN** `Identity/Auth` procedures MAY migrate only with approved security-equivalence evidence
 
 ### Requirement: Procedure cutover SHALL be gated by dual-run parity
 

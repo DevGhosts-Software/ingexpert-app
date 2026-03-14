@@ -107,3 +107,13 @@ Project stats migration MUST retain deterministic total-project semantics under 
 - **WHEN** local compute is enabled for project stats
 - **THEN** the `total` project count MUST meet parity acceptance criteria versus API output
 - **THEN** any sustained mismatch MUST trigger rollback
+
+## Requirement: Project write authority SHALL preserve API admin controls
+
+Project create/update/delete operations MUST remain API-owned while admin RBAC and delete-linked-movement restrictions are enforced server-side.
+
+#### Scenario: Project mutation is invoked from frontend
+
+- **WHEN** a project create, update, or delete action is submitted
+- **THEN** the action MUST be enforced through API admin-protected procedures
+- **THEN** local-only reads MUST remain compatible with the resulting synchronized state
