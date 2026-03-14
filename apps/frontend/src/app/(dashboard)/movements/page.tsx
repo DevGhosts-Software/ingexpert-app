@@ -1,27 +1,41 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
+import { supabase } from '@/lib/supabase';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { MovementStats } from '@/features/movements/components/movement-stats';
 import { MovementTable } from '@/features/movements/components/movement-table';
 import type { ActiveTab, TypeCounts } from '@/features/movements/components/movement-table.types';
 
-const DEFAULT_STATS: MovementStatsType = {
-  total: 0,
-  purchases: 0,
-  returns: 0,
-  exits: 0,
-  writeoffs: 0,
-  thisMonth: 0,
-};
 const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0, writeoff: 0 };
+
+type LocalMovementRow = {
+  id: string;
+  type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF';
+  created_by_id: string;
+  destination: string | null;
+  observations: string | null;
+  responsible_delivery_id: string | null;
+  responsible_receipt_id: string | null;
+  date: string;
+  project_id: string | null;
+  items_count: number | string | null;
+  project_name: string | null;
+  creator_name: string | null;
+  responsible_delivery_name: string | null;
+  responsible_receipt_name: string | null;
+};
+
+type LocalProjectOption = { id: string; name: string };
+type LocalUserOption = { id: string; name: string | null; email: string };
 
 export default function MovementsPage() {
   const isAdmin = useIsAdmin();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [search, setSearch] = useState('');
@@ -30,27 +44,93 @@ export default function MovementsPage() {
   const [projectFilter, setProjectFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'date', desc: true }]);
 
-  // Server-side filters
+  // Shared filters (applied client-side on local rows)
   const [creatorFilter, setCreatorFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
 
-  const serverFilters = useMemo(
-    () => ({
-      createdById: isAdmin && creatorFilter !== 'all' ? creatorFilter : undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-    }),
-    [isAdmin, creatorFilter, dateFrom, dateTo],
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) {
+        setCurrentUserId(session?.user.id ?? null);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user.id ?? null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const movementsQuery = useQuery<LocalMovementRow>(`
+    SELECT
+      m.id,
+      m.type,
+      m.created_by_id,
+      m.destination,
+      m.observations,
+      m.responsible_delivery_id,
+      m.responsible_receipt_id,
+      m.date,
+      m.project_id,
+      COUNT(md.id) AS items_count,
+      p.name AS project_name,
+      creator.name AS creator_name,
+      delivery.name AS responsible_delivery_name,
+      receipt.name AS responsible_receipt_name
+    FROM movements m
+    LEFT JOIN movement_details md ON md.movement_id = m.id
+    LEFT JOIN projects p ON p.id = m.project_id
+    LEFT JOIN users creator ON creator.id = m.created_by_id
+    LEFT JOIN users delivery ON delivery.id = m.responsible_delivery_id
+    LEFT JOIN users receipt ON receipt.id = m.responsible_receipt_id
+    GROUP BY
+      m.id, m.type, m.created_by_id, m.destination, m.observations,
+      m.responsible_delivery_id, m.responsible_receipt_id, m.date, m.project_id,
+      p.name, creator.name, delivery.name, receipt.name
+    ORDER BY m.date DESC
+  `);
+  const projectsQuery = useQuery<LocalProjectOption>(
+    'SELECT id, name FROM projects ORDER BY name ASC',
+  );
+  const usersQuery = useQuery<LocalUserOption>(
+    isAdmin
+      ? 'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC'
+      : 'SELECT id, name, email FROM users WHERE 1 = 0',
   );
 
-  const { data: allMovements = [], isLoading } = trpc.movements.getAll.useQuery(serverFilters);
-  const { data: stats = DEFAULT_STATS } = trpc.movements.getStats.useQuery(serverFilters);
-  const { data: projects = [] } = trpc.movements.getProjects.useQuery();
-  // Only admins fetch the user list for the creator filter
-  const { data: users = [] } = trpc.users.listNames.useQuery(undefined, { enabled: isAdmin });
+  const allMovements = useMemo(
+    () =>
+      (movementsQuery.data ?? []).map((movement) => ({
+        id: movement.id,
+        type: movement.type,
+        createdById: movement.created_by_id,
+        destination: movement.destination,
+        observations: movement.observations,
+        responsibleDeliveryId: movement.responsible_delivery_id,
+        responsibleReceiptId: movement.responsible_receipt_id,
+        date: movement.date,
+        projectId: movement.project_id,
+        itemsCount: Number(movement.items_count ?? 0),
+        projectName: movement.project_name,
+        creatorName: movement.creator_name,
+        responsibleDeliveryName: movement.responsible_delivery_name,
+        responsibleReceiptName: movement.responsible_receipt_name,
+      })),
+    [movementsQuery.data],
+  );
 
-  const { tableData, pageCount, typeCounts } = useMemo(() => {
+  const projects = projectsQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+
+  const { tableData, pageCount, typeCounts, stats } = useMemo(() => {
     const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
       all: undefined,
       purchase: 'PURCHASE',
@@ -59,7 +139,31 @@ export default function MovementsPage() {
       writeoff: 'WRITEOFF',
     };
 
-    const preType = allMovements.filter((m) => {
+    const preCreatedByFiltered = allMovements.filter((movement) => {
+      if (isAdmin) {
+        return creatorFilter === 'all' || movement.createdById === creatorFilter;
+      }
+      if (!currentUserId) {
+        return true;
+      }
+      return movement.createdById === currentUserId;
+    });
+
+    const preDateFiltered = preCreatedByFiltered.filter((movement) => {
+      if (!dateFrom && !dateTo) {
+        return true;
+      }
+      const movementDate = new Date(movement.date);
+      if (dateFrom && movementDate < new Date(`${dateFrom}T00:00:00`)) {
+        return false;
+      }
+      if (dateTo && movementDate > new Date(`${dateTo}T23:59:59`)) {
+        return false;
+      }
+      return true;
+    });
+
+    const preType = preDateFiltered.filter((m) => {
       const matchesSearch =
         debouncedSearch === '' ||
         (m.creatorName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false) ||
@@ -86,10 +190,18 @@ export default function MovementsPage() {
     });
 
     const { pageIndex, pageSize } = pagination;
+    const now = new Date();
+    const thisMonthCount = preDateFiltered.filter((movement) => {
+      const movementDate = new Date(movement.date);
+      return (
+        movementDate.getFullYear() === now.getFullYear() &&
+        movementDate.getMonth() === now.getMonth()
+      );
+    }).length;
 
     return {
       tableData: sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
-      pageCount: Math.ceil(sorted.length / pageSize),
+      pageCount: Math.max(1, Math.ceil(sorted.length / pageSize)),
       typeCounts: {
         all: preType.length,
         purchase: preType.filter((m) => m.type === 'PURCHASE').length,
@@ -97,8 +209,28 @@ export default function MovementsPage() {
         exit: preType.filter((m) => m.type === 'EXIT').length,
         writeoff: preType.filter((m) => m.type === 'WRITEOFF').length,
       } satisfies TypeCounts,
+      stats: {
+        total: preDateFiltered.length,
+        purchases: preDateFiltered.filter((m) => m.type === 'PURCHASE').length,
+        returns: preDateFiltered.filter((m) => m.type === 'RETURN').length,
+        exits: preDateFiltered.filter((m) => m.type === 'EXIT').length,
+        writeoffs: preDateFiltered.filter((m) => m.type === 'WRITEOFF').length,
+        thisMonth: thisMonthCount,
+      } satisfies MovementStatsType,
     };
-  }, [allMovements, debouncedSearch, projectFilter, typeFilter, sorting, pagination]);
+  }, [
+    allMovements,
+    creatorFilter,
+    currentUserId,
+    dateFrom,
+    dateTo,
+    debouncedSearch,
+    isAdmin,
+    pagination,
+    projectFilter,
+    sorting,
+    typeFilter,
+  ]);
 
   const resetPage = useCallback(() => setPagination((p) => ({ ...p, pageIndex: 0 })), []);
 
@@ -174,7 +306,7 @@ export default function MovementsPage() {
       <MovementStats stats={stats} />
       <MovementTable
         movements={tableData}
-        isLoading={isLoading}
+        isLoading={movementsQuery.isFetching && allMovements.length === 0}
         pageCount={pageCount}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}

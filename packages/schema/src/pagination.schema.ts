@@ -10,3 +10,22 @@ export const BasePaginationSchema = z.object({
   orderDir: z.enum(['asc', 'desc']).optional(),
 });
 export type BasePaginationInput = z.infer<typeof BasePaginationSchema>;
+
+// ─── Shared output schemas ────────────────────────────────────────────────────
+
+export const PaginationMetaSchema = z.object({
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean(),
+});
+export type PaginationMeta = z.infer<typeof PaginationMetaSchema>;
+
+/** Wraps an item schema in a paginated `{ data, meta }` response. */
+export const paginatedSchema = <T extends z.ZodType>(itemSchema: T) =>
+  z.object({
+    data: z.array(itemSchema),
+    meta: PaginationMetaSchema,
+  });

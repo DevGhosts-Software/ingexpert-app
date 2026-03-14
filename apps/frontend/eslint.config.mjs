@@ -4,6 +4,6 @@ import nextConfig from '@ingexpert/config/eslint/next';
 export default [
   ...nextConfig,
   {
-    ignores: ['src/components/ui/**', 'src-tauri/**'],
+    ignores: ['src/components/ui/**', 'src-tauri/**', 'public/@powersync/**'],
   },
 ];

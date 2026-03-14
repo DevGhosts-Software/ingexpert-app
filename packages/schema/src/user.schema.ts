@@ -40,7 +40,7 @@ export type UpdateUserDto = z.infer<typeof UpdateUserSchema>;
 /**
  * Wire representation of a User returned by the API.
  * Extends the Prisma `User` model with `workArea` flattened from the Staff→WorkArea relation.
- * `hasAuth` reflects whether the user has a Supabase auth account.
+ * `has_auth` reflects whether the user has a Supabase auth account.
  */
 export type UserEntity = User & { workArea: string | null };
 
@@ -51,3 +51,38 @@ export type UserStats = {
   active: number; // users with a work area assigned
   inactive: number; // users without a work area
 };
+
+// ─── Output schemas ───────────────────────────────────────────────────────────
+
+export const UserEntitySchema = z.object({
+  id: z.string().uuid(),
+  email: z.string(),
+  role: z.nativeEnum(UserRole),
+  name: z.string().nullable(),
+  avatar: z.string().nullable(),
+  has_auth: z.boolean(),
+  workArea: z.string().nullable(),
+});
+
+/** Schema for the current authenticated user (workArea not populated by UsersService). */
+export const CurrentUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string(),
+  role: z.nativeEnum(UserRole),
+  name: z.string().nullable(),
+  avatar: z.string().nullable(),
+  has_auth: z.boolean(),
+});
+
+export const UserStatsSchema = z.object({
+  total: z.number(),
+  admins: z.number(),
+  active: z.number(),
+  inactive: z.number(),
+});
+
+export const UserNameSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().nullable(),
+  email: z.string(),
+});

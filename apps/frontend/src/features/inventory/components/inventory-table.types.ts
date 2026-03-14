@@ -64,6 +64,15 @@ export const TAB_ITEMS: Array<{ value: string; label: string; type: ItemType | '
 
 export interface InventoryTableProps {
   items: ItemEntity[];
+  exportItems: ItemEntity[];
+  exportKitRows: Array<{
+    kitName: string;
+    kitCode: string;
+    componentName: string;
+    componentCode: string;
+    quantity: number;
+    unit: string;
+  }>;
   isLoading?: boolean;
   isAdmin: boolean;
   pageCount: number;

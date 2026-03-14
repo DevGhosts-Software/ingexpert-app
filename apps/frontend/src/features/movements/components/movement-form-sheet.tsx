@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@powersync/react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -12,11 +13,13 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { type CreateMovementDto, CreateMovementSchema } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -115,6 +118,18 @@ type FormValues = z.infer<typeof MovementFormSchema>;
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MovementItem = LocalComponent; // reuse shape: componentId = itemId
+type LocalProjectRow = { id: string; name: string };
+type LocalUserRow = { id: string; name: string | null; email: string };
+type LocalKitDetailRow = {
+  kit_id: string;
+  item_id: string;
+  quantity: number | string | null;
+  name: string;
+  code: string;
+  unit: string;
+  stock: number | string | null;
+  type: string;
+};
 
 interface MovementFormSheetProps {
   open: boolean;
@@ -124,7 +139,7 @@ interface MovementFormSheetProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
-  const utils = trpc.useUtils();
+  const powerSyncDb = usePowerSyncDatabase();
 
   // ── Items list state ────────────────────────────────────────────────────────
   const [movementItems, setMovementItems] = useState<MovementItem[]>([]);
@@ -135,8 +150,66 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   }, [open]);
 
   // ── Support data ────────────────────────────────────────────────────────────
-  const { data: projects = [] } = trpc.movements.getProjects.useQuery();
-  const { data: users = [] } = trpc.users.listNames.useQuery();
+  const projectsQuery = useQuery<LocalProjectRow>(
+    'SELECT id, name FROM projects ORDER BY name ASC',
+  );
+  const usersQuery = useQuery<LocalUserRow>(
+    'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC',
+  );
+  const kitDetailsQuery = useQuery<LocalKitDetailRow>(`
+    SELECT
+      kd.kit_id,
+      kd.item_id,
+      kd.quantity,
+      component.name,
+      component.code,
+      component.unit,
+      component.stock,
+      component.type
+    FROM kit_details kd
+    INNER JOIN items component ON component.id = kd.item_id
+  `);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const projects = projectsQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+  const kitComponentsByKitId = useMemo(() => {
+    const source = new Map<string, MovementItem[]>();
+    for (const row of kitDetailsQuery.data ?? []) {
+      const current = source.get(row.kit_id) ?? [];
+      current.push({
+        componentId: row.item_id,
+        name: row.name,
+        code: row.code,
+        unit: row.unit,
+        stock: Number(row.stock ?? 0),
+        quantity: Number(row.quantity ?? 0),
+        type: row.type as MovementItem['type'],
+      });
+      source.set(row.kit_id, current);
+    }
+    return source;
+  }, [kitDetailsQuery.data]);
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) {
+        setCurrentUserId(session?.user.id ?? null);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user.id ?? null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // ── Form ────────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
@@ -178,54 +251,30 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     }
   }, [open, form]);
 
-  // ── Mutations ───────────────────────────────────────────────────────────────
-  const createMutation = trpc.movements.create.useMutation({
-    onError: (e) => toast.error(e.message ?? 'Error al registrar movimiento'),
-  });
-
-  function invalidateAll() {
-    return Promise.all([
-      utils.movements.getAll.invalidate(),
-      utils.movements.getStats.invalidate(),
-      utils.items.list.invalidate(),
-      utils.items.getStats.invalidate(),
-    ]);
-  }
-
   // ── Item list helpers ───────────────────────────────────────────────────────
   const handleAddItem = useCallback(
     (item: MovementItem) => {
       if (item.type === 'KIT') {
-        // Expand kit: fetch its components and add/increment each one atomically on server
-        void (async () => {
-          const comps = await utils.kits.getComponents.fetch(item.componentId);
-          if (comps.length === 0) {
-            toast.error(`El kit "${item.name}" no tiene componentes configurados`);
-            return;
-          }
-          setMovementItems((prev) => {
-            const updated = [...prev];
-            for (const c of comps) {
-              const qty = Number(c.quantity);
-              const idx = updated.findIndex((i) => i.componentId === c.componentId);
-              if (idx >= 0) {
-                // Component already in list — increment quantity
-                updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + qty };
-              } else {
-                updated.push({
-                  componentId: c.componentId,
-                  name: c.component.name,
-                  code: c.component.code,
-                  unit: c.component.unit,
-                  stock: Number(c.component.stock),
-                  quantity: qty,
-                  type: c.component.type,
-                });
-              }
+        const kitComponents = kitComponentsByKitId.get(item.componentId) ?? [];
+        if (kitComponents.length === 0) {
+          toast.error(`El kit "${item.name}" no tiene componentes configurados`);
+          return;
+        }
+        setMovementItems((prev) => {
+          const updated = [...prev];
+          for (const component of kitComponents) {
+            const idx = updated.findIndex((entry) => entry.componentId === component.componentId);
+            if (idx >= 0) {
+              updated[idx] = {
+                ...updated[idx],
+                quantity: updated[idx].quantity + component.quantity,
+              };
+            } else {
+              updated.push(component);
             }
-            return updated;
-          });
-        })();
+          }
+          return updated;
+        });
         return;
       }
       setMovementItems((prev) => {
@@ -234,7 +283,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         return [...prev, item];
       });
     },
-    [utils],
+    [kitComponentsByKitId],
   );
 
   const handleRemoveItem = useCallback((componentId: string) => {
@@ -247,7 +296,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     );
   }, []);
 
-  const isPending = createMutation.isPending;
   const excludeIds: string[] = [];
 
   // ── Confirm dialog state ────────────────────────────────────────────────────
@@ -272,16 +320,71 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   // Called when user confirms in the dialog
   const onConfirm = useCallback(async () => {
     if (!pendingPayload) return;
+    if (!currentUserId) {
+      toast.error('No se pudo identificar el usuario actual');
+      return;
+    }
+
+    const movementId = uuidv4();
+    const movementDate = new Date().toISOString();
+    const stockDeltaSign =
+      pendingPayload.type === 'PURCHASE' || pendingPayload.type === 'RETURN' ? 1 : -1;
+    const optimisticMetadata = JSON.stringify({ source: 'movement-optimistic-stock' });
+
     try {
-      await createMutation.mutateAsync(pendingPayload);
-      toast.success('Movimiento registrado correctamente');
-      void invalidateAll();
+      await powerSyncDb.writeTransaction(async (tx) => {
+        await tx.execute(
+          `
+            INSERT INTO movements (
+              id,
+              type,
+              created_by_id,
+              destination,
+              observations,
+              responsible_delivery_id,
+              responsible_receipt_id,
+              date,
+              project_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            movementId,
+            pendingPayload.type,
+            currentUserId,
+            pendingPayload.destination ?? null,
+            pendingPayload.observations ?? null,
+            pendingPayload.responsibleDeliveryId ?? null,
+            pendingPayload.responsibleReceiptId ?? null,
+            movementDate,
+            pendingPayload.projectId ?? null,
+          ],
+        );
+
+        for (const detail of pendingPayload.details) {
+          await tx.execute(
+            `INSERT INTO movement_details (id, movement_id, item_id, quantity) VALUES (?, ?, ?, ?)`,
+            [uuidv4(), movementId, detail.itemId, detail.quantity],
+          );
+
+          await tx.execute(`UPDATE items SET stock = stock + ?, _metadata = ? WHERE id = ?`, [
+            stockDeltaSign * detail.quantity,
+            optimisticMetadata,
+            detail.itemId,
+          ]);
+        }
+      });
+
+      toast.success('Movimiento guardado localmente. Se sincronizará cuando haya conexión.');
       setPendingPayload(null);
       onClose();
-    } catch {
-      // handled by mutation onError
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Error al registrar movimiento en almacenamiento local';
+      toast.error(message);
     }
-  }, [pendingPayload, createMutation, onClose]);
+  }, [currentUserId, onClose, pendingPayload, powerSyncDb]);
 
   return (
     <>
@@ -588,17 +691,14 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                     onAdd={handleAddItem}
                     onRemove={handleRemoveItem}
                     onQtyChange={handleQtyChange}
-                    disabled={isPending}
                   />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2 pb-4">
-                  <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+                  <Button type="button" variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? 'Registrando...' : 'Revisar y confirmar'}
-                  </Button>
+                  <Button type="submit">Revisar y confirmar</Button>
                 </div>
               </form>
             </Form>
@@ -648,10 +748,8 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Volver a editar</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirm} disabled={isPending}>
-              {isPending ? 'Registrando...' : 'Confirmar registro'}
-            </AlertDialogAction>
+            <AlertDialogCancel>Volver a editar</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirm}>Confirmar registro</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

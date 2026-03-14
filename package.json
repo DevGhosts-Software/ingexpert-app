@@ -27,6 +27,9 @@
     "db:seed": "pnpm --filter @ingexpert/database db:seed",
     "db:studio": "pnpm --filter @ingexpert/database db:studio",
     "db:reset": "pnpm --filter @ingexpert/database db:reset",
+    "supabase:link": "pnpm --filter @ingexpert/database supabase:link",
+    "supabase:db:push": "pnpm --filter @ingexpert/database supabase:db:push",
+    "supabase:functions:deploy": "pnpm --filter @ingexpert/database supabase:functions:deploy",
     "type-check": "turbo run type-check",
     "version:sync": "tsx scripts/sync-version.ts"
   },
@@ -43,9 +46,6 @@
   },
   "packageManager": "pnpm@10.28.0",
   "pnpm": {
-    "patchedDependencies": {
-      "trpc-docs-generator": "patches/trpc-docs-generator.patch"
-    },
     "overrides": {
       "@swc/helpers": "0.5.11"
     }

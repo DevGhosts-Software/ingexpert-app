@@ -2,8 +2,10 @@
 
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
+import { useQuery } from '@powersync/react';
 
-import { trpc } from '@/lib/trpc';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -23,18 +25,13 @@ interface ProjectDeleteSheetProps {
 }
 
 export function ProjectDeleteSheet({ project, open, onClose }: ProjectDeleteSheetProps) {
-  const utils = trpc.useUtils();
-
-  const deleteMutation = trpc.projects.remove.useMutation({
-    onSuccess: () => {
-      toast.success(`"${project?.name}" eliminado correctamente`);
-      void utils.projects.list.invalidate();
-      void utils.projects.getAll.invalidate();
-      void utils.movements.getAll.invalidate();
-      onClose();
-    },
-    onError: (e) => toast.error(e.message ?? 'Error al eliminar proyecto'),
-  });
+  const powerSyncDb = usePowerSyncDatabase();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const escapedProjectId = project?.id.replace(/'/g, "''") ?? '';
+  const linkedMovementsSql = project
+    ? `SELECT COUNT(*) AS total FROM movements WHERE project_id = '${escapedProjectId}'`
+    : 'SELECT COUNT(*) AS total FROM movements WHERE 1 = 0';
+  const linkedMovementsQuery = useQuery<{ total: number | string | null }>(linkedMovementsSql);
 
   if (!project) return null;
 
@@ -64,16 +61,42 @@ export function ProjectDeleteSheet({ project, open, onClose }: ProjectDeleteShee
           <Separator />
 
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={onClose} disabled={deleteMutation.isPending}>
+            <Button variant="outline" onClick={onClose} disabled={isDeleting}>
               Cancelar
             </Button>
             <Button
               variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate(project.id)}
+              disabled={isDeleting}
+              onClick={() => {
+                const linkedCount = Number(linkedMovementsQuery.data?.[0]?.total ?? 0);
+                if (linkedCount > 0) {
+                  toast.error(
+                    `No se puede eliminar "${project.name}": tiene ${linkedCount} movimiento${linkedCount > 1 ? 's' : ''} asociado${linkedCount > 1 ? 's' : ''}.`,
+                  );
+                  return;
+                }
+
+                setIsDeleting(true);
+                void powerSyncDb
+                  .writeTransaction(async (tx) => {
+                    await tx.execute('DELETE FROM projects WHERE id = ?', [project.id]);
+                  })
+                  .then(() => {
+                    toast.success(`"${project.name}" eliminado correctamente`);
+                    onClose();
+                  })
+                  .catch((error: unknown) => {
+                    const message =
+                      error instanceof Error ? error.message : 'Error al eliminar proyecto';
+                    toast.error(message);
+                  })
+                  .finally(() => {
+                    setIsDeleting(false);
+                  });
+              }}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </div>
         </div>

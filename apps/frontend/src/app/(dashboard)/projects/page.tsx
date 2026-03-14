@@ -1,10 +1,20 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import { trpc } from '@/lib/trpc';
+import type { ProjectEntity } from '@ingexpert/schema';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ProjectTable } from '@/features/projects/components/project-table';
+
+type ProjectLocalRow = {
+  id: string;
+  name: string;
+  contact: string;
+  address: string;
+  manager_id: string;
+  manager: string | null;
+};
 
 export default function ProjectsPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
@@ -12,13 +22,71 @@ export default function ProjectsPage() {
   const debouncedSearch = useDebounce(search);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
 
-  const { data: listResult, isLoading } = trpc.projects.list.useQuery({
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: debouncedSearch || undefined,
-    orderBy: sorting[0]?.id,
-    orderDir: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
-  });
+  const projectsQuery = useQuery<ProjectLocalRow>(`
+    SELECT
+      p.id,
+      p.name,
+      p.contact,
+      p.address,
+      p.manager_id,
+      COALESCE(u.name, u.email, '—') AS manager 
+    FROM projects p
+    LEFT JOIN users u ON u.id = p.manager_id
+  `);
+
+  const allProjects = useMemo<ProjectEntity[]>(
+    () =>
+      (projectsQuery.data ?? []).map((project) => ({
+        id: project.id,
+        name: project.name,
+        contact: project.contact,
+        address: project.address,
+        managerId: project.manager_id,
+        manager: project.manager,
+      })),
+    [projectsQuery.data],
+  );
+
+  const filteredProjects = useMemo(() => {
+    const needle = debouncedSearch.trim().toLowerCase();
+    return allProjects.filter((project) => {
+      if (!needle) {
+        return true;
+      }
+      return (
+        project.name.toLowerCase().includes(needle) ||
+        project.contact.toLowerCase().includes(needle) ||
+        project.address.toLowerCase().includes(needle) ||
+        (project.manager ?? '').toLowerCase().includes(needle)
+      );
+    });
+  }, [allProjects, debouncedSearch]);
+
+  const sortedProjects = useMemo(() => {
+    const activeSort = sorting[0];
+    if (!activeSort) {
+      return filteredProjects;
+    }
+
+    const copy = [...filteredProjects];
+    copy.sort((left, right) => {
+      const leftValue = String(left[activeSort.id as keyof ProjectEntity] ?? '');
+      const rightValue = String(right[activeSort.id as keyof ProjectEntity] ?? '');
+      const compareValue = leftValue.localeCompare(rightValue);
+      return activeSort.desc ? -compareValue : compareValue;
+    });
+    return copy;
+  }, [filteredProjects, sorting]);
+
+  const pageCount = useMemo(
+    () => Math.max(1, Math.ceil(sortedProjects.length / pagination.pageSize)),
+    [pagination.pageSize, sortedProjects.length],
+  );
+
+  const pagedProjects = useMemo(() => {
+    const start = pagination.pageIndex * pagination.pageSize;
+    return sortedProjects.slice(start, start + pagination.pageSize);
+  }, [pagination.pageIndex, pagination.pageSize, sortedProjects]);
 
   const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
     setPagination((prev) => (typeof updater === 'function' ? updater(prev) : updater));
@@ -45,9 +113,9 @@ export default function ProjectsPage() {
       </div>
 
       <ProjectTable
-        projects={listResult?.data ?? []}
-        isLoading={isLoading}
-        pageCount={listResult?.meta.totalPages ?? 1}
+        projects={pagedProjects}
+        isLoading={projectsQuery.isFetching}
+        pageCount={pageCount}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}
         search={search}

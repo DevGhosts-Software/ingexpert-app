@@ -1,0 +1,31 @@
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATA_SOURCE_URI
+      publication: powersync
+
+storage:
+  type: mongodb
+  uri: !env PS_MONGO_URI
+
+port: !env PS_PORT
+
+sync_config:
+  content: |
+    bucket_definitions:
+      global:
+        # Baseline policy: sync all rows to all authenticated users.
+        data:
+          - SELECT id, code, name, location, stock, unit, CAST(type as TEXT) AS type, image_url FROM items
+          - SELECT id, kit_id, item_id, quantity FROM kit_details
+          - SELECT id, CAST(type as TEXT) AS type, created_by_id, destination, observations, responsible_delivery_id, responsible_receipt_id, date, project_id FROM movements
+          - SELECT id, movement_id, item_id, quantity FROM movement_details
+          - SELECT id, name, contact, address, manager_id FROM projects
+          - SELECT id, work_area_id FROM staff
+          - SELECT id, email, CAST(role as TEXT) AS role, name, avatar, CAST(has_auth as INTEGER) AS has_auth FROM users
+          - SELECT id, name FROM work_areas
+
+client_auth:
+  jwks_uri: !env PS_JWKS_URL
+  audience:
+    - authenticated

@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Boxes, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
-import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
+import { type CreateItemDto, CreateItemSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
-import { trpc } from '@/lib/trpc';
+import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,8 +32,8 @@ import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-fi
 import {
   type InventoryItem,
   type ItemType,
-  TYPE_CONFIG,
   TYPE_COLORS,
+  TYPE_CONFIG,
 } from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
@@ -105,17 +107,18 @@ interface ItemFormSheetProps {
 }
 
 export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps) {
-  const utils = trpc.useUtils();
   const isEdit = mode === 'edit';
   const imageFieldRef = useRef<ImageUploadFieldHandle>(null);
   const originalImageUrl = useRef<string | undefined>(undefined);
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
+  const powerSyncDb = usePowerSyncDatabase();
 
   const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
-
-  const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
-    enabled: isEdit && item?.type === 'KIT' && open,
-  });
+  const { components: localExistingComponents } = useLocalKitComponents(
+    item?.id ?? '',
+    isEdit && item?.type === 'KIT' && open,
+  );
+  const existingComponents = localExistingComponents;
 
   useEffect(() => {
     if (open && isEdit && existingComponents) {
@@ -195,110 +198,100 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     }
   }, [open, isEdit, item, form]);
 
-  const createMutation = trpc.items.create.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al agregar el ítem'),
-  });
-
-  const updateMutation = trpc.items.update.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al actualizar el ítem'),
-  });
-
-  const setComponentsMutation = trpc.kits.setComponents.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al guardar los componentes'),
-  });
-
-  const clearKitMutation = trpc.kits.clearKit.useMutation({
-    onError: (error) => toast.error(error.message ?? 'Error al limpiar los componentes'),
-  });
-
-  function invalidateAll() {
-    return Promise.all([
-      utils.items.list.invalidate(),
-      utils.items.getStats.invalidate(),
-      utils.items.getCounts.invalidate(),
-      utils.items.getLocations.invalidate(),
-    ]);
-  }
-
   const onSubmit = useCallback(
     async (values: FormValues) => {
       const pendingFile = imageFieldRef.current?.getPendingFile() ?? null;
+      const itemId = isEdit && item ? item.id : uuidv4();
+      const imageUrl = values.imageUrl ?? '';
 
-      let finalImageUrl = values.imageUrl;
-      if (pendingFile) {
-        try {
-          finalImageUrl = await uploadFile(pendingFile);
-        } catch {
-          return;
+      await powerSyncDb.writeTransaction(async (tx) => {
+        if (isEdit && item) {
+          await tx.execute(
+            `
+              UPDATE items
+              SET code = ?, name = ?, location = ?, stock = ?, unit = ?, type = ?, image_url = ?
+              WHERE id = ?
+            `,
+            [
+              values.code,
+              values.name,
+              values.location,
+              values.stock,
+              values.unit,
+              values.type,
+              imageUrl,
+              item.id,
+            ],
+          );
+        } else {
+          await tx.execute(
+            `
+              INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              itemId,
+              values.code,
+              values.name,
+              values.location,
+              values.stock,
+              values.unit,
+              values.type,
+              imageUrl,
+            ],
+          );
         }
-      }
 
-      if (originalImageUrl.current && originalImageUrl.current !== finalImageUrl) {
+        if (values.type === 'KIT') {
+          await tx.execute('DELETE FROM kit_details WHERE kit_id = ?', [itemId]);
+          for (const component of kitComponents) {
+            await tx.execute(
+              `
+                INSERT INTO kit_details (id, kit_id, item_id, quantity)
+                VALUES (?, ?, ?, ?)
+              `,
+              [uuidv4(), itemId, component.componentId, component.quantity],
+            );
+          }
+        } else {
+          await tx.execute('DELETE FROM kit_details WHERE kit_id = ?', [itemId]);
+        }
+      });
+
+      if (pendingFile) {
+        void (async () => {
+          try {
+            const uploadedImageUrl = await uploadFile(pendingFile);
+            await powerSyncDb.writeTransaction(async (tx) => {
+              await tx.execute('UPDATE items SET image_url = ? WHERE id = ?', [
+                uploadedImageUrl,
+                itemId,
+              ]);
+            });
+            if (originalImageUrl.current && originalImageUrl.current !== uploadedImageUrl) {
+              await deleteFile(originalImageUrl.current);
+            }
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Error al subir la imagen del ítem';
+            toast.error(message);
+          }
+        })();
+      } else if (originalImageUrl.current && originalImageUrl.current !== imageUrl) {
         void deleteFile(originalImageUrl.current);
       }
 
-      const submitValues = { ...values, imageUrl: finalImageUrl ?? '' };
-
-      try {
-        if (isEdit && item) {
-          await updateMutation.mutateAsync({ id: item.id, ...submitValues });
-          if (values.type === 'KIT') {
-            if (kitComponents.length > 0) {
-              const updated = await setComponentsMutation.mutateAsync({
-                kit_id: item.id,
-                components: kitComponents.map((c) => ({
-                  item_id: c.componentId,
-                  quantity: c.quantity,
-                })),
-              });
-              utils.kits.getComponents.setData(item.id, updated);
-            } else {
-              await clearKitMutation.mutateAsync(item.id);
-              utils.kits.getComponents.setData(item.id, []);
-            }
-          }
-          toast.success('Ítem actualizado correctamente');
-        } else {
-          const created = await createMutation.mutateAsync(submitValues);
-          if (values.type === 'KIT' && kitComponents.length > 0) {
-            const created2 = await setComponentsMutation.mutateAsync({
-              kit_id: created.id,
-              components: kitComponents.map((c) => ({
-                item_id: c.componentId,
-                quantity: c.quantity,
-              })),
-            });
-            utils.kits.getComponents.setData(created.id, created2);
-          }
-          toast.success('Ítem agregado correctamente');
-        }
-        void invalidateAll();
-        onClose();
-      } catch {
-        // errors handled by each mutation's onError
-      }
+      toast.success(
+        isEdit
+          ? 'Ítem guardado localmente. Se sincronizará automáticamente.'
+          : 'Ítem creado localmente. Se sincronizará automáticamente.',
+      );
+      onClose();
     },
-    [
-      uploadFile,
-      deleteFile,
-      isEdit,
-      item,
-      utils,
-      updateMutation,
-      createMutation,
-      setComponentsMutation,
-      clearKitMutation,
-      kitComponents,
-      onClose,
-    ],
+    [deleteFile, isEdit, item, kitComponents, onClose, powerSyncDb, uploadFile],
   );
 
-  const isPending =
-    createMutation.isPending ||
-    updateMutation.isPending ||
-    setComponentsMutation.isPending ||
-    clearKitMutation.isPending ||
-    isUploading;
+  const isPending = isUploading;
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {

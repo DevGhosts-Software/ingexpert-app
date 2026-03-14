@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useMutation } from '@tanstack/react-query';
 import {
   Briefcase,
   Eye,
@@ -41,6 +42,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  grantAdminUserAuth,
+  removeAdminUser,
+  revokeAdminUserAuth,
+  updateAdminUserPassword,
+} from '@/lib/admin-control-function';
+import {
   Form,
   FormControl,
   FormField,
@@ -49,7 +56,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { trpc } from '@/lib/trpc';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { UserEditSheet } from './user-edit-sheet';
 import type { UserEntity, UserRole } from './user-table.types';
 
@@ -65,6 +72,22 @@ function canDelete(currentId: string, target: UserEntity): boolean {
   if (target.id === currentId) return false; // can't delete yourself
   if (target.role === 'ADMIN') return false; // can't delete other admins
   return true;
+}
+
+function mapAdminControlAuthError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+
+  if (error.message.includes('AUTH_CONTEXT_MISSING')) {
+    return 'Tu sesión no es válida para esta acción. Cierra sesión e inicia de nuevo.';
+  }
+  if (error.message.includes('AUTH_TOKEN_INVALID')) {
+    return 'No se pudo validar tu sesión. Inicia sesión de nuevo e inténtalo otra vez.';
+  }
+  if (error.message.includes('ADMIN_ROLE_REQUIRED')) {
+    return 'Solo un administrador puede realizar esta acción.';
+  }
+
+  return error.message || fallback;
 }
 
 // ─── Shared password input ────────────────────────────────────────────────────
@@ -120,13 +143,16 @@ function ResetPasswordDialog({
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const mutation = trpc.adminUsers.updatePassword.useMutation({
+  const mutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      updateAdminUserPassword(id, password),
     onSuccess: () => {
       toast.success('Contraseña restablecida correctamente');
       form.reset();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al restablecer la contraseña'),
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Error al restablecer la contraseña'),
   });
 
   const onSubmit = ({ password }: ResetPwValues) => {
@@ -224,20 +250,20 @@ function GrantAuthDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
   const form = useForm<GrantAuthPwValues>({
     resolver: zodResolver(GrantAuthPwSchema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const mutation = trpc.adminUsers.grantAuth.useMutation({
+  const mutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      grantAdminUserAuth({ id, password }),
     onSuccess: () => {
       toast.success(`Acceso otorgado a ${user.name ?? user.email}`);
-      void utils.adminUsers.list.invalidate();
       form.reset();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al otorgar acceso'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Error al otorgar acceso'),
   });
 
   return (
@@ -326,14 +352,13 @@ function RevokeAuthDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
-  const mutation = trpc.adminUsers.revokeAuth.useMutation({
+  const mutation = useMutation({
+    mutationFn: (id: string) => revokeAdminUserAuth(id),
     onSuccess: () => {
       toast.success(`Acceso revocado para ${user.name ?? user.email}`);
-      void utils.adminUsers.list.invalidate();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al revocar acceso'),
+    onError: (err) => toast.error(mapAdminControlAuthError(err, 'Error al revocar acceso')),
   });
 
   return (
@@ -378,16 +403,14 @@ function DeleteUserDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
-
-  const mutation = trpc.adminUsers.remove.useMutation({
+  const mutation = useMutation({
+    mutationFn: (id: string) => removeAdminUser(id),
     onSuccess: () => {
       toast.success('Usuario eliminado correctamente');
-      void utils.adminUsers.list.invalidate();
-      void utils.adminUsers.getStats.invalidate();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al eliminar el usuario'),
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar el usuario'),
   });
 
   return (
@@ -431,11 +454,11 @@ function RowActions({ user }: { user: UserEntity }) {
   const [grantOpen, setGrantOpen] = useState(false);
   const [revokeOpen, setRevokeOpen] = useState(false);
 
-  const { data: me } = trpc.users.me.useQuery();
+  const { user: me } = useCurrentUser();
   const currentId = me?.id ?? '';
   const isEditAllowed = canEdit(currentId, user);
   const isDeleteAllowed = canDelete(currentId, user);
-  const isResetPasswordAllowed = user.hasAuth && (user.id === currentId || user.role !== 'ADMIN');
+  const isResetPasswordAllowed = user.has_auth && (user.id === currentId || user.role !== 'ADMIN');
   const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
 
   return (
@@ -457,7 +480,7 @@ function RowActions({ user }: { user: UserEntity }) {
             Restablecer contraseña
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {user.hasAuth ? (
+          {user.has_auth ? (
             <DropdownMenuItem
               onClick={() => setRevokeOpen(true)}
               disabled={user.id === currentId || user.role === 'ADMIN'}
@@ -608,7 +631,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       enableSorting: false,
     },
     {
-      id: 'hasAuth',
+      id: 'has_auth',
       header: () => (
         <div className="flex justify-center">
           <span className="font-medium">Acceso</span>
@@ -616,7 +639,7 @@ export function getColumns(): ColumnDef<UserEntity>[] {
       ),
       cell: ({ row }) => (
         <div className="flex justify-center">
-          {row.original.hasAuth ? (
+          {row.original.has_auth ? (
             <Badge
               variant="outline"
               className="gap-1 text-green-700 border-green-300 bg-green-50 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"

@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { readOfflineValidatedUser } from '@/lib/auth/offline-session';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 /**
  * Returns true if the currently authenticated user has the ADMIN role.
@@ -6,8 +7,11 @@ import { trpc } from '@/lib/trpc';
  * no extra network request is made.
  */
 export function useIsAdmin(): boolean {
-  const { data: user } = trpc.users.me.useQuery(undefined, {
-    staleTime: Infinity, // rely on the layout's fetch; never re-fetch on its own
-  });
-  return user?.role === 'ADMIN';
+  const { user } = useCurrentUser();
+
+  if (user) {
+    return user.role === 'ADMIN';
+  }
+
+  return readOfflineValidatedUser()?.role === 'ADMIN';
 }

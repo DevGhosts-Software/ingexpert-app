@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import { Loader2, X } from 'lucide-react';
 
 import { type ItemType } from '@ingexpert/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
 import { cn } from '@/lib/utils';
 import { TYPE_CONFIG } from './inventory-table.types';
@@ -42,23 +42,42 @@ export function AddComponentInput({
   const [highlighted, setHighlighted] = useState(-1);
   const debouncedQuery = useDebounce(query, 300);
 
-  const { data: results, isFetching } = trpc.items.list.useQuery(
-    {
-      page: 1,
-      limit: 10,
-      search: debouncedQuery || undefined,
-      filters: allowedTypes?.length ? { types: allowedTypes } : undefined,
-    },
-    { enabled: debouncedQuery.trim().length >= 2 },
-  );
+  const normalizedQuery = debouncedQuery.trim().toLowerCase();
+  const escapedQuery = normalizedQuery.replaceAll("'", "''");
+  const typeFilterSql =
+    allowedTypes && allowedTypes.length > 0
+      ? `AND type IN (${allowedTypes.map((type) => `'${type}'`).join(', ')})`
+      : '';
+  const searchSql =
+    normalizedQuery.length >= 2
+      ? `
+      SELECT id, name, code, unit, stock, type
+      FROM items
+      WHERE (
+        LOWER(name) LIKE '%${escapedQuery}%'
+        OR LOWER(code) LIKE '%${escapedQuery}%'
+      )
+      ${typeFilterSql}
+      ORDER BY name ASC
+      LIMIT 10
+    `
+      : 'SELECT id, name, code, unit, stock, type FROM items WHERE 1 = 0';
+  const { data: results, isFetching } = useQuery<{
+    id: string;
+    name: string;
+    code: string;
+    unit: string;
+    stock: number | string | null;
+    type: ItemType;
+  }>(searchSql);
 
   const isSearching = isFetching || (query.trim().length >= 2 && debouncedQuery !== query);
 
   const filtered = useMemo(
     () =>
-      (results?.data ?? [])
+      (results ?? [])
         .filter((i) => !excludeIds.includes(i.id))
-        .map((i) => ({ ...i, stock: Number(i.stock) })),
+        .map((i) => ({ ...i, stock: Number(i.stock ?? 0) })),
     [results, excludeIds],
   );
 

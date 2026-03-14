@@ -3,13 +3,6 @@ packages:
   - 'packages/*'
 
 catalogs:
-  # === FRAMEWORKS & CORE ===
-  nest:
-    '@nestjs/common': ^11.0.1
-    '@nestjs/core': ^11.0.1
-    '@nestjs/config': ^4.0.2
-    '@nestjs/platform-express': ^11.0.1
-
   next:
     next: 16.1.1
     react: 19.2.3

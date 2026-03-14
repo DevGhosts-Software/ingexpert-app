@@ -2,9 +2,10 @@
 
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
-import { trpc } from '@/lib/trpc';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -24,23 +25,9 @@ interface ItemDeleteDialogProps {
 }
 
 export function ItemDeleteDialog({ item, open, onClose }: ItemDeleteDialogProps) {
-  const utils = trpc.useUtils();
   const { deleteFile } = useStorageUpload();
-
-  const deleteMutation = trpc.items.remove.useMutation({
-    onSuccess: () => {
-      toast.success(`"${item?.name}" eliminado correctamente`);
-      if (item?.imageUrl) void deleteFile(item.imageUrl);
-      void utils.items.list.invalidate();
-      void utils.items.getStats.invalidate();
-      void utils.items.getCounts.invalidate();
-      void utils.items.getLocations.invalidate();
-      onClose();
-    },
-    onError: (error) => {
-      toast.error(error.message ?? 'Error al eliminar el ítem');
-    },
-  });
+  const powerSyncDb = usePowerSyncDatabase();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!item) return null;
 
@@ -69,16 +56,39 @@ export function ItemDeleteDialog({ item, open, onClose }: ItemDeleteDialogProps)
           <Separator />
 
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={onClose} disabled={deleteMutation.isPending}>
+            <Button variant="outline" onClick={onClose} disabled={isDeleting}>
               Cancelar
             </Button>
             <Button
               variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate(item.id)}
+              disabled={isDeleting}
+              onClick={() => {
+                setIsDeleting(true);
+                void powerSyncDb
+                  .writeTransaction(async (tx) => {
+                    await tx.execute('DELETE FROM kit_details WHERE kit_id = ? OR item_id = ?', [
+                      item.id,
+                      item.id,
+                    ]);
+                    await tx.execute('DELETE FROM items WHERE id = ?', [item.id]);
+                  })
+                  .then(() => {
+                    toast.success(`"${item.name}" eliminado correctamente`);
+                    if (item.imageUrl) void deleteFile(item.imageUrl);
+                    onClose();
+                  })
+                  .catch((error: unknown) => {
+                    const message =
+                      error instanceof Error ? error.message : 'Error al eliminar el ítem';
+                    toast.error(message);
+                  })
+                  .finally(() => {
+                    setIsDeleting(false);
+                  });
+              }}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </div>
         </div>

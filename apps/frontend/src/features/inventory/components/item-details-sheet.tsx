@@ -1,16 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Boxes, ImageIcon, Loader2, MapPin, Package } from 'lucide-react';
+import { ImageIcon, Loader2, MapPin, Package } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { StorageImage } from '@/components/ui/storage-image';
-import { trpc } from '@/lib/trpc';
+import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
 
-import { type InventoryItem, TYPE_CONFIG, TYPE_COLORS } from './inventory-table.types';
+import { type InventoryItem, TYPE_COLORS, TYPE_CONFIG } from './inventory-table.types';
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
 
@@ -35,21 +35,24 @@ function MetaRow({
 // ─── Kit components (read-only) ───────────────────────────────────────────────
 
 function KitComponentsReadonly({ kitId }: { kitId: string }) {
-  const { data: rawComponents, isLoading } = trpc.kits.getComponents.useQuery(kitId);
+  const { components: localComponents, isFetching: isLocalFetching } = useLocalKitComponents(
+    kitId,
+    true,
+  );
 
   const components = useMemo(
     () =>
-      (rawComponents ?? []).map((c) => ({
+      localComponents.map((c) => ({
         id: c.componentId,
         name: c.component.name,
         code: c.component.code,
         unit: c.component.unit,
         quantity: Number(c.quantity),
       })),
-    [rawComponents],
+    [localComponents],
   );
 
-  if (isLoading) {
+  if (isLocalFetching) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />

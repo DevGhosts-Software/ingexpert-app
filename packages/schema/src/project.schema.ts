@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { type Project } from '@ingexpert/database';
-import { BasePaginationSchema } from './pagination.schema';
+import { BasePaginationSchema, paginatedSchema } from './pagination.schema';
 
 // ─── DTOs (Zod-validated tRPC inputs) ────────────────────────────────────────
 
@@ -25,3 +25,20 @@ export type ProjectPaginationInput = z.infer<typeof ProjectPaginationSchema>;
  * `manager` is a flattened name from the related User — mapped in the service.
  */
 export type ProjectEntity = Project & { manager: string | null };
+
+// ─── Output schemas ───────────────────────────────────────────────────────────
+
+export const ProjectEntitySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  contact: z.string(),
+  address: z.string(),
+  managerId: z.string().uuid(),
+  manager: z.string().nullable(),
+});
+
+export const ProjectListSchema = paginatedSchema(ProjectEntitySchema);
+
+export const ProjectStatsSchema = z.object({
+  total: z.number(),
+});

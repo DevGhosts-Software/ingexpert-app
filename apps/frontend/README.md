@@ -58,4 +58,4 @@ pnpm check    # format:check + lint + type-check + next:build
 
 ## Architecture
 
-See [`AGENTS.md`](./AGENTS.md) for the Container/Presenter pattern, type rules, and feature structure.
+See [`openspec/specs/core-architecture/spec.md`](../../openspec/specs/core-architecture/spec.md) for the Container/Presenter pattern, type rules, and feature structure.

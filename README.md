@@ -6,33 +6,9 @@
 
 Ingexpert = **Inventory Management** (tracking) + **Transaction Auditing** (blame) + **Role-Based Access** (security) + **Real-time Updates**.
 
-## Roadmap
+## AI Agents
 
-The development is organized by Impact vs. Difficulty.
-
-### Phase 1 (MVP - Weeks 1-2)
-
-- **Inventory Core**: Product CRUD, SKU management, and stock level tracking.
-- **Database Schema**: Prisma-based PostgreSQL setup for all core entities.
-- **Basic Dashboard**: Visualizing current stock and low-stock items.
-
-### Phase 2 (Audit & Accountability - Weeks 3-4)
-
-- **Transaction System**: Implementation of the "blame" management system (logging who did what and when).
-- **Transaction Types**: Support for `IN`, `OUT`, and `ADJUSTMENT` operations.
-- **Audit Logs**: History view for every product and user.
-
-### Phase 3 (Auth & Roles - Month 2)
-
-- **Supabase Integration**: Secure authentication and identity management.
-- **RBAC**: Implementing `ADMIN` and `USER` roles with specific dashboard access.
-- **User Management**: Interface for admins to manage system access.
-
-### Phase 4 (Advanced Features - Month 3+)
-
-- **Low Stock Alerts**: Real-time notifications for items below threshold.
-- **Analytics**: Usage trends and inventory velocity reporting.
-- **Supplier Integration**: Tracking where supplies are coming from.
+All context, architecture rules, and domain specs are in [`openspec/specs/`](./openspec/specs/). Start with [`openspec/specs/core-architecture/spec.md`](./openspec/specs/core-architecture/spec.md).
 
 ## Workspace Structure
 
@@ -40,7 +16,6 @@ This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://
 
 ### Applications
 
-- **`@ingexpert/api`** (`apps/api`): NestJS backend. Handles business logic, tRPC API, and database interactions.
 - **`@ingexpert/frontend`** (`apps/frontend`): Next.js frontend. Modern, responsive UI/UX using Tailwind CSS v4 and shadcn/ui.
 
 ### Packages
@@ -69,7 +44,7 @@ This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://
     ```bash
     pnpm dev
     ```
-    This launches the API dev server and the Tauri desktop app (with the Next.js frontend embedded).
+    This launches the Tauri desktop app (with the Next.js frontend embedded).
 
 ## Pre-Push Checklist
 
@@ -84,8 +59,8 @@ pnpm check    # format:check + lint + type-check + Next.js build
 
 ## Scripts
 
-- `pnpm dev`: Start all apps in development mode (API + Tauri desktop app).
-- `pnpm build`: Build all apps and packages (API + Tauri desktop bundle).
+- `pnpm dev`: Start the desktop app in development mode.
+- `pnpm build`: Build all apps and packages (Tauri desktop bundle).
 - `pnpm check`: **Pre-push pipeline** — format check + lint + type-check + Next.js compile. Run this before every push.
 - `pnpm format`: Auto-fix formatting with Prettier.
 - `pnpm lint`: Lint code quality across all packages.

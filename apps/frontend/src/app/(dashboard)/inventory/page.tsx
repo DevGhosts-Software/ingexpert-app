@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { ItemCounts, ItemEntity, ItemStats, ItemType } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
@@ -26,6 +26,32 @@ const DEFAULT_COUNTS: ItemCounts = {
   KIT: 0,
 };
 
+type InventoryRow = {
+  id: string;
+  code: string;
+  name: string;
+  location: string;
+  stock: number | string | null;
+  unit: string;
+  type: string;
+  image_url: string | null;
+};
+
+type KitExportRow = {
+  kitName: string;
+  kitCode: string;
+  componentName: string;
+  componentCode: string;
+  quantity: number | string | null;
+  unit: string;
+};
+
+const ITEM_TYPES: ItemType[] = ['PRODUCT', 'EQUIPMENT', 'TOOL', 'KIT'];
+
+function asItemType(value: string): ItemType {
+  return ITEM_TYPES.includes(value as ItemType) ? (value as ItemType) : 'PRODUCT';
+}
+
 export default function InventoryPage() {
   const isAdmin = useIsAdmin();
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
@@ -37,39 +63,138 @@ export default function InventoryPage() {
 
   const [selectedItem, setSelectedItem] = useState<ItemEntity | null>(null);
 
-  // Global unfiltered stats for the summary cards
-  const { data: statsData } = trpc.items.getStats.useQuery();
+  const inventoryQuery = useQuery<InventoryRow>(`
+    SELECT
+      id,
+      code,
+      name,
+      location,
+      stock, 
+      unit,
+      type,
+      image_url
+    FROM items
+  `);
 
-  // All distinct locations for the filter dropdown
-  const { data: allLocations } = trpc.items.getLocations.useQuery();
+  const kitsExportQuery = useQuery<KitExportRow>(`
+    SELECT
+      kit.name AS "kitName",
+      kit.code AS "kitCode",
+      component.name AS "componentName",
+      component.code AS "componentCode",
+      kd.quantity,
+      component.unit AS "unit" 
+    FROM kit_details kd
+    INNER JOIN items kit ON kit.id = kd.kit_id
+    INNER JOIN items component ON component.id = kd.item_id
+    ORDER BY kit.name, component.name
+  `);
 
-  // Per-type counts filtered by search + location (for tab badges)
-  const { data: countsData } = trpc.items.getCounts.useQuery({
-    search: debouncedSearch || undefined,
-    location: locationFilter !== 'all' ? locationFilter : undefined,
-  });
-
-  // Paginated table data — tRPC infers ItemEntity[] from service return type
-  const { data: listResult, isLoading } = trpc.items.list.useQuery({
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: debouncedSearch || undefined,
-    orderBy: sorting[0]?.id,
-    orderDir: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : undefined,
-    filters: {
-      type: typeFilter !== 'ALL' ? typeFilter : undefined,
-      location: locationFilter !== 'all' ? locationFilter : undefined,
-    },
-  });
-
-  // stock is already a plain number — the service calls .toNumber() before serializing
-  const items = useMemo(
+  const allItems = useMemo(
     () =>
-      (listResult?.data ?? []).map((item) => ({
-        ...item,
-        stock: Number(item.stock), // guard: Decimal serializes as string over JSON
+      (inventoryQuery.data ?? []).map((item) => ({
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        location: item.location,
+        stock: Number(item.stock ?? 0),
+        unit: item.unit,
+        type: asItemType(item.type),
+        imageUrl: item.image_url ?? '',
       })),
-    [listResult?.data],
+    [inventoryQuery.data],
+  );
+
+  const statsData = useMemo<ItemStats>(() => {
+    return {
+      total: allItems.length,
+      products: allItems.filter((item) => item.type === 'PRODUCT').length,
+      equipment: allItems.filter((item) => item.type === 'EQUIPMENT').length,
+      tools: allItems.filter((item) => item.type === 'TOOL').length,
+      kits: allItems.filter((item) => item.type === 'KIT').length,
+    };
+  }, [allItems]);
+
+  const allLocations = useMemo(
+    () =>
+      Array.from(
+        new Set(allItems.map((item) => item.location).filter((value) => value !== '')),
+      ).sort(),
+    [allItems],
+  );
+
+  const baseFilteredItems = useMemo(() => {
+    const searchValue = debouncedSearch.trim().toLowerCase();
+    return allItems.filter((item) => {
+      const matchesSearch =
+        searchValue === '' ||
+        item.name.toLowerCase().includes(searchValue) ||
+        item.code.toLowerCase().includes(searchValue) ||
+        item.location.toLowerCase().includes(searchValue);
+      const matchesLocation = locationFilter === 'all' || item.location === locationFilter;
+      return matchesSearch && matchesLocation;
+    });
+  }, [allItems, debouncedSearch, locationFilter]);
+
+  const countsData = useMemo<ItemCounts>(() => {
+    return {
+      ALL: baseFilteredItems.length,
+      PRODUCT: baseFilteredItems.filter((item) => item.type === 'PRODUCT').length,
+      EQUIPMENT: baseFilteredItems.filter((item) => item.type === 'EQUIPMENT').length,
+      TOOL: baseFilteredItems.filter((item) => item.type === 'TOOL').length,
+      KIT: baseFilteredItems.filter((item) => item.type === 'KIT').length,
+    };
+  }, [baseFilteredItems]);
+
+  const tableItems = useMemo(() => {
+    const byType =
+      typeFilter === 'ALL'
+        ? baseFilteredItems
+        : baseFilteredItems.filter((item) => item.type === typeFilter);
+
+    const sorted = [...byType].sort((left, right) => {
+      const activeSort = sorting[0];
+      if (!activeSort) {
+        return 0;
+      }
+
+      const leftValue = left[activeSort.id as keyof ItemEntity];
+      const rightValue = right[activeSort.id as keyof ItemEntity];
+
+      let compareValue = 0;
+      if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+        compareValue = leftValue - rightValue;
+      } else {
+        compareValue = String(leftValue ?? '').localeCompare(String(rightValue ?? ''));
+      }
+
+      return activeSort.desc ? -compareValue : compareValue;
+    });
+
+    const start = pagination.pageIndex * pagination.pageSize;
+    const end = start + pagination.pageSize;
+    return sorted.slice(start, end);
+  }, [baseFilteredItems, pagination.pageIndex, pagination.pageSize, sorting, typeFilter]);
+
+  const pageCount = useMemo(() => {
+    const totalForType =
+      typeFilter === 'ALL'
+        ? baseFilteredItems.length
+        : baseFilteredItems.filter((item) => item.type === typeFilter).length;
+    return Math.max(1, Math.ceil(totalForType / pagination.pageSize));
+  }, [baseFilteredItems, pagination.pageSize, typeFilter]);
+
+  const kitExportRows = useMemo(
+    () =>
+      (kitsExportQuery.data ?? []).map((row) => ({
+        kitName: row.kitName,
+        kitCode: row.kitCode,
+        componentName: row.componentName,
+        componentCode: row.componentCode,
+        quantity: Number(row.quantity ?? 0),
+        unit: row.unit,
+      })),
+    [kitsExportQuery.data],
   );
 
   const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
@@ -111,10 +236,10 @@ export default function InventoryPage() {
 
       <InventoryStats stats={statsData ?? DEFAULT_STATS} />
       <InventoryTable
-        items={items}
-        isLoading={isLoading}
+        items={tableItems}
+        isLoading={inventoryQuery.isFetching && allItems.length === 0}
         isAdmin={isAdmin}
-        pageCount={listResult?.meta.totalPages ?? 1}
+        pageCount={pageCount}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}
         search={search}
@@ -124,10 +249,12 @@ export default function InventoryPage() {
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
         typeCounts={countsData ?? DEFAULT_COUNTS}
-        allLocations={allLocations ?? []}
+        allLocations={allLocations}
         sorting={sorting}
         onSortingChange={handleSortingChange}
         onRowClick={handleRowClick}
+        exportItems={allItems}
+        exportKitRows={kitExportRows}
       />
       <ItemDetailsSheet
         item={selectedItem}

@@ -1,6 +1,8 @@
 'use client';
 
-import { trpc } from '@/lib/trpc';
+import { useMemo } from 'react';
+import { useQuery } from '@powersync/react';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +19,34 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+
+type LocalItemStatsRow = {
+  total: number | string | null;
+  products: number | string | null;
+  equipment: number | string | null;
+  tools: number | string | null;
+  kits: number | string | null;
+};
+
+type LocalMovementStatsRow = {
+  total: number | string | null;
+  purchases: number | string | null;
+  returns: number | string | null;
+  exits: number | string | null;
+  writeoffs: number | string | null;
+  thisMonth: number | string | null;
+};
+
+type LocalProjectStatsRow = {
+  total: number | string | null;
+};
+
+type LocalUserStatsRow = {
+  total: number | string | null;
+  admins: number | string | null;
+  active: number | string | null;
+  inactive: number | string | null;
+};
 
 function StatCard({
   title,
@@ -56,16 +86,89 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { data: me } = trpc.users.me.useQuery();
+  const { user: me } = useCurrentUser();
   const isAdmin = me?.role === 'ADMIN';
 
-  const { data: itemStats, isLoading: loadingItems } = trpc.items.getStats.useQuery();
-  const { data: movStats, isLoading: loadingMov } = trpc.movements.getStats.useQuery();
-  const { data: projStats, isLoading: loadingProj } = trpc.projects.getStats.useQuery();
-  const { data: userStats, isLoading: loadingUsers } = trpc.adminUsers.getStats.useQuery(
-    undefined,
-    { enabled: isAdmin },
+  const localItemStatsQuery = useQuery<LocalItemStatsRow>(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN type = 'PRODUCT' THEN 1 ELSE 0 END) AS products,
+      SUM(CASE WHEN type = 'EQUIPMENT' THEN 1 ELSE 0 END) AS equipment,
+      SUM(CASE WHEN type = 'TOOL' THEN 1 ELSE 0 END) AS tools,
+      SUM(CASE WHEN type = 'KIT' THEN 1 ELSE 0 END) AS kits
+    FROM items
+  `);
+  const localMovementStatsQuery = useQuery<LocalMovementStatsRow>(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN type = 'PURCHASE' THEN 1 ELSE 0 END) AS purchases,
+      SUM(CASE WHEN type = 'RETURN' THEN 1 ELSE 0 END) AS returns,
+      SUM(CASE WHEN type = 'EXIT' THEN 1 ELSE 0 END) AS exits,
+      SUM(CASE WHEN type = 'WRITEOFF' THEN 1 ELSE 0 END) AS writeoffs,
+      SUM(
+        CASE
+          WHEN strftime('%Y-%m', date) = strftime('%Y-%m', 'now', 'localtime')
+            THEN 1
+          ELSE 0
+        END
+      ) AS thisMonth
+    FROM movements
+  `);
+  const localProjectStatsQuery = useQuery<LocalProjectStatsRow>(
+    'SELECT COUNT(*) AS total FROM projects',
   );
+  const localUserStatsQuery = useQuery<LocalUserStatsRow>(`
+    SELECT
+      (SELECT COUNT(*) FROM users) AS total,
+      (SELECT COUNT(*) FROM users WHERE role = 'ADMIN') AS admins,
+      (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL) AS active,
+      ((SELECT COUNT(*) FROM users) - (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL)) AS inactive
+  `);
+
+  const localItemStats = useMemo(() => {
+    const first = localItemStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      products: Number(first?.products ?? 0),
+      equipment: Number(first?.equipment ?? 0),
+      tools: Number(first?.tools ?? 0),
+      kits: Number(first?.kits ?? 0),
+    };
+  }, [localItemStatsQuery.data]);
+  const localMovementStats = useMemo(() => {
+    const first = localMovementStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      purchases: Number(first?.purchases ?? 0),
+      returns: Number(first?.returns ?? 0),
+      exits: Number(first?.exits ?? 0),
+      writeoffs: Number(first?.writeoffs ?? 0),
+      thisMonth: Number(first?.thisMonth ?? 0),
+    };
+  }, [localMovementStatsQuery.data]);
+  const localProjectStats = useMemo(() => {
+    const first = localProjectStatsQuery.data?.[0];
+    return { total: Number(first?.total ?? 0) };
+  }, [localProjectStatsQuery.data]);
+  const localUserStats = useMemo(() => {
+    const first = localUserStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      admins: Number(first?.admins ?? 0),
+      active: Number(first?.active ?? 0),
+      inactive: Number(first?.inactive ?? 0),
+    };
+  }, [localUserStatsQuery.data]);
+
+  const itemStats = localItemStats;
+  const movStats = localMovementStats;
+  const projStats = localProjectStats;
+  const userStats = localUserStats;
+
+  const loadingItems = localItemStatsQuery.isFetching;
+  const loadingMov = localMovementStatsQuery.isFetching;
+  const loadingProj = localProjectStatsQuery.isFetching;
+  const loadingUsers = localUserStatsQuery.isFetching;
 
   const displayName = me?.name ?? me?.email ?? '…';
 

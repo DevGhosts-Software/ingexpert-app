@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginDto, LoginSchema } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Boxes, Eye, EyeOff } from 'lucide-react';
+import { localizeUserError } from '@/lib/i18n/user-error';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -25,38 +25,47 @@ export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
 
-  const { data: authenticatedUser } = trpc.users.me.useQuery(undefined, { retry: false });
-
   useEffect(() => {
-    if (authenticatedUser) {
-      router.replace('/');
-    }
-  }, [authenticatedUser, router]);
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active && session) {
+        router.replace('/');
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.replace('/');
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const form = useForm<LoginDto>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: '', password: '' },
   });
 
-  const utils = trpc.useUtils();
-  const loginMutation = trpc.auth.login.useMutation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function onSubmit(values: LoginDto) {
-    loginMutation.mutate(values, {
-      onSuccess: async (data) => {
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
-        // Reset the cached users.me error so the dashboard fetches fresh
-        void utils.users.me.reset();
-        toast.success('Sesión iniciada correctamente');
-        router.push('/');
-      },
-      onError: (error) => {
-        toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');
-      },
-    });
+  async function onSubmit(values: LoginDto) {
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.signInWithPassword(values);
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error(localizeUserError(error.message, 'Credenciales inválidas. Intenta nuevamente.'));
+      return;
+    }
+
+    toast.success('Sesión iniciada correctamente');
+    router.push('/');
   }
 
   return (
@@ -91,7 +100,7 @@ export function LoginForm() {
                       type="email"
                       placeholder="usuario@empresa.com"
                       autoComplete="email"
-                      disabled={loginMutation.isPending}
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
@@ -112,7 +121,7 @@ export function LoginForm() {
                         placeholder="••••••••"
                         autoComplete="current-password"
                         className="pr-10"
-                        disabled={loginMutation.isPending}
+                        disabled={isSubmitting}
                         {...field}
                       />
                       <button
@@ -133,8 +142,8 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full mt-2" disabled={loginMutation.isPending}>
-              {loginMutation.isPending ? 'Iniciando sesión…' : 'Iniciar sesión'}
+            <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+              {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
             </Button>
           </form>
         </Form>

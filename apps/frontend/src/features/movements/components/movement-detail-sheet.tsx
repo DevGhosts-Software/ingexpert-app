@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useQuery } from '@powersync/react';
 
-import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -100,10 +100,131 @@ interface MovementDetailSheetProps {
   onClose: () => void;
 }
 
+type LocalMovementHeaderRow = {
+  id: string;
+  type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF';
+  created_by_id: string;
+  destination: string | null;
+  observations: string | null;
+  responsible_delivery_id: string | null;
+  responsible_receipt_id: string | null;
+  date: string;
+  project_id: string | null;
+  items_count: number | string | null;
+  project_name: string | null;
+  creator_name: string | null;
+  responsible_delivery_name: string | null;
+  responsible_receipt_name: string | null;
+};
+
+type LocalMovementDetailRow = {
+  id: string;
+  movement_id: string;
+  item_id: string;
+  quantity: number | string | null;
+  item_name: string;
+  item_code: string;
+  item_location: string;
+  item_stock: number | string | null;
+  item_unit: string;
+  item_type: string;
+  item_image_url: string | null;
+};
+
 export function MovementDetailSheet({ movementId, open, onClose }: MovementDetailSheetProps) {
-  const { data: movement, isLoading } = trpc.movements.getById.useQuery(movementId, {
-    enabled: open,
-  });
+  const escapedMovementId = movementId.replaceAll("'", "''");
+  const headerSql =
+    open && movementId
+      ? `
+      SELECT
+        m.id,
+        m.type,
+        m.created_by_id,
+        m.destination,
+        m.observations,
+        m.responsible_delivery_id,
+        m.responsible_receipt_id,
+        m.date,
+        m.project_id,
+        COUNT(md.id) AS items_count,
+        p.name AS project_name,
+        creator.name AS creator_name,
+        delivery.name AS responsible_delivery_name,
+        receipt.name AS responsible_receipt_name
+      FROM movements m
+      LEFT JOIN movement_details md ON md.movement_id = m.id
+      LEFT JOIN projects p ON p.id = m.project_id
+      LEFT JOIN users creator ON creator.id = m.created_by_id
+      LEFT JOIN users delivery ON delivery.id = m.responsible_delivery_id
+      LEFT JOIN users receipt ON receipt.id = m.responsible_receipt_id
+      WHERE m.id = '${escapedMovementId}'
+      GROUP BY
+        m.id, m.type, m.created_by_id, m.destination, m.observations,
+        m.responsible_delivery_id, m.responsible_receipt_id, m.date, m.project_id,
+        p.name, creator.name, delivery.name, receipt.name
+      LIMIT 1
+    `
+      : 'SELECT * FROM movements WHERE 1 = 0';
+  const detailsSql =
+    open && movementId
+      ? `
+      SELECT
+        md.id,
+        md.movement_id,
+        md.item_id,
+        md.quantity,
+        i.name AS item_name,
+        i.code AS item_code,
+        i.location AS item_location,
+        i.stock AS item_stock,
+        i.unit AS item_unit,
+        i.type AS item_type,
+        i.image_url AS item_image_url
+      FROM movement_details md
+      INNER JOIN items i ON i.id = md.item_id
+      WHERE md.movement_id = '${escapedMovementId}'
+      ORDER BY i.name ASC
+    `
+      : 'SELECT * FROM movement_details WHERE 1 = 0';
+
+  const headerQuery = useQuery<LocalMovementHeaderRow>(headerSql);
+  const detailsQuery = useQuery<LocalMovementDetailRow>(detailsSql);
+  const movementHeader = headerQuery.data?.[0];
+  const movement = movementHeader
+    ? {
+        id: movementHeader.id,
+        type: movementHeader.type,
+        createdById: movementHeader.created_by_id,
+        destination: movementHeader.destination,
+        observations: movementHeader.observations,
+        responsibleDeliveryId: movementHeader.responsible_delivery_id,
+        responsibleReceiptId: movementHeader.responsible_receipt_id,
+        date: movementHeader.date,
+        projectId: movementHeader.project_id,
+        itemsCount: Number(movementHeader.items_count ?? 0),
+        projectName: movementHeader.project_name,
+        creatorName: movementHeader.creator_name,
+        responsibleDeliveryName: movementHeader.responsible_delivery_name,
+        responsibleReceiptName: movementHeader.responsible_receipt_name,
+        details: (detailsQuery.data ?? []).map((detail) => ({
+          id: detail.id,
+          movementId: detail.movement_id,
+          itemId: detail.item_id,
+          quantity: Number(detail.quantity ?? 0),
+          item: {
+            id: detail.item_id,
+            code: detail.item_code,
+            name: detail.item_name,
+            location: detail.item_location,
+            stock: Number(detail.item_stock ?? 0),
+            unit: detail.item_unit,
+            type: detail.item_type,
+            imageUrl: detail.item_image_url ?? '',
+          },
+        })),
+      }
+    : null;
+  const isLoading = !movement && (headerQuery.isFetching || detailsQuery.isFetching);
 
   const config = movement ? TYPE_CONFIG[movement.type] : null;
 

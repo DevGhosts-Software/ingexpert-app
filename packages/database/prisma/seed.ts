@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { type ItemType, PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Client } from 'pg';
 
 dotenv.config();
 
@@ -248,43 +245,6 @@ function generateItemsOfType(
   return items;
 }
 
-// ─── SQL statement splitter (handles dollar-quoted function bodies) ───────────
-
-function splitSqlStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = '';
-  let inDollarQuote = false;
-  let dollarTag = '';
-
-  for (const line of sql.split('\n')) {
-    // Track entry/exit of dollar-quoted strings (e.g. $$ or $tag$)
-    const tags = line.match(/\$\w*\$/g) ?? [];
-    for (const tag of tags) {
-      if (!inDollarQuote) {
-        inDollarQuote = true;
-        dollarTag = tag;
-      } else if (tag === dollarTag) {
-        inDollarQuote = false;
-        dollarTag = '';
-      }
-    }
-
-    current += line + '\n';
-
-    // A statement ends at a semicolon on a line, but only outside dollar-quotes
-    if (!inDollarQuote && line.trimEnd().endsWith(';')) {
-      const trimmed = current.trim();
-      if (trimmed) {
-        statements.push(trimmed);
-      }
-      current = '';
-    }
-  }
-
-  if (current.trim()) statements.push(current.trim());
-  return statements;
-}
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -437,48 +397,6 @@ async function main() {
         console.log(`  Created: "${p.name}".`);
       }
     }
-  }
-
-  // ── 5. SQL bucket policies ────────────────────────────────────────────────────
-  const sqlPath = path.join(__dirname, 'app-data bucket policies.sql');
-  if (!fs.existsSync(sqlPath)) {
-    console.warn('\nSQL script not found, skipping.');
-  } else {
-    console.log('\n── SQL Policies ────────────────────────────────');
-    const sql = fs.readFileSync(sqlPath, 'utf-8');
-    const statements = splitSqlStatements(sql);
-    console.log(`Found ${statements.length} SQL statements.`);
-
-    const dbClient = new Client({
-      connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
-    });
-    await dbClient.connect();
-
-    let ok = 0;
-    let skipped = 0;
-    let failed = 0;
-
-    for (const stmt of statements) {
-      const preview = stmt.slice(0, 60).replace(/\n/g, ' ');
-      try {
-        await dbClient.query(stmt);
-        console.log(`  ✓ ${preview}...`);
-        ok++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Duplicate policy / already exists → skip gracefully
-        if (msg.includes('already exists') || msg.includes('duplicate')) {
-          console.log(`  ⊘ Already exists, skipping: ${preview}...`);
-          skipped++;
-        } else {
-          console.warn(`  ✗ Failed: ${preview}...\n    ${msg}`);
-          failed++;
-        }
-      }
-    }
-
-    await dbClient.end();
-    console.log(`  Done: ${ok} applied, ${skipped} skipped, ${failed} failed.`);
   }
 
   console.log('\n✅ Seed complete.');

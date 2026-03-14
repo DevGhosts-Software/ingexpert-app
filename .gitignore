@@ -30,6 +30,7 @@ dist
 # Tauri
 apps/frontend/src-tauri/target/
 apps/frontend/src-tauri/gen/
+apps/frontend/public/@powersync/
 
 
 # Debug
@@ -43,3 +44,14 @@ yarn-error.log*
 
 
 apps/frontend/next-env.d.ts
+
+
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.development
+.env.*.local
