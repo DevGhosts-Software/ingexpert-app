@@ -88,22 +88,27 @@ const json = (status: number, body: unknown): Response =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-const decodeJwtSubject = (token: string): string | null => {
-  const segments = token.split('.');
-  if (segments.length < 2) {
-    return null;
-  }
+type CallerResolutionCode = 'AUTH_CONTEXT_MISSING' | 'AUTH_TOKEN_INVALID';
 
-  try {
-    const payload = JSON.parse(atob(segments[1]));
-    return typeof payload?.sub === 'string' ? payload.sub : null;
-  } catch {
+type CallerResolutionResult =
+  | { ok: true; callerId: string; strategy: 'forwarded-header' | 'bearer-token' }
+  | { ok: false; code: CallerResolutionCode; message: string };
+
+const getBearerToken = (req: Request): string | null => {
+  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
+  if (!authHeader) {
     return null;
   }
+  return authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
 };
 
 const getForwardedCallerId = (req: Request): string | null => {
-  const headerCandidates = ['x-supabase-auth-user', 'x-jwt-claim-sub', 'x-auth-user'];
+  const headerCandidates = [
+    'x-supabase-auth-user',
+    'x-jwt-claim-sub',
+    'x-auth-user',
+    'x-supabase-user-id',
+  ];
   for (const headerName of headerCandidates) {
     const value = req.headers.get(headerName)?.trim();
     if (value) {
@@ -111,6 +116,36 @@ const getForwardedCallerId = (req: Request): string | null => {
     }
   }
   return null;
+};
+
+const resolveCallerIdentity = async (
+  req: Request,
+  adminClient: ReturnType<typeof createClient>,
+): Promise<CallerResolutionResult> => {
+  const forwardedCallerId = getForwardedCallerId(req);
+  if (forwardedCallerId) {
+    return { ok: true, callerId: forwardedCallerId, strategy: 'forwarded-header' };
+  }
+
+  const token = getBearerToken(req);
+  if (!token) {
+    return {
+      ok: false,
+      code: 'AUTH_CONTEXT_MISSING',
+      message: 'Missing authenticated caller context',
+    };
+  }
+
+  const { data: callerData, error: callerError } = await adminClient.auth.getUser(token);
+  if (callerError || !callerData.user?.id) {
+    return {
+      ok: false,
+      code: 'AUTH_TOKEN_INVALID',
+      message: callerError?.message ?? 'Invalid caller token',
+    };
+  }
+
+  return { ok: true, callerId: callerData.user.id, strategy: 'bearer-token' };
 };
 
 const ensureWorkArea = async (adminClient: ReturnType<typeof createClient>, workArea: string) => {
@@ -148,30 +183,18 @@ Deno.serve(async (req) => {
     return json(500, { error: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required' });
   }
 
-  // Supabase Edge may provide authenticated caller context via forwarded headers even when
-  // the raw Authorization header is not surfaced to function code.
-  const forwardedCallerId = getForwardedCallerId(req);
-  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  let callerErrorMessage: string | undefined;
-  let callerId = forwardedCallerId;
-
-  if (!callerId && token) {
-    const { data: callerData, error: callerError } = await adminClient.auth.getUser(token);
-    callerErrorMessage = callerError?.message;
-    callerId = callerData.user?.id ?? decodeJwtSubject(token);
-  }
-
-  if (!callerId) {
+  const callerResolution = await resolveCallerIdentity(req, adminClient);
+  if (!callerResolution.ok) {
     return json(401, {
-      error: callerErrorMessage ?? 'Missing authenticated caller context',
+      code: callerResolution.code,
+      error: callerResolution.message,
     });
   }
+  const callerId = callerResolution.callerId;
 
   const { data: callerUser, error: callerUserError } = await adminClient
     .from('users')
@@ -179,10 +202,10 @@ Deno.serve(async (req) => {
     .eq('id', callerId)
     .single();
   if (callerUserError) {
-    return json(403, { error: callerUserError.message });
+    return json(403, { code: 'ADMIN_LOOKUP_FAILED', error: callerUserError.message });
   }
   if (callerUser?.role !== 'ADMIN') {
-    return json(403, { error: 'Admin role required' });
+    return json(403, { code: 'ADMIN_ROLE_REQUIRED', error: 'Admin role required' });
   }
 
   let payload: ActionPayload;

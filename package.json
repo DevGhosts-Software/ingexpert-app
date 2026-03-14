@@ -27,13 +27,9 @@
     "db:seed": "pnpm --filter @ingexpert/database db:seed",
     "db:studio": "pnpm --filter @ingexpert/database db:studio",
     "db:reset": "pnpm --filter @ingexpert/database db:reset",
-    "supabase:start": "pnpm --filter @ingexpert/database supabase:start",
-    "supabase:stop": "pnpm --filter @ingexpert/database supabase:stop",
     "supabase:link": "pnpm --filter @ingexpert/database supabase:link",
     "supabase:db:push": "pnpm --filter @ingexpert/database supabase:db:push",
     "supabase:functions:deploy": "pnpm --filter @ingexpert/database supabase:functions:deploy",
-    "supabase:functions:deploy:all": "pnpm --filter @ingexpert/database supabase:functions:deploy:all",
-    "supabase:functions:serve": "pnpm --filter @ingexpert/database supabase:functions:serve",
     "type-check": "turbo run type-check",
     "version:sync": "tsx scripts/sync-version.ts"
   },

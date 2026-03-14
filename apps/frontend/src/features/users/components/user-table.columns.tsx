@@ -74,6 +74,22 @@ function canDelete(currentId: string, target: UserEntity): boolean {
   return true;
 }
 
+function mapAdminControlAuthError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+
+  if (error.message.includes('AUTH_CONTEXT_MISSING')) {
+    return 'Tu sesión no es válida para esta acción. Cierra sesión e inicia de nuevo.';
+  }
+  if (error.message.includes('AUTH_TOKEN_INVALID')) {
+    return 'No se pudo validar tu sesión. Inicia sesión de nuevo e inténtalo otra vez.';
+  }
+  if (error.message.includes('ADMIN_ROLE_REQUIRED')) {
+    return 'Solo un administrador puede realizar esta acción.';
+  }
+
+  return error.message || fallback;
+}
+
 // ─── Shared password input ────────────────────────────────────────────────────
 
 function PasswordInput({ placeholder, disabled, ...props }: React.ComponentProps<typeof Input>) {
@@ -342,7 +358,7 @@ function RevokeAuthDialog({
       toast.success(`Acceso revocado para ${user.name ?? user.email}`);
       onClose();
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : 'Error al revocar acceso'),
+    onError: (err) => toast.error(mapAdminControlAuthError(err, 'Error al revocar acceso')),
   });
 
   return (

@@ -15,10 +15,58 @@ type AdminControlEnvelope = {
   data: unknown;
 };
 
+type FunctionErrorPayload = {
+  code?: string;
+  error?: string;
+};
+
+const isResponse = (value: unknown): value is Response => value instanceof Response;
+
+const parseFunctionErrorMessage = async (error: unknown): Promise<string | null> => {
+  if (typeof error !== 'object' || error === null || !('context' in error)) {
+    return null;
+  }
+
+  const context = (error as { context?: unknown }).context;
+  if (!isResponse(context)) {
+    return null;
+  }
+
+  const payload = (await context
+    .clone()
+    .json()
+    .catch(() => null)) as FunctionErrorPayload | null;
+  if (!payload?.error) {
+    return null;
+  }
+
+  return payload.code ? `${payload.code}: ${payload.error}` : payload.error;
+};
+
 async function invokeAdminControl(body: Record<string, unknown>): Promise<AdminControlEnvelope> {
-  const { data, error } = await supabase.functions.invoke(functionName, { body });
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new Error(sessionError.message);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('AUTH_CONTEXT_MISSING: Tu sesión expiró. Inicia sesión de nuevo.');
+  }
+
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
   if (error) {
-    throw new Error(error.message || 'Failed to invoke admin-control function');
+    const detailedMessage = await parseFunctionErrorMessage(error);
+    throw new Error(
+      (detailedMessage ?? error.message) || 'Failed to invoke admin-control function',
+    );
   }
 
   const parsed = AdminControlResponseSchema.safeParse(data);
