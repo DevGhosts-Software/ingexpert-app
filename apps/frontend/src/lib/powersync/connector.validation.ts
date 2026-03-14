@@ -54,6 +54,14 @@ export function validateConnectorSkipRules(): void {
     throw new Error('Expected KitDetail CRUD table alias to be supported');
   }
 
+  if (normalizeUploadCrudTable('users') !== 'users') {
+    throw new Error('Expected users CRUD table name to be supported');
+  }
+
+  if (normalizeUploadCrudTable('User') !== 'users') {
+    throw new Error('Expected User CRUD table alias to be supported');
+  }
+
   if (normalizeUploadCrudTable('kit_detail') !== null) {
     throw new Error('Expected invalid kit detail table aliases to remain unsupported');
   }

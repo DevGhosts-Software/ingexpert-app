@@ -136,7 +136,7 @@ function isDuplicateKeyError(error: SupabaseUploadError): boolean {
 
 export function normalizeUploadCrudTable(
   table: string,
-): 'movements' | 'movement_details' | 'items' | 'projects' | 'kit_details' | null {
+): 'movements' | 'movement_details' | 'items' | 'projects' | 'kit_details' | 'users' | null {
   if (table === 'Movement' || table === 'movements') {
     return 'movements';
   }
@@ -155,6 +155,10 @@ export function normalizeUploadCrudTable(
 
   if (table === 'KitDetail' || table === 'kit_details') {
     return 'kit_details';
+  }
+
+  if (table === 'User' || table === 'users') {
+    return 'users';
   }
 
   return null;
@@ -412,6 +416,31 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
         throw new Error(buildUploadFailureMessage('projects', entry.id, error));
       }
       return;
+    }
+
+    if (uploadTable === 'users') {
+      if (entry.op === UpdateType.PUT) {
+        const { error } = await supabase
+          .from('users')
+          .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
+        if (error) {
+          if (isDuplicateKeyError(error)) {
+            return;
+          }
+          throw new Error(buildUploadFailureMessage('users', entry.id, error));
+        }
+        return;
+      }
+
+      if (entry.op === UpdateType.PATCH) {
+        const { error } = await supabase.from('users').update(payload).eq('id', entry.id);
+        if (error) {
+          throw new Error(buildUploadFailureMessage('users', entry.id, error));
+        }
+        return;
+      }
+
+      throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
     }
 
     if (entry.op === UpdateType.PUT) {
