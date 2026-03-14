@@ -10,7 +10,7 @@ const POWERSYNC_PERMISSION_REMEDIATION =
 type CrudPayload = Record<string, unknown>;
 type CrudSource = { source?: string };
 type ConnectorDebugListener = () => void;
-type SupabaseUploadError = {
+export type SupabaseUploadError = {
   message: string;
   code?: string | null;
   details?: string | null;
@@ -114,7 +114,11 @@ export function isPowerSyncPermissionDeniedError(error: SupabaseUploadError): bo
   );
 }
 
-function buildUploadFailureMessage(table: string, id: string, error: SupabaseUploadError): string {
+export function buildUploadFailureMessage(
+  table: string,
+  id: string,
+  error: SupabaseUploadError,
+): string {
   const baseMessage = `PowerSync upload failed for ${table}/${id}: ${error.message}`;
   if (!isPowerSyncPermissionDeniedError(error)) {
     return baseMessage;
@@ -128,6 +132,32 @@ function isDuplicateKeyError(error: SupabaseUploadError): boolean {
     error.code === '23505' ||
     normalizedMessage.includes('duplicate key value violates unique constraint')
   );
+}
+
+export function normalizeUploadCrudTable(
+  table: string,
+): 'movements' | 'movement_details' | 'items' | 'projects' | 'kit_details' | null {
+  if (table === 'Movement' || table === 'movements') {
+    return 'movements';
+  }
+
+  if (table === 'MovementDetail' || table === 'movement_details') {
+    return 'movement_details';
+  }
+
+  if (table === 'Item' || table === 'items') {
+    return 'items';
+  }
+
+  if (table === 'Project' || table === 'projects') {
+    return 'projects';
+  }
+
+  if (table === 'KitDetail' || table === 'kit_details') {
+    return 'kit_details';
+  }
+
+  return null;
 }
 
 function parseCrudMetadata(rawMetadata: string | undefined): CrudSource | null {
@@ -289,13 +319,14 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
   }
 
   private async uploadCrudEntry(entry: CrudEntry): Promise<void> {
-    if (entry.op === UpdateType.DELETE) {
-      throw new Error(`DELETE replay is not mapped for table ${entry.table}`);
+    const payload = omitLocalMetadata(entry.opData ?? {});
+    const uploadTable = normalizeUploadCrudTable(entry.table);
+
+    if (!uploadTable) {
+      throw new Error(`Unsupported CRUD table "${entry.table}" in PowerSync uploadData`);
     }
 
-    const payload = omitLocalMetadata(entry.opData ?? {});
-
-    if (entry.table === 'Movement' || entry.table === 'movements') {
+    if (uploadTable === 'movements') {
       if (entry.op !== UpdateType.PUT) {
         throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
       }
@@ -312,7 +343,7 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       return;
     }
 
-    if (entry.table === 'MovementDetail' || entry.table === 'movement_details') {
+    if (uploadTable === 'movement_details') {
       if (entry.op !== UpdateType.PUT) {
         throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
       }
@@ -329,7 +360,7 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       return;
     }
 
-    if (entry.table === 'Item' || entry.table === 'items') {
+    if (uploadTable === 'items') {
       if (entry.op === UpdateType.PUT) {
         const { error } = await supabase
           .from('items')
@@ -350,7 +381,7 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       return;
     }
 
-    if (entry.table === 'Project' || entry.table === 'projects') {
+    if (uploadTable === 'projects') {
       if (entry.op === UpdateType.PUT) {
         const { error } = await supabase
           .from('projects')
@@ -371,6 +402,26 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       return;
     }
 
-    throw new Error(`Unsupported CRUD table "${entry.table}" in PowerSync uploadData`);
+    if (entry.op === UpdateType.PUT) {
+      const { error } = await supabase
+        .from('kit_details')
+        .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
+      if (error) {
+        if (isDuplicateKeyError(error)) {
+          return;
+        }
+        throw new Error(buildUploadFailureMessage('kit_details', entry.id, error));
+      }
+      return;
+    }
+
+    if (entry.op !== UpdateType.DELETE) {
+      throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
+    }
+
+    const { error } = await supabase.from('kit_details').delete().eq('id', entry.id);
+    if (error) {
+      throw new Error(buildUploadFailureMessage('kit_details', entry.id, error));
+    }
   }
 }

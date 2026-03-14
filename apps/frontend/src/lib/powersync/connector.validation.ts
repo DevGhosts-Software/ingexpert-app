@@ -1,8 +1,10 @@
 import type { CrudEntry } from '@powersync/web';
 import { UpdateType } from '@powersync/web';
 import {
+  buildUploadFailureMessage,
   isPowerSyncPermissionDeniedError,
   isRecoverablePowerSyncUploadError,
+  normalizeUploadCrudTable,
   shouldSkipCrudUpload,
 } from './connector';
 
@@ -44,6 +46,18 @@ export function validateConnectorSkipRules(): void {
     throw new Error('Expected movement inserts to be uploaded');
   }
 
+  if (normalizeUploadCrudTable('kit_details') !== 'kit_details') {
+    throw new Error('Expected kit_details CRUD table name to be supported');
+  }
+
+  if (normalizeUploadCrudTable('KitDetail') !== 'kit_details') {
+    throw new Error('Expected KitDetail CRUD table alias to be supported');
+  }
+
+  if (normalizeUploadCrudTable('kit_detail') !== null) {
+    throw new Error('Expected invalid kit detail table aliases to remain unsupported');
+  }
+
   if (!isRecoverablePowerSyncUploadError('Network request failed while uploading movement batch')) {
     throw new Error('Expected network upload failures to be treated as recoverable');
   }
@@ -66,10 +80,35 @@ export function validateConnectorSkipRules(): void {
 
   if (
     !isRecoverablePowerSyncUploadError(
-      'PowerSync upload failed for movements/1: duplicate key value violates unique constraint "movements_pkey"',
+      'PowerSync upload failed for kit_details/1: duplicate key value violates unique constraint "kit_details_pkey"',
     )
   ) {
     throw new Error('Expected duplicate-key replay failures to be treated as recoverable');
+  }
+
+  const permissionErrorMessage = buildUploadFailureMessage('kit_details', 'kit-detail-1', {
+    code: '42501',
+    message: 'permission denied for table kit_details',
+  });
+  if (
+    !permissionErrorMessage.includes('PowerSync upload failed for kit_details/kit-detail-1:') ||
+    !permissionErrorMessage.includes('Permission remediation required:')
+  ) {
+    throw new Error(
+      'Expected kit_details permission failures to preserve actionable upload context',
+    );
+  }
+
+  const genericErrorMessage = buildUploadFailureMessage('kit_details', 'kit-detail-2', {
+    message: 'new row violates row-level security policy for table "kit_details"',
+  });
+  if (
+    genericErrorMessage !==
+    'PowerSync upload failed for kit_details/kit-detail-2: new row violates row-level security policy for table "kit_details"'
+  ) {
+    throw new Error(
+      'Expected non-permission kit_details failures to preserve the original message shape',
+    );
   }
 
   if (
