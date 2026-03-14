@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { ModeToggle } from '@/components/theme/mode-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StorageAvatarImage } from '@/components/ui/storage-image';
+import { SyncStatusIndicator } from '@/components/sync-status-indicator';
 import type { User } from '@ingexpert/database';
 import { UserProfileSheet } from '@/features/users/components/user-profile-sheet';
 
@@ -37,6 +38,7 @@ export function DashboardNavbar({ title, user, onLogout }: DashboardNavbarProps)
         <h1 className="text-sm font-semibold">{title}</h1>
 
         <div className="ml-auto flex items-center gap-2">
+          <SyncStatusIndicator />
           <ModeToggle />
           <Separator orientation="vertical" className="h-4" />
           <button

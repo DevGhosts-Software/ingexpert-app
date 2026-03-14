@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Boxes, Eye, EyeOff } from 'lucide-react';
+import { localizeUserError } from '@/lib/i18n/user-error';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -59,7 +60,7 @@ export function LoginForm() {
     setIsSubmitting(false);
 
     if (error) {
-      toast.error(error.message || 'Credenciales incorrectas. Intenta nuevamente.');
+      toast.error(localizeUserError(error.message, 'Credenciales inválidas. Intenta nuevamente.'));
       return;
     }
 

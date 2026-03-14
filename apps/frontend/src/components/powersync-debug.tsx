@@ -122,14 +122,16 @@ export function PowerSyncDebug({ className }: { className?: string }) {
             </p>
             <p>🔐 Última credencial: {connectorState.lastCredentialAt ?? '—'}</p>
             {connectorState.lastCredentialError ? (
-              <p className="text-red-400">Credential error: {connectorState.lastCredentialError}</p>
+              <p className="text-red-400">
+                Error de credencial: {connectorState.lastCredentialError}
+              </p>
             ) : null}
             {connectorState.lastUploadError ? (
-              <p className="text-red-400">Upload error: {connectorState.lastUploadError}</p>
+              <p className="text-red-400">Error de subida: {connectorState.lastUploadError}</p>
             ) : null}
             {queryErrors.map((errorMessage) => (
               <p key={errorMessage} className="text-red-400">
-                Query error: {errorMessage}
+                Error de consulta: {errorMessage}
               </p>
             ))}
           </div>

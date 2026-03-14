@@ -11,6 +11,7 @@ import {
   writeOfflineValidatedUser,
 } from '@/lib/auth/offline-session';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { localizeUserError } from '@/lib/i18n/user-error';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { DashboardNavbar } from '@/components/dashboard-navbar';
@@ -134,12 +135,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast.error(error.message);
+      toast.error(
+        localizeUserError(error.message, 'No se pudo cerrar sesión. Intenta nuevamente.'),
+      );
       return;
     }
     clearOfflineValidatedUser();
     router.push('/login');
-    toast.success('Logged out successfully');
+    toast.success('Sesión cerrada correctamente');
   };
 
   return (

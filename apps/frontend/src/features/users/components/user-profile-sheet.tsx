@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, LogOut, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { localizeUserError } from '@/lib/i18n/user-error';
 import { supabase } from '@/lib/supabase';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
@@ -142,7 +143,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
         avatarForm.setValue('avatar', finalAvatarUrl);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Error al actualizar avatar';
-        toast.error(message);
+        toast.error(localizeUserError(message, 'Error al actualizar avatar.'));
       } finally {
         setIsSavingAvatar(false);
       }
@@ -169,7 +170,7 @@ export function UserProfileSheet({ user, open, onClose, onLogout }: UserProfileS
     const { error } = await supabase.auth.updateUser({ password: values.password });
     setIsUpdatingPassword(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(localizeUserError(error.message, 'No se pudo actualizar la contraseña.'));
       return;
     }
     toast.success('Contraseña actualizada');
