@@ -17,6 +17,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.items TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.kit_details TO authenticated;
 GRANT SELECT, INSERT ON TABLE public.movements TO authenticated;
 GRANT SELECT, INSERT ON TABLE public.movement_details TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.staff TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.work_areas TO authenticated;
 REVOKE UPDATE, DELETE ON TABLE public.movements FROM authenticated;
 REVOKE UPDATE, DELETE ON TABLE public.movement_details FROM authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
@@ -30,6 +32,8 @@ ALTER TABLE public.items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kit_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.movements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.movement_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.work_areas ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
 -- users policies
@@ -265,6 +269,136 @@ END IF;
 END $$;
 
 -- ------------------------------------------------------------
+-- staff policies
+-- - authenticated CRUD
+-- ------------------------------------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'staff'
+      AND policyname = 'staff_select_authenticated'
+  ) THEN
+    CREATE POLICY staff_select_authenticated
+      ON public.staff
+      FOR SELECT
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'staff'
+      AND policyname = 'staff_insert_authenticated'
+  ) THEN
+    CREATE POLICY staff_insert_authenticated
+      ON public.staff
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'staff'
+      AND policyname = 'staff_update_authenticated'
+  ) THEN
+    CREATE POLICY staff_update_authenticated
+      ON public.staff
+      FOR UPDATE
+      TO authenticated
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'staff'
+      AND policyname = 'staff_delete_authenticated'
+  ) THEN
+    CREATE POLICY staff_delete_authenticated
+      ON public.staff
+      FOR DELETE
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
+
+-- ------------------------------------------------------------
+-- work_areas policies
+-- - authenticated CRUD
+-- ------------------------------------------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'work_areas'
+      AND policyname = 'work_areas_select_authenticated'
+  ) THEN
+    CREATE POLICY work_areas_select_authenticated
+      ON public.work_areas
+      FOR SELECT
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'work_areas'
+      AND policyname = 'work_areas_insert_authenticated'
+  ) THEN
+    CREATE POLICY work_areas_insert_authenticated
+      ON public.work_areas
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'work_areas'
+      AND policyname = 'work_areas_update_authenticated'
+  ) THEN
+    CREATE POLICY work_areas_update_authenticated
+      ON public.work_areas
+      FOR UPDATE
+      TO authenticated
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'work_areas'
+      AND policyname = 'work_areas_delete_authenticated'
+  ) THEN
+    CREATE POLICY work_areas_delete_authenticated
+      ON public.work_areas
+      FOR DELETE
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
+
+-- ------------------------------------------------------------
 -- movements policies
 -- - authenticated read
 -- - authenticated insert with ownership constraint
@@ -359,14 +493,14 @@ COMMIT;
 -- FROM information_schema.role_table_grants
 -- WHERE table_schema = 'public'
 --   AND grantee = 'authenticated'
---   AND table_name IN ('users', 'projects', 'items', 'kit_details', 'movements', 'movement_details')
+--   AND table_name IN ('users', 'projects', 'items', 'kit_details', 'movements', 'movement_details', 'staff', 'work_areas')
 -- ORDER BY table_name, privilege_type;
 --
 -- 3) Confirm policy inventory:
 -- SELECT tablename, policyname, cmd, roles
 -- FROM pg_policies
 -- WHERE schemaname = 'public'
---   AND tablename IN ('users', 'projects', 'items', 'kit_details', 'movements', 'movement_details')
+--   AND tablename IN ('users', 'projects', 'items', 'kit_details', 'movements', 'movement_details', 'staff', 'work_areas')
 -- ORDER BY tablename, policyname;
 --
 -- 4) Behavioral checks (execute via authenticated session/token):
@@ -375,6 +509,8 @@ COMMIT;
 --    - admin user can INSERT/UPDATE/DELETE on projects.
 --    - non-admin user is denied DELETE on items.
 --    - authenticated user can INSERT/UPDATE/DELETE kit_details rows.
+--    - authenticated user can INSERT/UPDATE/DELETE staff rows.
+--    - authenticated user can INSERT/UPDATE/DELETE work_areas rows.
 --    - authenticated user can INSERT on movements/movement_details for own movement chain.
 --    - authenticated user is denied UPDATE/DELETE on movements and movement_details.
 --
@@ -393,6 +529,14 @@ COMMIT;
 -- DROP POLICY IF EXISTS kit_details_insert_authenticated ON public.kit_details;
 -- DROP POLICY IF EXISTS kit_details_update_authenticated ON public.kit_details;
 -- DROP POLICY IF EXISTS kit_details_delete_authenticated ON public.kit_details;
+-- DROP POLICY IF EXISTS staff_select_authenticated ON public.staff;
+-- DROP POLICY IF EXISTS staff_insert_authenticated ON public.staff;
+-- DROP POLICY IF EXISTS staff_update_authenticated ON public.staff;
+-- DROP POLICY IF EXISTS staff_delete_authenticated ON public.staff;
+-- DROP POLICY IF EXISTS work_areas_select_authenticated ON public.work_areas;
+-- DROP POLICY IF EXISTS work_areas_insert_authenticated ON public.work_areas;
+-- DROP POLICY IF EXISTS work_areas_update_authenticated ON public.work_areas;
+-- DROP POLICY IF EXISTS work_areas_delete_authenticated ON public.work_areas;
 -- DROP POLICY IF EXISTS powersync_movements_select_authenticated ON public.movements;
 -- DROP POLICY IF EXISTS powersync_movements_insert_authenticated ON public.movements;
 -- DROP POLICY IF EXISTS powersync_movement_details_select_authenticated ON public.movement_details;

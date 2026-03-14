@@ -7,12 +7,14 @@ This change is a frontend-only UX refinement in `apps/frontend/src/components/sy
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Replace the native tooltip with a shadcn-based hover surface (Radix-backed) that shows sync details in a structured layout.
 - Preserve current sync semantics, copy language (Spanish-first), badge tones, and icon behavior.
 - Keep the interaction non-blocking and lightweight for topbar usage.
 - Maintain accessibility for hover/focus interactions in desktop contexts.
 
 **Non-Goals:**
+
 - No changes to sync algorithm, queue logic, or persistence keys.
 - No API, backend, or Prisma schema modifications.
 - No redesign of topbar layout beyond the sync indicator interaction affordance.

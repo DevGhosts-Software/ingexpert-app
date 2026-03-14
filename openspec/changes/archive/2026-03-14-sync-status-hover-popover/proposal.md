@@ -12,9 +12,11 @@ The topbar sync badge currently exposes details only through a multiline `title`
 ## Capabilities
 
 ### New Capabilities
+
 - None.
 
 ### Modified Capabilities
+
 - `frontend-sync-status-localization`: extend topbar sync-status requirements to define structured hover details instead of relying on native tooltip behavior.
 
 ## Impact
