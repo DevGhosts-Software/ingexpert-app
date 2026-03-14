@@ -16,7 +16,6 @@ This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://
 
 ### Applications
 
-- **`@ingexpert/api`** (`apps/api`): NestJS backend. Handles business logic, tRPC API, and database interactions.
 - **`@ingexpert/frontend`** (`apps/frontend`): Next.js frontend. Modern, responsive UI/UX using Tailwind CSS v4 and shadcn/ui.
 
 ### Packages
@@ -45,7 +44,7 @@ This monorepo is managed using [Turbo](https://turbo.build/) and [pnpm](https://
     ```bash
     pnpm dev
     ```
-    This launches the API dev server and the Tauri desktop app (with the Next.js frontend embedded).
+    This launches the Tauri desktop app (with the Next.js frontend embedded).
 
 ## Pre-Push Checklist
 
@@ -60,8 +59,8 @@ pnpm check    # format:check + lint + type-check + Next.js build
 
 ## Scripts
 
-- `pnpm dev`: Start all apps in development mode (API + Tauri desktop app).
-- `pnpm build`: Build all apps and packages (API + Tauri desktop bundle).
+- `pnpm dev`: Start the desktop app in development mode.
+- `pnpm build`: Build all apps and packages (Tauri desktop bundle).
 - `pnpm check`: **Pre-push pipeline** — format check + lint + type-check + Next.js compile. Run this before every push.
 - `pnpm format`: Auto-fix formatting with Prettier.
 - `pnpm lint`: Lint code quality across all packages.

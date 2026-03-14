@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { PowerSyncDebug } from '@/components/powersync-debug';
+import { AppQueryClientProvider } from '@/components/providers/query-client-provider';
 import { PowerSyncProvider } from '@/components/providers/powersync-provider';
 import { ThemeProvider } from '@/components/theme/theme-provider';
-import { TRPCProvider } from '@/components/providers/trpc-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head />
       <body>
-        <TRPCProvider>
+        <AppQueryClientProvider>
           <PowerSyncProvider>
             <ThemeProvider
               attribute="class"
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </TooltipProvider>
             </ThemeProvider>
           </PowerSyncProvider>
-        </TRPCProvider>
+        </AppQueryClientProvider>
       </body>
     </html>
   );
