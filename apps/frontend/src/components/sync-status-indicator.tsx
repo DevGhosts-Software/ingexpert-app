@@ -1,12 +1,12 @@
 'use client';
 
 import { useQuery } from '@powersync/react';
-import { useRef } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { CloudOff, RefreshCw, Wifi } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSyncStatus } from '@/hooks/use-sync-status';
-import { DEBUG_COUNT_SQL, parseCount, type CountRow } from '@/lib/powersync/debug';
+import { type CountRow, DEBUG_COUNT_SQL, parseCount } from '@/lib/powersync/debug';
 import { cn } from '@/lib/utils';
 
 const LAST_COMPLETE_SYNC_KEY = 'ingexpert.lastCompleteSyncAt';
@@ -57,6 +57,9 @@ export function SyncStatusIndicator() {
     isFullySynced && !persistedLastCompleteSyncAt
       ? new Date().toISOString()
       : persistedLastCompleteSyncAt;
+  const lastCompleteSyncLabel = lastCompleteSyncAt
+    ? new Date(lastCompleteSyncAt).toLocaleString('es-ES')
+    : 'pendiente';
 
   const icon =
     state === 'offline' ? (
@@ -81,20 +84,37 @@ export function SyncStatusIndicator() {
 
   return (
     <div className="flex items-center gap-2">
-      <Badge
-        variant="outline"
-        className={cn('gap-1.5 px-3 py-1.5 text-[11px] md:text-xs', tone)}
-        title={[
-          `Estado: ${getReadableStatus(state, pendingQueueRows)}`,
-          `Última sincronización completa: ${
-            lastCompleteSyncAt ? new Date(lastCompleteSyncAt).toLocaleString('es-ES') : 'pendiente'
-          }`,
-          `Pendientes por subir: ${pendingQueueRows}`,
-        ].join('\n')}
-      >
-        {icon}
-        {getReadableStatus(state, pendingQueueRows)}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className={cn('gap-1.5 px-3 py-1.5 text-[11px] md:text-xs', tone)}
+          >
+            {icon}
+            {getReadableStatus(state, pendingQueueRows)}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          align="end"
+          hideArrow
+          className="bg-popover text-popover-foreground border max-w-80 px-3 py-2 text-xs shadow-md"
+        >
+          <div className="space-y-1.5">
+            <p>
+              <span className="font-medium">Estado:</span>{' '}
+              {getReadableStatus(state, pendingQueueRows)}
+            </p>
+            <p>
+              <span className="font-medium">Última sincronización completa:</span>{' '}
+              {lastCompleteSyncLabel}
+            </p>
+            <p>
+              <span className="font-medium">Pendientes por subir:</span> {pendingQueueRows}
+            </p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
