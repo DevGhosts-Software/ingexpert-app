@@ -1,0 +1,657 @@
+{
+  "change": "audit-frontend-trpc-api-usage",
+  "generatedAt": "2026-03-13T23:24:37.784Z",
+  "totalEntries": 65,
+  "entries": [
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 151,
+      "procedureName": "adminUsers.create",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 160,
+      "procedureName": "adminUsers.createWithoutAuth",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/admin/users/page.tsx",
+      "line": 27,
+      "procedureName": "adminUsers.getStats",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/page.tsx",
+      "line": 65,
+      "procedureName": "adminUsers.getStats",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 147,
+      "procedureName": "adminUsers.getStats",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-edit-sheet.tsx",
+      "line": 84,
+      "procedureName": "adminUsers.getStats",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 387,
+      "procedureName": "adminUsers.getStats",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/admin/users/page.tsx",
+      "line": 28,
+      "procedureName": "adminUsers.getWorkAreas",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 114,
+      "procedureName": "adminUsers.getWorkAreas",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 148,
+      "procedureName": "adminUsers.getWorkAreas",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-edit-sheet.tsx",
+      "line": 59,
+      "procedureName": "adminUsers.getWorkAreas",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-edit-sheet.tsx",
+      "line": 85,
+      "procedureName": "adminUsers.getWorkAreas",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 233,
+      "procedureName": "adminUsers.grantAuth",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/admin/users/page.tsx",
+      "line": 26,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Read path appears movable pending parity/security validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-create-sheet.tsx",
+      "line": 146,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-edit-sheet.tsx",
+      "line": 83,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 236,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 333,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 386,
+      "procedureName": "adminUsers.list",
+      "domain": "adminUsers",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 383,
+      "procedureName": "adminUsers.remove",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 330,
+      "procedureName": "adminUsers.revokeAuth",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-edit-sheet.tsx",
+      "line": 80,
+      "procedureName": "adminUsers.update",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 123,
+      "procedureName": "adminUsers.updatePassword",
+      "domain": "adminUsers",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/auth/components/login-form.tsx",
+      "line": 56,
+      "procedureName": "auth.login",
+      "domain": "auth",
+      "callType": "useMutation",
+      "featureOwnership": "Identity",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/layout.tsx",
+      "line": 86,
+      "procedureName": "auth.logout",
+      "domain": "auth",
+      "callType": "useMutation",
+      "featureOwnership": "Dashboard/AuthShell",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/components/providers/trpc-provider.tsx",
+      "line": 21,
+      "procedureName": "auth.refresh",
+      "domain": "auth",
+      "callType": "useMutation",
+      "featureOwnership": "Shared",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 123,
+      "procedureName": "items.getCounts",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-delete-dialog.tsx",
+      "line": 36,
+      "procedureName": "items.getCounts",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 124,
+      "procedureName": "items.getLocations",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-delete-dialog.tsx",
+      "line": 37,
+      "procedureName": "items.getLocations",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/page.tsx",
+      "line": 62,
+      "procedureName": "items.getStats",
+      "domain": "items",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 122,
+      "procedureName": "items.getStats",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-delete-dialog.tsx",
+      "line": 35,
+      "procedureName": "items.getStats",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 115,
+      "procedureName": "items.importMany",
+      "domain": "items",
+      "callType": "useMutation",
+      "featureOwnership": "Inventory",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 121,
+      "procedureName": "items.list",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-delete-dialog.tsx",
+      "line": 34,
+      "procedureName": "items.list",
+      "domain": "items",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-delete-dialog.tsx",
+      "line": 30,
+      "procedureName": "items.remove",
+      "domain": "items",
+      "callType": "useMutation",
+      "featureOwnership": "Inventory",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-form-sheet.tsx",
+      "line": 204,
+      "procedureName": "kits.clearKit",
+      "domain": "kits",
+      "callType": "useMutation",
+      "featureOwnership": "Inventory",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 125,
+      "procedureName": "kits.getAllWithComponents",
+      "domain": "kits",
+      "callType": "utility",
+      "featureOwnership": "Inventory",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-details-sheet.tsx",
+      "line": 38,
+      "procedureName": "kits.getComponents",
+      "domain": "kits",
+      "callType": "useQuery",
+      "featureOwnership": "Inventory",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-form-sheet.tsx",
+      "line": 118,
+      "procedureName": "kits.getComponents",
+      "domain": "kits",
+      "callType": "useQuery",
+      "featureOwnership": "Inventory",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/import-excel-dialog.tsx",
+      "line": 116,
+      "procedureName": "kits.importMany",
+      "domain": "kits",
+      "callType": "useMutation",
+      "featureOwnership": "Inventory",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/inventory/components/item-form-sheet.tsx",
+      "line": 200,
+      "procedureName": "kits.setComponents",
+      "domain": "kits",
+      "callType": "useMutation",
+      "featureOwnership": "Inventory",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-delete-sheet.tsx",
+      "line": 33,
+      "procedureName": "movements.getAll",
+      "domain": "movements",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 91,
+      "procedureName": "movements.getAll",
+      "domain": "movements",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/page.tsx",
+      "line": 63,
+      "procedureName": "movements.getStats",
+      "domain": "movements",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 95,
+      "procedureName": "projects.create",
+      "domain": "projects",
+      "callType": "useMutation",
+      "featureOwnership": "Projects",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-delete-sheet.tsx",
+      "line": 32,
+      "procedureName": "projects.getAll",
+      "domain": "projects",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 89,
+      "procedureName": "projects.getAll",
+      "domain": "projects",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/page.tsx",
+      "line": 64,
+      "procedureName": "projects.getStats",
+      "domain": "projects",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard",
+      "classification": "Server Compute Read",
+      "classificationRationale": "Aggregate stats currently server-derived with role-sensitive semantics."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-delete-sheet.tsx",
+      "line": 31,
+      "procedureName": "projects.list",
+      "domain": "projects",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 88,
+      "procedureName": "projects.list",
+      "domain": "projects",
+      "callType": "utility",
+      "featureOwnership": "Projects",
+      "classification": "Migration Candidate",
+      "classificationRationale": "Client-side cache utility; no direct authority write/read obligation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-delete-sheet.tsx",
+      "line": 28,
+      "procedureName": "projects.remove",
+      "domain": "projects",
+      "callType": "useMutation",
+      "featureOwnership": "Projects",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 104,
+      "procedureName": "projects.update",
+      "domain": "projects",
+      "callType": "useMutation",
+      "featureOwnership": "Projects",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/projects/components/project-form-sheet.tsx",
+      "line": 65,
+      "procedureName": "users.listNames",
+      "domain": "users",
+      "callType": "useQuery",
+      "featureOwnership": "Projects",
+      "classification": "Local-Computable Read",
+      "classificationRationale": "Read can be served from synchronized local tables after parity checks."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/layout.tsx",
+      "line": 80,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard/AuthShell",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/layout.tsx",
+      "line": 143,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "utility",
+      "featureOwnership": "Dashboard/AuthShell",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/layout.tsx",
+      "line": 179,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "utility",
+      "featureOwnership": "Dashboard/AuthShell",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/app/(dashboard)/page.tsx",
+      "line": 59,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "useQuery",
+      "featureOwnership": "Dashboard",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/features/auth/components/login-form.tsx",
+      "line": 66,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "utility",
+      "featureOwnership": "Identity",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-profile-sheet.tsx",
+      "line": 116,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "utility",
+      "featureOwnership": "Users/Admin",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-table.columns.tsx",
+      "line": 434,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "useQuery",
+      "featureOwnership": "Users/Admin",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/hooks/use-is-admin.ts",
+      "line": 11,
+      "procedureName": "users.me",
+      "domain": "users",
+      "callType": "useQuery",
+      "featureOwnership": "Shared",
+      "classification": "Identity/Auth",
+      "classificationRationale": "Session identity and token lifecycle boundary."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-profile-sheet.tsx",
+      "line": 111,
+      "procedureName": "users.updateMe",
+      "domain": "users",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    },
+    {
+      "filePath": "apps/frontend/src/features/users/components/user-profile-sheet.tsx",
+      "line": 160,
+      "procedureName": "users.updateMyPassword",
+      "domain": "users",
+      "callType": "useMutation",
+      "featureOwnership": "Users/Admin",
+      "classification": "Server Authority Write",
+      "classificationRationale": "Mutation changes authoritative state and requires centralized RBAC/validation."
+    }
+  ]
+}

@@ -1,6 +1,11 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@powersync/react';
 import { trpc } from '@/lib/trpc';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { compareNumericFields } from '@/lib/api-migration-parity';
+import { emitMigrationParity, emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +22,34 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+
+type LocalItemStatsRow = {
+  total: number | string | null;
+  products: number | string | null;
+  equipment: number | string | null;
+  tools: number | string | null;
+  kits: number | string | null;
+};
+
+type LocalMovementStatsRow = {
+  total: number | string | null;
+  purchases: number | string | null;
+  returns: number | string | null;
+  exits: number | string | null;
+  writeoffs: number | string | null;
+  thisMonth: number | string | null;
+};
+
+type LocalProjectStatsRow = {
+  total: number | string | null;
+};
+
+type LocalUserStatsRow = {
+  total: number | string | null;
+  admins: number | string | null;
+  active: number | string | null;
+  inactive: number | string | null;
+};
 
 function StatCard({
   title,
@@ -58,14 +91,223 @@ function StatCard({
 export default function DashboardPage() {
   const { data: me } = trpc.users.me.useQuery();
   const isAdmin = me?.role === 'ADMIN';
+  const itemStatsMode = useMigrationProcedureMode('items.getStats');
+  const movementStatsMode = useMigrationProcedureMode('movements.getStats');
+  const projectStatsMode = useMigrationProcedureMode('projects.getStats');
+  const userStatsMode = useMigrationProcedureMode('adminUsers.getStats');
 
-  const { data: itemStats, isLoading: loadingItems } = trpc.items.getStats.useQuery();
-  const { data: movStats, isLoading: loadingMov } = trpc.movements.getStats.useQuery();
-  const { data: projStats, isLoading: loadingProj } = trpc.projects.getStats.useQuery();
-  const { data: userStats, isLoading: loadingUsers } = trpc.adminUsers.getStats.useQuery(
-    undefined,
-    { enabled: isAdmin },
+  const localItemStatsQuery = useQuery<LocalItemStatsRow>(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN type = 'PRODUCT' THEN 1 ELSE 0 END) AS products,
+      SUM(CASE WHEN type = 'EQUIPMENT' THEN 1 ELSE 0 END) AS equipment,
+      SUM(CASE WHEN type = 'TOOL' THEN 1 ELSE 0 END) AS tools,
+      SUM(CASE WHEN type = 'KIT' THEN 1 ELSE 0 END) AS kits
+    FROM items
+  `);
+  const localMovementStatsQuery = useQuery<LocalMovementStatsRow>(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN type = 'PURCHASE' THEN 1 ELSE 0 END) AS purchases,
+      SUM(CASE WHEN type = 'RETURN' THEN 1 ELSE 0 END) AS returns,
+      SUM(CASE WHEN type = 'EXIT' THEN 1 ELSE 0 END) AS exits,
+      SUM(CASE WHEN type = 'WRITEOFF' THEN 1 ELSE 0 END) AS writeoffs,
+      SUM(
+        CASE
+          WHEN strftime('%Y-%m', date) = strftime('%Y-%m', 'now', 'localtime')
+            THEN 1
+          ELSE 0
+        END
+      ) AS thisMonth
+    FROM movements
+  `);
+  const localProjectStatsQuery = useQuery<LocalProjectStatsRow>(
+    'SELECT COUNT(*) AS total FROM projects',
   );
+  const localUserStatsQuery = useQuery<LocalUserStatsRow>(`
+    SELECT
+      (SELECT COUNT(*) FROM users) AS total,
+      (SELECT COUNT(*) FROM users WHERE role = 'ADMIN') AS admins,
+      (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL) AS active,
+      ((SELECT COUNT(*) FROM users) - (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL)) AS inactive
+  `);
+
+  const localItemStats = useMemo(() => {
+    const first = localItemStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      products: Number(first?.products ?? 0),
+      equipment: Number(first?.equipment ?? 0),
+      tools: Number(first?.tools ?? 0),
+      kits: Number(first?.kits ?? 0),
+    };
+  }, [localItemStatsQuery.data]);
+  const localMovementStats = useMemo(() => {
+    const first = localMovementStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      purchases: Number(first?.purchases ?? 0),
+      returns: Number(first?.returns ?? 0),
+      exits: Number(first?.exits ?? 0),
+      writeoffs: Number(first?.writeoffs ?? 0),
+      thisMonth: Number(first?.thisMonth ?? 0),
+    };
+  }, [localMovementStatsQuery.data]);
+  const localProjectStats = useMemo(() => {
+    const first = localProjectStatsQuery.data?.[0];
+    return { total: Number(first?.total ?? 0) };
+  }, [localProjectStatsQuery.data]);
+  const localUserStats = useMemo(() => {
+    const first = localUserStatsQuery.data?.[0];
+    return {
+      total: Number(first?.total ?? 0),
+      admins: Number(first?.admins ?? 0),
+      active: Number(first?.active ?? 0),
+      inactive: Number(first?.inactive ?? 0),
+    };
+  }, [localUserStatsQuery.data]);
+
+  const useApiItemStats = itemStatsMode !== 'local';
+  const useApiMovementStats = movementStatsMode !== 'local';
+  const useApiProjectStats = projectStatsMode !== 'local';
+  const useApiUserStats = userStatsMode !== 'local';
+
+  const { data: apiItemStats, isLoading: loadingApiItems } = trpc.items.getStats.useQuery(
+    undefined,
+    {
+      enabled: useApiItemStats,
+    },
+  );
+  const { data: apiMovStats, isLoading: loadingApiMov } = trpc.movements.getStats.useQuery(
+    undefined,
+    {
+      enabled: useApiMovementStats,
+    },
+  );
+  const { data: apiProjStats, isLoading: loadingApiProj } = trpc.projects.getStats.useQuery(
+    undefined,
+    {
+      enabled: useApiProjectStats,
+    },
+  );
+  const { data: apiUserStats, isLoading: loadingApiUsers } = trpc.adminUsers.getStats.useQuery(
+    undefined,
+    { enabled: isAdmin && useApiUserStats },
+  );
+
+  const itemStats = itemStatsMode === 'local' ? localItemStats : apiItemStats;
+  const movStats = movementStatsMode === 'local' ? localMovementStats : apiMovStats;
+  const projStats = projectStatsMode === 'local' ? localProjectStats : apiProjStats;
+  const userStats = userStatsMode === 'local' ? localUserStats : apiUserStats;
+
+  const loadingItems =
+    itemStatsMode === 'local' ? localItemStatsQuery.isFetching : loadingApiItems || !apiItemStats;
+  const loadingMov =
+    movementStatsMode === 'local'
+      ? localMovementStatsQuery.isFetching
+      : loadingApiMov || !apiMovStats;
+  const loadingProj =
+    projectStatsMode === 'local'
+      ? localProjectStatsQuery.isFetching
+      : loadingApiProj || !apiProjStats;
+  const loadingUsers =
+    userStatsMode === 'local'
+      ? localUserStatsQuery.isFetching
+      : loadingApiUsers || (isAdmin && !apiUserStats);
+
+  useEffect(() => {
+    emitMigrationSourceSelection({
+      procedure: 'items.getStats',
+      mode: itemStatsMode,
+      source: useApiItemStats ? 'api' : 'local',
+    });
+    emitMigrationSourceSelection({
+      procedure: 'movements.getStats',
+      mode: movementStatsMode,
+      source: useApiMovementStats ? 'api' : 'local',
+    });
+    emitMigrationSourceSelection({
+      procedure: 'projects.getStats',
+      mode: projectStatsMode,
+      source: useApiProjectStats ? 'api' : 'local',
+    });
+    emitMigrationSourceSelection({
+      procedure: 'adminUsers.getStats',
+      mode: userStatsMode,
+      source: useApiUserStats ? 'api' : 'local',
+    });
+  }, [
+    itemStatsMode,
+    movementStatsMode,
+    projectStatsMode,
+    userStatsMode,
+    useApiItemStats,
+    useApiMovementStats,
+    useApiProjectStats,
+    useApiUserStats,
+  ]);
+
+  useEffect(() => {
+    if (itemStatsMode !== 'dual-run' || !apiItemStats) return;
+    const parity = compareNumericFields(localItemStats, apiItemStats, [
+      'total',
+      'products',
+      'equipment',
+      'tools',
+      'kits',
+    ]);
+    emitMigrationParity({
+      procedure: 'items.getStats',
+      mode: 'dual-run',
+      matches: parity.matches,
+      mismatchKeys: parity.mismatchKeys,
+    });
+  }, [apiItemStats, itemStatsMode, localItemStats]);
+
+  useEffect(() => {
+    if (movementStatsMode !== 'dual-run' || !apiMovStats) return;
+    const parity = compareNumericFields(localMovementStats, apiMovStats, [
+      'total',
+      'purchases',
+      'returns',
+      'exits',
+      'writeoffs',
+      'thisMonth',
+    ]);
+    emitMigrationParity({
+      procedure: 'movements.getStats',
+      mode: 'dual-run',
+      matches: parity.matches,
+      mismatchKeys: parity.mismatchKeys,
+    });
+  }, [apiMovStats, localMovementStats, movementStatsMode]);
+
+  useEffect(() => {
+    if (projectStatsMode !== 'dual-run' || !apiProjStats) return;
+    const parity = compareNumericFields(localProjectStats, apiProjStats, ['total']);
+    emitMigrationParity({
+      procedure: 'projects.getStats',
+      mode: 'dual-run',
+      matches: parity.matches,
+      mismatchKeys: parity.mismatchKeys,
+    });
+  }, [apiProjStats, localProjectStats, projectStatsMode]);
+
+  useEffect(() => {
+    if (!isAdmin || userStatsMode !== 'dual-run' || !apiUserStats) return;
+    const parity = compareNumericFields(localUserStats, apiUserStats, [
+      'total',
+      'admins',
+      'active',
+      'inactive',
+    ]);
+    emitMigrationParity({
+      procedure: 'adminUsers.getStats',
+      mode: 'dual-run',
+      matches: parity.matches,
+      mismatchKeys: parity.mismatchKeys,
+    });
+  }, [apiUserStats, isAdmin, localUserStats, userStatsMode]);
 
   const displayName = me?.name ?? me?.email ?? '…';
 

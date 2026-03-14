@@ -1,8 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { trpc } from '@/lib/trpc';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { compareNumericFields } from '@/lib/api-migration-parity';
+import { emitMigrationParity, emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { useDebounce } from '@/hooks/use-debounce';
 import { UserStats } from '@/features/users/components/user-stats';
 import { UserTable } from '@/features/users/components/user-table';
@@ -14,6 +18,13 @@ import type {
 import type { UserStats as UserStatsType } from '@ingexpert/schema';
 
 const DEFAULT_STATS: UserStatsType = { total: 0, admins: 0, active: 0, inactive: 0 };
+type LocalWorkAreaRow = { name: string };
+type LocalUserStatsRow = {
+  total: number | string | null;
+  admins: number | string | null;
+  active: number | string | null;
+  inactive: number | string | null;
+};
 
 export default function UsersPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -22,10 +33,74 @@ export default function UsersPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('all');
   const [workAreaFilter, setWorkAreaFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const workAreasMode = useMigrationProcedureMode('adminUsers.getWorkAreas');
+  const userStatsMode = useMigrationProcedureMode('adminUsers.getStats');
 
   const { data: allUsers = [], isLoading } = trpc.adminUsers.list.useQuery();
-  const { data: stats = DEFAULT_STATS } = trpc.adminUsers.getStats.useQuery();
-  const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
+  const localWorkAreasQuery = useQuery<LocalWorkAreaRow>(
+    'SELECT name FROM work_areas ORDER BY name ASC',
+  );
+  const localStatsQuery = useQuery<LocalUserStatsRow>(`
+    SELECT
+      (SELECT COUNT(*) FROM users) AS total,
+      (SELECT COUNT(*) FROM users WHERE role = 'ADMIN') AS admins,
+      (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL) AS active,
+      ((SELECT COUNT(*) FROM users) - (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL)) AS inactive
+  `);
+  const localWorkAreas = useMemo(
+    () => (localWorkAreasQuery.data ?? []).map((row) => row.name),
+    [localWorkAreasQuery.data],
+  );
+  const localStats = useMemo<UserStatsType>(() => {
+    const first = localStatsQuery.data?.[0];
+    if (!first) {
+      return DEFAULT_STATS;
+    }
+    return {
+      total: Number(first.total ?? 0),
+      admins: Number(first.admins ?? 0),
+      active: Number(first.active ?? 0),
+      inactive: Number(first.inactive ?? 0),
+    };
+  }, [localStatsQuery.data]);
+
+  const useApiWorkAreas = workAreasMode === 'api' || localWorkAreas.length === 0;
+  const { data: apiWorkAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery(undefined, {
+    enabled: useApiWorkAreas,
+  });
+  const workAreas = useApiWorkAreas ? apiWorkAreas : localWorkAreas;
+
+  const useApiStats = userStatsMode !== 'local';
+  const { data: apiStats = DEFAULT_STATS } = trpc.adminUsers.getStats.useQuery(undefined, {
+    enabled: useApiStats,
+  });
+  const stats = userStatsMode === 'local' ? localStats : apiStats;
+
+  useEffect(() => {
+    emitMigrationSourceSelection({
+      procedure: 'adminUsers.getWorkAreas',
+      mode: workAreasMode,
+      source: useApiWorkAreas ? 'api' : 'local',
+    });
+  }, [useApiWorkAreas, workAreasMode]);
+
+  useEffect(() => {
+    if (userStatsMode !== 'dual-run') {
+      return;
+    }
+    const parity = compareNumericFields(localStats, apiStats, [
+      'total',
+      'admins',
+      'active',
+      'inactive',
+    ]);
+    emitMigrationParity({
+      procedure: 'adminUsers.getStats',
+      mode: 'dual-run',
+      matches: parity.matches,
+      mismatchKeys: parity.mismatchKeys,
+    });
+  }, [apiStats, localStats, userStatsMode]);
 
   // Client-side filtering + pagination over the already-fetched list
   const { tableData, pageCount, roleCounts } = useMemo(() => {

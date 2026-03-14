@@ -48,3 +48,20 @@ export const KitSummarySchema = z.object({
   name: z.string(),
   components: z.array(KitSummaryComponentSchema),
 });
+
+export const KitComponentEntitySchema = z.object({
+  id: z.string().uuid(),
+  kitId: z.string().uuid(),
+  componentId: z.string().uuid(),
+  quantity: z.number(),
+  component: z.object({
+    id: z.string().uuid(),
+    code: z.string(),
+    name: z.string(),
+    location: z.string(),
+    stock: z.number(),
+    unit: z.string(),
+    type: z.enum(['PRODUCT', 'EQUIPMENT', 'TOOL', 'KIT']),
+    imageUrl: z.string(),
+  }),
+});

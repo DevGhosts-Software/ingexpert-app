@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 
 import { UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { useLocalWorkAreas } from '@/lib/api-migration-local-reads';
+import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -111,7 +114,13 @@ function PasswordInput({
 
 export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
   const utils = trpc.useUtils();
-  const { data: workAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery();
+  const workAreasMode = useMigrationProcedureMode('adminUsers.getWorkAreas');
+  const localWorkAreas = useLocalWorkAreas();
+  const useApiWorkAreas = workAreasMode === 'api' || localWorkAreas.length === 0;
+  const { data: apiWorkAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery(undefined, {
+    enabled: useApiWorkAreas,
+  });
+  const workAreas = useApiWorkAreas ? apiWorkAreas : localWorkAreas;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(CreateUserFormSchema),
@@ -141,6 +150,14 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
       });
     }
   }, [open, form]);
+
+  useEffect(() => {
+    emitMigrationSourceSelection({
+      procedure: 'adminUsers.getWorkAreas',
+      mode: workAreasMode,
+      source: useApiWorkAreas ? 'api' : 'local',
+    });
+  }, [useApiWorkAreas, workAreasMode]);
 
   function invalidate() {
     void utils.adminUsers.list.invalidate();

@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { ProjectEntity } from '@ingexpert/schema';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ProjectTable } from '@/features/projects/components/project-table';
 
@@ -21,6 +23,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const projectsStatsMode = useMigrationProcedureMode('projects.getStats');
 
   const projectsQuery = useQuery<ProjectLocalRow>(`
     SELECT
@@ -33,6 +36,14 @@ export default function ProjectsPage() {
     FROM projects p
     LEFT JOIN users u ON u.id = p.manager_id
   `);
+
+  useEffect(() => {
+    emitMigrationSourceSelection({
+      procedure: 'projects.getStats',
+      mode: projectsStatsMode,
+      source: 'local',
+    });
+  }, [projectsStatsMode]);
 
   const allProjects = useMemo<ProjectEntity[]>(
     () =>

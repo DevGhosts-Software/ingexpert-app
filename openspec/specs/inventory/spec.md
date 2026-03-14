@@ -208,3 +208,33 @@ Inventory write flows MUST not include hidden awaited tRPC reads/mutations that 
 - **WHEN** the user saves item changes while offline
 - **THEN** save flow MUST finish from local operations only
 - **THEN** the UI MUST communicate queued sync state instead of waiting for network recovery
+
+## Requirement: Inventory local-computable reads SHALL use local-first with API fallback control
+
+Inventory read procedures classified as local-computable (for example kit component expansion reads) MUST use local PowerSync reads as primary source with a runtime API fallback switch.
+
+#### Scenario: Local-first kit component read
+
+- **WHEN** the UI requests kit component composition for an existing kit
+- **THEN** the client MUST resolve components from local `kit_details` + `items` data first
+- **THEN** the client MUST retain a configurable API fallback mode for rollback
+
+## Requirement: Inventory read candidates SHALL cut over to local-first execution
+
+Inventory read procedures classified as migration candidates MUST transition to local PowerSync/SQLite reads once parity gates pass.
+
+#### Scenario: Inventory read candidate passes dual-run validation
+
+- **WHEN** parity criteria are satisfied for an inventory read candidate
+- **THEN** the frontend MUST use local-first data as the primary source for that read
+- **THEN** API fallback MUST remain available during stabilization
+
+## Requirement: Inventory stats migration SHALL preserve aggregate parity
+
+Migration of inventory stats MUST preserve exact aggregate semantics currently exposed to the dashboard.
+
+#### Scenario: Inventory stats are computed locally
+
+- **WHEN** local computation is enabled for inventory stats
+- **THEN** field-level totals (`total`, `products`, `equipment`, `tools`, `kits`) MUST match API parity criteria
+- **THEN** mismatches MUST trigger rollback handling

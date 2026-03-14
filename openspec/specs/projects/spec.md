@@ -77,3 +77,33 @@ Project-facing screens used in dashboard workflows MUST support loading from loc
 
 - **WHEN** the user applies search, sorting, or pagination controls on projects page
 - **THEN** the UI MUST apply those controls against local query results consistently while offline
+
+## Requirement: Project form dependencies SHALL support local-first reads
+
+Project create/edit flows MUST resolve manager selection data from local PowerSync-backed `users` rows first, with runtime API fallback for rollback safety.
+
+#### Scenario: Project form opens while API is degraded
+
+- **WHEN** the project form is opened under degraded API conditions
+- **THEN** manager options MUST be populated from synchronized local user rows
+- **THEN** the form MUST remain operable without blocking on a live `users.listNames` request
+
+## Requirement: Project read migration SHALL keep UX parity
+
+Project list and stats reads migrated from API to local-first execution MUST maintain equivalent user-visible behavior for filtering, sorting, and totals.
+
+#### Scenario: Project list read path is migrated
+
+- **WHEN** project list reads use local-first data as primary source
+- **THEN** list ordering, filtering, and pagination behavior MUST remain consistent with accepted API-era behavior
+- **THEN** API fallback MUST be available during stabilization
+
+## Requirement: Project stats cutover SHALL retain deterministic totals
+
+Project stats migration MUST retain deterministic total-project semantics under local-first execution.
+
+#### Scenario: Project stats are sourced locally
+
+- **WHEN** local compute is enabled for project stats
+- **THEN** the `total` project count MUST meet parity acceptance criteria versus API output
+- **THEN** any sustained mismatch MUST trigger rollback

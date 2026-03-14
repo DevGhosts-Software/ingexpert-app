@@ -66,9 +66,12 @@ export class AdminUsersRouter {
         }),
 
       // Primitive input — excluded from OpenAPI spec
-      revokeAuth: this.trpc.adminProcedure.input(z.string().uuid()).mutation(async ({ input }) => {
-        return await this.adminUsersService.revokeAuth(input);
-      }),
+      revokeAuth: this.trpc.adminProcedure
+        .input(z.string().uuid())
+        .output(UserEntitySchema)
+        .mutation(async ({ input }) => {
+          return await this.adminUsersService.revokeAuth(input);
+        }),
 
       list: this.trpc.adminProcedure
         .meta({
@@ -133,9 +136,12 @@ export class AdminUsersRouter {
         }),
 
       // Primitive input — excluded from OpenAPI spec
-      remove: this.trpc.adminProcedure.input(z.uuid()).mutation(async ({ input }) => {
-        return await this.adminUsersService.remove(input);
-      }),
+      remove: this.trpc.adminProcedure
+        .input(z.uuid())
+        .output(z.object({ success: z.boolean() }))
+        .mutation(async ({ input }) => {
+          return await this.adminUsersService.remove(input);
+        }),
 
       updatePassword: this.trpc.adminProcedure
         .meta({

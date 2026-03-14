@@ -95,9 +95,12 @@ export class ProjectsRouter {
         }),
 
       // Primitive input — excluded from OpenAPI spec
-      remove: this.trpc.adminProcedure.input(z.string().uuid()).mutation(async ({ input }) => {
-        return this.projectsService.remove(input);
-      }),
+      remove: this.trpc.adminProcedure
+        .input(z.string().uuid())
+        .output(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          return this.projectsService.remove(input);
+        }),
     });
   }
 }

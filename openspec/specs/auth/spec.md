@@ -159,3 +159,23 @@ When connectivity returns, the client MUST revalidate the active session against
 - **WHEN** a user is operating under offline-continued session and network connectivity returns
 - **THEN** the client MUST attempt normal session/token revalidation
 - **THEN** invalid sessions MUST be revoked with clear user feedback and local cleanup
+
+## Requirement: Auth authority SHALL remain API-owned during read migration
+
+API-scope reduction initiatives MUST NOT relocate `auth.login`, `auth.refresh`, `auth.logout`, or `users.me` authority without an approved security-equivalence change.
+
+#### Scenario: Read-migration rollout plan includes auth procedure
+
+- **WHEN** a migration plan attempts to include an auth/session procedure
+- **THEN** the procedure MUST be marked blocked from cutover by default
+- **THEN** migration MAY proceed only after explicit security-equivalence approval
+
+## Requirement: Read migration SHALL not weaken RBAC checks
+
+Any local-first cutover in adjacent domains MUST preserve existing RBAC-protected behavior and continue relying on API authority for protected write/auth decisions.
+
+#### Scenario: Local-first read cutover reaches production
+
+- **WHEN** migrated read paths are active in production
+- **THEN** role-based access behavior MUST remain unchanged from approved auth policy
+- **THEN** any RBAC regression MUST trigger immediate rollback

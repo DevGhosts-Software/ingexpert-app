@@ -36,13 +36,16 @@ export class KitsRouter {
 
       setComponents: this.trpc.protectedProcedure
         .input(SetKitComponentsSchema)
+        .output(z.object({ success: z.boolean() }))
         .mutation(async ({ input }) => {
-          return this.kitsService.setComponents(input);
+          await this.kitsService.setComponents(input);
+          return { success: true };
         }),
 
       // Primitive input — excluded from OpenAPI spec
       clearKit: this.trpc.protectedProcedure
         .input(z.string().uuid())
+        .output(z.object({ success: z.boolean() }))
         .mutation(async ({ input }) => {
           await this.kitsService.clearKit(input);
           return { success: true };
@@ -51,6 +54,7 @@ export class KitsRouter {
       // Array input — excluded from OpenAPI spec
       importMany: this.trpc.adminProcedure
         .input(z.array(KitImportRowSchema))
+        .output(z.object({ success: z.boolean() }))
         .mutation(async ({ input }) => {
           await this.kitsService.importMany(input);
           return { success: true };

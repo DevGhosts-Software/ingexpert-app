@@ -84,6 +84,39 @@ When adding a new domain feature, follow this order **strictly**:
 - **Stock mutations** — must use Prisma `$transaction`.
 - **Output schemas** — every tRPC procedure with OpenAPI metadata has a `.output()` Zod schema. Match it exactly in any new procedure.
 - **No `// TODO` or `// FIXME`** — implement the solution fully or define the interface clearly.
+- **API responsibility matrix maintenance** — keep the frontend-procedure-to-backend-responsibility matrix current and evidence-based; see requirements below for mandatory scenarios.
+
+### API Responsibility Matrix Governance
+
+#### Requirement: API responsibility matrix SHALL be maintained for local-first architecture
+
+When local-first capabilities materially reduce frontend dependence on online tRPC reads, the architecture documentation MUST include an up-to-date API responsibility matrix mapping each frontend procedure to its backend ownership rationale.
+
+##### Scenario: Local-first rollout changes call distribution
+
+- **WHEN** a major local-first rollout is completed
+- **THEN** maintainers MUST update an API responsibility matrix covering active frontend procedure usage
+- **THEN** the matrix MUST identify which procedures remain API-required and which are migration candidates
+
+#### Requirement: Backend reduction decisions MUST be evidence-based
+
+Decisions to reduce or replace always-on API infrastructure MUST be based on audited procedure usage and validated behavior parity, not assumptions.
+
+##### Scenario: Team evaluates API downscoping
+
+- **WHEN** the team evaluates moving API responsibilities to serverless functions or local computation
+- **THEN** the decision MUST reference the latest audited procedure inventory
+- **THEN** candidate replacements for stats or reads MUST demonstrate validated parity with existing behavior before cutover
+
+#### Requirement: Migration observability SHALL be mandatory before cutover
+
+Local-first cutovers MUST include parity telemetry and per-procedure rollback controls before switching production traffic.
+
+##### Scenario: Read procedure is marked cutover-ready
+
+- **WHEN** maintainers attempt to cut over a read procedure from API to local-primary mode
+- **THEN** parity mismatch telemetry MUST already be enabled for that procedure
+- **THEN** a runtime rollback switch MUST exist to restore API-backed behavior immediately
 
 ---
 
@@ -542,3 +575,15 @@ const noAuth = form.watch('noAuth');
 - Use `"use client"` for interactive components.
 - Never use raw HTML form elements — always use shadcn `Form`, `Input`, `Select`, etc.
 - Install new components via: `npx shadcn-ui@latest add <component>` from `apps/frontend`.
+
+---
+
+## Requirement: API simplification SHALL preserve authority boundaries
+
+Architecture changes that reduce API scope MUST preserve centralized ownership for authentication/session validation and authoritative write operations.
+
+#### Scenario: Team proposes API route removal
+
+- **WHEN** an API route or procedure is proposed for deprecation/removal
+- **THEN** maintainers MUST verify it is not an auth/session boundary or authority write path
+- **THEN** non-compliant proposals MUST be rejected until boundaries are preserved

@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { ItemCounts, ItemEntity, ItemStats, ItemType } from '@ingexpert/schema';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { InventoryStats } from '@/features/inventory/components/inventory-stats';
@@ -54,6 +56,7 @@ function asItemType(value: string): ItemType {
 
 export default function InventoryPage() {
   const isAdmin = useIsAdmin();
+  const itemStatsMode = useMigrationProcedureMode('items.getStats');
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 20 });
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
@@ -89,6 +92,14 @@ export default function InventoryPage() {
     INNER JOIN items component ON component.id = kd.item_id
     ORDER BY kit.name, component.name
   `);
+
+  useEffect(() => {
+    emitMigrationSourceSelection({
+      procedure: 'items.getStats',
+      mode: itemStatsMode,
+      source: 'local',
+    });
+  }, [itemStatsMode]);
 
   const allItems = useMemo(
     () =>

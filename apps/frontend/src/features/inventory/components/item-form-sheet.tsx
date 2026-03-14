@@ -11,6 +11,9 @@ import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
+import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
+import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { useStorageUpload } from '@/hooks/use-storage-upload';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Badge } from '@/components/ui/badge';
@@ -114,10 +117,37 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
   const powerSyncDb = usePowerSyncDatabase();
 
   const [kitComponents, setKitComponents] = useState<LocalComponent[]>([]);
+  const kitComponentsMode = useMigrationProcedureMode('kits.getComponents');
+  const { components: localExistingComponents, isFetching: isLocalComponentsFetching } =
+    useLocalKitComponents(item?.id ?? '', isEdit && item?.type === 'KIT' && open);
+  const useApiComponents = kitComponentsMode === 'api' || localExistingComponents.length === 0;
 
-  const { data: existingComponents } = trpc.kits.getComponents.useQuery(item?.id ?? '', {
-    enabled: isEdit && item?.type === 'KIT' && open,
-  });
+  const { data: apiExistingComponents, isFetching: isApiComponentsFetching } =
+    trpc.kits.getComponents.useQuery(item?.id ?? '', {
+      enabled: isEdit && item?.type === 'KIT' && open && useApiComponents,
+    });
+  const existingComponents = useApiComponents ? apiExistingComponents : localExistingComponents;
+
+  useEffect(() => {
+    if (!isEdit || item?.type !== 'KIT' || !open) {
+      return;
+    }
+    if (!isApiComponentsFetching && !isLocalComponentsFetching) {
+      emitMigrationSourceSelection({
+        procedure: 'kits.getComponents',
+        mode: kitComponentsMode,
+        source: useApiComponents ? 'api' : 'local',
+      });
+    }
+  }, [
+    isEdit,
+    item?.type,
+    open,
+    isApiComponentsFetching,
+    isLocalComponentsFetching,
+    kitComponentsMode,
+    useApiComponents,
+  ]);
 
   useEffect(() => {
     if (open && isEdit && existingComponents) {
