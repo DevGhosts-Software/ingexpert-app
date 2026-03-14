@@ -1,38 +1,62 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useQuery } from '@powersync/react';
+import { useRef } from 'react';
+import { useEffect } from 'react';
 import { CloudOff, RefreshCw, Wifi } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useSyncStatus } from '@/hooks/use-sync-status';
+import { DEBUG_COUNT_SQL, parseCount, type CountRow } from '@/lib/powersync/debug';
 import { cn } from '@/lib/utils';
 
-function getStateLabel(state: ReturnType<typeof useSyncStatus>['state']): string {
+const LAST_COMPLETE_SYNC_KEY = 'ingexpert.lastCompleteSyncAt';
+
+function getReadableStatus(
+  state: ReturnType<typeof useSyncStatus>['state'],
+  pendingQueueRows: number,
+): string {
   if (state === 'offline') {
-    return 'Modo offline';
+    return pendingQueueRows > 0
+      ? `Offline (${pendingQueueRows} pendientes)`
+      : 'Offline sin pendientes';
   }
   if (state === 'loading') {
-    return 'Cargando sincronización';
+    return 'Cargando datos iniciales';
   }
-  if (state === 'syncing') {
-    return 'Sincronizando';
+  if (state === 'syncing' || pendingQueueRows > 0) {
+    return `Sincronizando (${pendingQueueRows} pendientes)`;
   }
-  return 'Conectado';
-}
-
-function getLastSyncLabel(lastUploadAt: string | null): string {
-  if (!lastUploadAt) {
-    return 'Última sync: pendiente';
-  }
-
-  return `Última sync: ${formatDistanceToNow(new Date(lastUploadAt), {
-    addSuffix: true,
-    locale: es,
-  })}`;
+  return 'Sincronizado';
 }
 
 export function SyncStatusIndicator() {
-  const { state, lastUploadAt, lastUploadError } = useSyncStatus();
+  const { state, lastUploadError } = useSyncStatus();
+  const queueQuery = useQuery<CountRow>(DEBUG_COUNT_SQL.queue);
+  const pendingQueueRows = parseCount(queueQuery.data);
+  const wasFullySyncedRef = useRef(false);
+  const isFullySynced = state === 'connected' && pendingQueueRows === 0 && !lastUploadError;
+
+  useEffect(() => {
+    if (!isFullySynced) {
+      wasFullySyncedRef.current = false;
+      return;
+    }
+    if (wasFullySyncedRef.current) {
+      return;
+    }
+    wasFullySyncedRef.current = true;
+    const now = new Date().toISOString();
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LAST_COMPLETE_SYNC_KEY, now);
+    }
+  }, [isFullySynced]);
+
+  const persistedLastCompleteSyncAt =
+    typeof window !== 'undefined' ? window.localStorage.getItem(LAST_COMPLETE_SYNC_KEY) : null;
+  const lastCompleteSyncAt =
+    isFullySynced && !persistedLastCompleteSyncAt
+      ? new Date().toISOString()
+      : persistedLastCompleteSyncAt;
 
   const icon =
     state === 'offline' ? (
@@ -57,21 +81,20 @@ export function SyncStatusIndicator() {
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="outline" className={cn('gap-1.5', tone)}>
+      <Badge
+        variant="outline"
+        className={cn('gap-1.5 px-3 py-1.5 text-[11px] md:text-xs', tone)}
+        title={[
+          `Estado: ${getReadableStatus(state, pendingQueueRows)}`,
+          `Última sincronización completa: ${
+            lastCompleteSyncAt ? new Date(lastCompleteSyncAt).toLocaleString('es-ES') : 'pendiente'
+          }`,
+          `Pendientes por subir: ${pendingQueueRows}`,
+        ].join('\n')}
+      >
         {icon}
-        {getStateLabel(state)}
+        {getReadableStatus(state, pendingQueueRows)}
       </Badge>
-      <span className="hidden lg:inline text-xs text-muted-foreground">
-        {getLastSyncLabel(lastUploadAt)}
-      </span>
-      {lastUploadError ? (
-        <span
-          className="hidden xl:inline text-xs text-rose-600 max-w-52 truncate"
-          title={lastUploadError}
-        >
-          Error en sincronización
-        </span>
-      ) : null}
     </div>
   );
 }
