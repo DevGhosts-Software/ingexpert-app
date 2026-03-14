@@ -22,7 +22,7 @@ Run from repo root:
 - `pnpm supabase:functions:deploy`
 - `pnpm supabase:functions:deploy:all`
 - `pnpm supabase:functions:serve`
-- `pnpm supabase:secrets:set`
+- `pnpm supabase:secrets:set -- --env-file packages/database/supabase/.env.local`
 
 Or directly from package:
 
@@ -33,9 +33,11 @@ Or directly from package:
 - `pnpm --filter @ingexpert/database supabase:functions:deploy`
 - `pnpm --filter @ingexpert/database supabase:functions:deploy:all`
 - `pnpm --filter @ingexpert/database supabase:functions:serve`
-- `pnpm --filter @ingexpert/database supabase:secrets:set`
+- `pnpm --filter @ingexpert/database supabase:secrets:set -- --env-file supabase/.env.local`
 
-`supabase:secrets:set` reads `supabase/.env.functions` (not committed). Copy from `supabase/.env.functions.example` and fill values before running it.
+You can also set secrets inline, for example:
+
+- `pnpm supabase:secrets:set -- SUPABASE_SERVICE_ROLE_KEY=your-service-role-key`
 
 ## SQL execution order
 

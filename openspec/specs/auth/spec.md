@@ -1,17 +1,11 @@
 ## ADDED Requirements
 
-### Requirement: Self-service user flows SHALL execute without API `users.*` procedures
+### Requirement: Admin management runtime flows SHALL execute via Supabase cloud function
 
-Frontend runtime auth/user self-service behavior MUST not call API procedures `users.me`, `users.updateMe`, or `users.updateMyPassword` after final cutover.
+Frontend runtime admin-user management operations MUST call the Supabase admin-control cloud function and MUST NOT call API `adminUsers.*` procedures after cutover.
 
-#### Scenario: Dashboard bootstraps current user context
+#### Scenario: Admin manages users from dashboard
 
-- **WHEN** an authenticated user opens the dashboard
-- **THEN** user context MUST be resolved from Supabase session plus synchronized local user data
-- **THEN** no runtime request to `trpc.users.me` may execute
-
-#### Scenario: User updates own profile or password
-
-- **WHEN** the user submits profile or password changes from self-service UI
-- **THEN** the flow MUST use Supabase/local write paths governed by RLS
-- **THEN** no runtime requests to `trpc.users.updateMe` or `trpc.users.updateMyPassword` may execute
+- **WHEN** an admin performs user-management actions (create/update/remove/auth grant/auth revoke/password reset/list/get)
+- **THEN** the frontend MUST invoke the admin-control cloud function with the corresponding action payload
+- **THEN** no runtime request to API `adminUsers.*` procedures may execute

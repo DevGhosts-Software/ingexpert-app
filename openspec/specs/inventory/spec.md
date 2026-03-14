@@ -1,23 +1,17 @@
 ## ADDED Requirements
 
-### Requirement: Item delete and kit component writes SHALL not depend on API mutations
+### Requirement: Batch import flows SHALL execute through local SQLite writes
 
-Inventory mutation paths for item delete and kit component edits MUST execute through local PowerSync write transactions governed by Supabase RLS, and replay through connector upload handlers that support every emitted `kit_details` CRUD operation.
+Item and kit batch import runtime flows MUST execute through local SQLite write transactions and synchronize via PowerSync upload replay instead of API batch import procedures.
 
-#### Scenario: User deletes an item
+#### Scenario: Item batch import is submitted
 
-- **WHEN** an item delete action is confirmed in UI
-- **THEN** the item removal MUST be persisted through local-write + sync path
-- **THEN** no runtime request to `trpc.items.remove` may execute
+- **WHEN** a user submits an item batch import
+- **THEN** the frontend MUST persist the batch through local SQLite writes
+- **THEN** no runtime request to `trpc.items.createBatch` or `trpc.items.importMany` may execute
 
-#### Scenario: User edits kit components
+#### Scenario: Kit batch import is submitted
 
-- **WHEN** kit component assignments are saved or cleared
-- **THEN** writes to `kit_details` MUST execute through local-write + sync path under RLS
-- **THEN** no runtime requests to `trpc.kits.setComponents` or `trpc.kits.clearKit` may execute
-
-#### Scenario: Kit detail sync replay succeeds
-
-- **WHEN** local kit component edits emit `kit_details` CRUD entries for upload replay
-- **THEN** connector upload processing MUST handle those entries without throwing unsupported-table errors
-- **THEN** the remote `kit_details` state MUST converge with the local transaction result
+- **WHEN** a user submits a kit/components batch import
+- **THEN** the frontend MUST persist the batch through local SQLite writes compatible with existing kit and `kit_details` sync behavior
+- **THEN** no runtime request to `trpc.kits.importMany` may execute
