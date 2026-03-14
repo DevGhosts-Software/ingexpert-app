@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 const MOVEMENT_OPTIMISTIC_SOURCE = 'movement-optimistic-stock';
 const MISSING_SESSION_ERROR = 'Cannot upload PowerSync CRUD without an active Supabase session';
 const POWERSYNC_PERMISSION_REMEDIATION =
-  'Permission remediation required: run packages/database/prisma/powersync-upload-permissions.sql in your Supabase SQL editor, then re-run the verification queries in that file.';
+  'Permission remediation required: run packages/database/prisma/supabase/03_powersync-upload-permissions.sql in your Supabase SQL editor, then re-run the verification queries in that file.';
 
 type CrudPayload = Record<string, unknown>;
 type CrudSource = { source?: string };

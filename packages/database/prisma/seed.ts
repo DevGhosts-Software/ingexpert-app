@@ -439,46 +439,57 @@ async function main() {
     }
   }
 
-  // ── 5. SQL bucket policies ────────────────────────────────────────────────────
-  const sqlPath = path.join(__dirname, 'app-data bucket policies.sql');
-  if (!fs.existsSync(sqlPath)) {
-    console.warn('\nSQL script not found, skipping.');
+  // ── 5. Supabase SQL setup scripts (ordered by filename) ─────────────────────
+  const sqlDir = path.join(__dirname, 'supabase');
+  if (!fs.existsSync(sqlDir)) {
+    console.warn('\nSupabase SQL folder not found, skipping SQL setup.');
   } else {
-    console.log('\n── SQL Policies ────────────────────────────────');
-    const sql = fs.readFileSync(sqlPath, 'utf-8');
-    const statements = splitSqlStatements(sql);
-    console.log(`Found ${statements.length} SQL statements.`);
+    const sqlFiles = fs
+      .readdirSync(sqlDir)
+      .filter((file) => file.endsWith('.sql'))
+      .sort((left, right) => left.localeCompare(right));
 
-    const dbClient = new Client({
-      connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
-    });
-    await dbClient.connect();
+    if (sqlFiles.length === 0) {
+      console.warn('\nNo SQL files found in prisma/supabase, skipping SQL setup.');
+    } else {
+      console.log('\n── Supabase SQL Setup ─────────────────────────');
+      const dbClient = new Client({
+        connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
+      });
+      await dbClient.connect();
 
-    let ok = 0;
-    let skipped = 0;
-    let failed = 0;
+      let ok = 0;
+      let skipped = 0;
+      let failed = 0;
 
-    for (const stmt of statements) {
-      const preview = stmt.slice(0, 60).replace(/\n/g, ' ');
-      try {
-        await dbClient.query(stmt);
-        console.log(`  ✓ ${preview}...`);
-        ok++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Duplicate policy / already exists → skip gracefully
-        if (msg.includes('already exists') || msg.includes('duplicate')) {
-          console.log(`  ⊘ Already exists, skipping: ${preview}...`);
-          skipped++;
-        } else {
-          console.warn(`  ✗ Failed: ${preview}...\n    ${msg}`);
-          failed++;
+      for (const file of sqlFiles) {
+        const sqlPath = path.join(sqlDir, file);
+        const sql = fs.readFileSync(sqlPath, 'utf-8');
+        const statements = splitSqlStatements(sql);
+        console.log(`\n  ${file}: ${statements.length} statements`);
+
+        for (const stmt of statements) {
+          const preview = stmt.slice(0, 60).replace(/\n/g, ' ');
+          try {
+            await dbClient.query(stmt);
+            console.log(`    ✓ ${preview}...`);
+            ok++;
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes('already exists') || msg.includes('duplicate')) {
+              console.log(`    ⊘ Already exists, skipping: ${preview}...`);
+              skipped++;
+            } else {
+              console.warn(`    ✗ Failed: ${preview}...\n      ${msg}`);
+              failed++;
+            }
+          }
         }
       }
-    }
 
-    await dbClient.end();
-    console.log(`  Done: ${ok} applied, ${skipped} skipped, ${failed} failed.`);
+      await dbClient.end();
+      console.log(`\n  Done: ${ok} applied, ${skipped} skipped, ${failed} failed.`);
+    }
   }
 
   console.log('\n✅ Seed complete.');

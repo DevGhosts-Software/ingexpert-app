@@ -5,7 +5,7 @@
 
 ## 2. Supabase RLS SQL and local-write authority setup
 
-- [x] 2.1 Add a Supabase policy SQL file (for example `packages/database/prisma/powersync-rls-final-api-cutdown.sql`) defining RLS for `users`, `projects`, `items`, and `kit_details` direct-write/read paths with explicit allow/deny semantics.
+- [x] 2.1 Add a Supabase policy SQL file (for example `packages/database/prisma/supabase/04_powersync-rls.sql`) defining RLS for `users`, `projects`, `items`, and `kit_details` direct-write/read paths with explicit allow/deny semantics.
 - [x] 2.2 Add verification queries and execution notes in the same SQL artifact (or companion SQL file) to validate permitted and forbidden actions for authenticated users and admin scopes.
 
 ## 3. Frontend migration off targeted API procedures

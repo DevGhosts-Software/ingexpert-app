@@ -1,10 +1,20 @@
 # Prisma SQL setup notes
 
+All Supabase SQL setup scripts now live in:
+
+- `packages/database/prisma/supabase/`
+
+Scripts are executed in filename order by `pnpm --filter @ingexpert/database db:seed`.
+You can also run `pnpm --filter @ingexpert/database db:init` (same behavior).
+
 Run these SQL scripts in this order when preparing Supabase for offline inventory ledger sync:
 
-1. `powersync pubilcation.sql`
-2. `inventory-ledger-trigger.sql`
-3. `powersync-upload-permissions.sql`
+1. `00_core-functions.sql`
+2. `01_inventory-ledger-trigger.sql`
+3. `02_powersync pubilcation.sql`
+4. `03_powersync-upload-permissions.sql`
+5. `04_powersync-rls.sql`
+6. `05_app-data bucket policies.sql`
 
 Why order matters:
 
@@ -21,7 +31,7 @@ If debug output shows errors like:
 - `duplicate key value violates unique constraint "movements_pkey"`
 - `new row violates row-level security policy for table "movements"`
 
-apply `powersync-upload-permissions.sql` in Supabase SQL Editor.
+apply `supabase/03_powersync-upload-permissions.sql` in Supabase SQL Editor.
 
 For duplicate-key movement errors, this usually means the row already exists in cloud and the local queue replayed the same ID after a prior partial upload. The connector now uses idempotent create writes (`upsert` with conflict handling) so replayed IDs can converge without manual cleanup.
 

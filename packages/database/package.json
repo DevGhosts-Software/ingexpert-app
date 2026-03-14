@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
+    "db:init": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "lint": "eslint . --fix",
