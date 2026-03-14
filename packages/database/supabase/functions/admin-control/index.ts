@@ -164,7 +164,7 @@ const ensureWorkArea = async (adminClient: ReturnType<typeof createClient>, work
 
   const { data: created, error: createError } = await adminClient
     .from('work_areas')
-    .insert({ name: workArea })
+    .upsert({ id: crypto.randomUUID(), name: workArea }, { onConflict: 'name' })
     .select('id')
     .single();
   if (createError) {
