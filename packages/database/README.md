@@ -29,31 +29,28 @@ Convenience defaults (currently point to dev):
 
 ## 2) Supabase target selection
 
-Before deploy, link to the correct project.
+Link is manual/interactive:
 
 - `pnpm supabase:link`
 
+This opens Supabase CLI project selection (or you can pass flags manually).
 
 ## 3) Supabase deploy flow
 
-- Dev deploy:
-  - `pnpm deploy:dev`
-- Prod deploy:
-  - `pnpm deploy:prod`
+- `pnpm supabase:deploy`
 
-Each deploy macro does:
+This command does:
 
-1. Link target (`dev` or `prod`)
+1. `supabase link` (you choose/select target manually)
 2. `supabase db push`
 3. `supabase functions deploy`
 
 ## 4) Common safe workflow
 
-1. `pnpm link:dev`
+1. `pnpm supabase:link`
 2. Make SQL/function changes
-3. `pnpm deploy:dev`
-4. For release: `pnpm deploy:prod`
-5. Return to dev: `pnpm link:dev`
+3. `pnpm supabase:deploy`
+4. If needed, relink and repeat for another project
 
 ## 5) Validation commands
 
