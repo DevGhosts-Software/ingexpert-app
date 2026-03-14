@@ -44,3 +44,13 @@ yarn-error.log*
 
 
 apps/frontend/next-env.d.ts
+
+
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local

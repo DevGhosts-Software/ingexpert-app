@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { type ItemType, PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Client } from 'pg';
 
 dotenv.config();
 
@@ -248,43 +245,6 @@ function generateItemsOfType(
   return items;
 }
 
-// ─── SQL statement splitter (handles dollar-quoted function bodies) ───────────
-
-function splitSqlStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = '';
-  let inDollarQuote = false;
-  let dollarTag = '';
-
-  for (const line of sql.split('\n')) {
-    // Track entry/exit of dollar-quoted strings (e.g. $$ or $tag$)
-    const tags = line.match(/\$\w*\$/g) ?? [];
-    for (const tag of tags) {
-      if (!inDollarQuote) {
-        inDollarQuote = true;
-        dollarTag = tag;
-      } else if (tag === dollarTag) {
-        inDollarQuote = false;
-        dollarTag = '';
-      }
-    }
-
-    current += line + '\n';
-
-    // A statement ends at a semicolon on a line, but only outside dollar-quotes
-    if (!inDollarQuote && line.trimEnd().endsWith(';')) {
-      const trimmed = current.trim();
-      if (trimmed) {
-        statements.push(trimmed);
-      }
-      current = '';
-    }
-  }
-
-  if (current.trim()) statements.push(current.trim());
-  return statements;
-}
-
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -436,59 +396,6 @@ async function main() {
         });
         console.log(`  Created: "${p.name}".`);
       }
-    }
-  }
-
-  // ── 5. Supabase SQL setup scripts (ordered by filename) ─────────────────────
-  const sqlDir = path.join(__dirname, '..', 'supabase', 'migrations');
-  if (!fs.existsSync(sqlDir)) {
-    console.warn('\nSupabase SQL folder not found, skipping SQL setup.');
-  } else {
-    const sqlFiles = fs
-      .readdirSync(sqlDir)
-      .filter((file) => file.endsWith('.sql'))
-      .sort((left, right) => left.localeCompare(right));
-
-    if (sqlFiles.length === 0) {
-      console.warn('\nNo SQL files found in supabase/migrations, skipping SQL setup.');
-    } else {
-      console.log('\n── Supabase SQL Setup ─────────────────────────');
-      const dbClient = new Client({
-        connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
-      });
-      await dbClient.connect();
-
-      let ok = 0;
-      let skipped = 0;
-      let failed = 0;
-
-      for (const file of sqlFiles) {
-        const sqlPath = path.join(sqlDir, file);
-        const sql = fs.readFileSync(sqlPath, 'utf-8');
-        const statements = splitSqlStatements(sql);
-        console.log(`\n  ${file}: ${statements.length} statements`);
-
-        for (const stmt of statements) {
-          const preview = stmt.slice(0, 60).replace(/\n/g, ' ');
-          try {
-            await dbClient.query(stmt);
-            console.log(`    ✓ ${preview}...`);
-            ok++;
-          } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            if (msg.includes('already exists') || msg.includes('duplicate')) {
-              console.log(`    ⊘ Already exists, skipping: ${preview}...`);
-              skipped++;
-            } else {
-              console.warn(`    ✗ Failed: ${preview}...\n      ${msg}`);
-              failed++;
-            }
-          }
-        }
-      }
-
-      await dbClient.end();
-      console.log(`\n  Done: ${ok} applied, ${skipped} skipped, ${failed} failed.`);
     }
   }
 
