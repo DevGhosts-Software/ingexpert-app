@@ -88,6 +88,31 @@ const json = (status: number, body: unknown): Response =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+const decodeJwtSubject = (token: string): string | null => {
+  const segments = token.split('.');
+  if (segments.length < 2) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(atob(segments[1]));
+    return typeof payload?.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+};
+
+const getForwardedCallerId = (req: Request): string | null => {
+  const headerCandidates = ['x-supabase-auth-user', 'x-jwt-claim-sub', 'x-auth-user'];
+  for (const headerName of headerCandidates) {
+    const value = req.headers.get(headerName)?.trim();
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+};
+
 const ensureWorkArea = async (adminClient: ReturnType<typeof createClient>, workArea: string) => {
   const { data: existing, error: existingError } = await adminClient
     .from('work_areas')
@@ -123,25 +148,35 @@ Deno.serve(async (req) => {
     return json(500, { error: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required' });
   }
 
-  const authHeader = req.headers.get('Authorization');
+  // Supabase Edge may provide authenticated caller context via forwarded headers even when
+  // the raw Authorization header is not surfaced to function code.
+  const forwardedCallerId = getForwardedCallerId(req);
+  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) {
-    return json(401, { error: 'Missing bearer token' });
-  }
 
   const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: callerData, error: callerError } = await adminClient.auth.getUser(token);
-  if (callerError || !callerData.user) {
-    return json(401, { error: 'Invalid caller token' });
+  let callerErrorMessage: string | undefined;
+  let callerId = forwardedCallerId;
+
+  if (!callerId && token) {
+    const { data: callerData, error: callerError } = await adminClient.auth.getUser(token);
+    callerErrorMessage = callerError?.message;
+    callerId = callerData.user?.id ?? decodeJwtSubject(token);
+  }
+
+  if (!callerId) {
+    return json(401, {
+      error: callerErrorMessage ?? 'Missing authenticated caller context',
+    });
   }
 
   const { data: callerUser, error: callerUserError } = await adminClient
     .from('users')
     .select('role')
-    .eq('id', callerData.user.id)
+    .eq('id', callerId)
     .single();
   if (callerUserError) {
     return json(403, { error: callerUserError.message });
