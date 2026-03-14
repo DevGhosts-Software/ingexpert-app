@@ -53,4 +53,5 @@ apps/frontend/next-env.d.ts
 # dotenvx
 .env.keys
 .env.local
+.env.development
 .env.*.local

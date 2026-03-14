@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Direct-write tables MUST be protected by committed Supabase RLS policies
 
