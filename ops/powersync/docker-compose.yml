@@ -105,6 +105,11 @@ services:
 # ==========================================
 networks:
   powersync-net:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16       # Rango estándar IPv4
+        - subnet: fd00:aaaa::/64      # Tu nuevo rango interno IPv6
 
 volumes:
   powersync-mongo-data:
