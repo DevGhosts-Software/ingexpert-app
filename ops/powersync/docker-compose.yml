@@ -1,29 +1,35 @@
+version: '3.8'
+
 services:
-  powersync:
-    image: journeyapps/powersync-service:latest
-    container_name: ingexpert-powersync
-    depends_on:
-      mongo-rs-init:
-        condition: service_completed_successfully
+  # ==========================================
+  # 1. EL PROXY INVERSO (CADDY) - Maneja SSL Automático
+  # ==========================================
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    container_name: caddy-proxy
     ports:
-      - "${PS_PORT:-8080}:${PS_PORT:-8080}"
+      - "80:80"
+      - "443:443"
     environment:
-      PS_PORT: ${PS_PORT:-8080}
-      PS_DATA_SOURCE_URI: ${PS_DATA_SOURCE_URI}
-      PS_MONGO_URI: ${PS_MONGO_URI:-mongodb://mongo:27017/powersync?replicaSet=rs0}
-      PS_JWKS_URL: ${PS_JWKS_URL}
-      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
+      - CADDY_INGRESS_NETWORKS=powersync-net
+    networks:
+      - powersync-net
     volumes:
-      - ./powersync.yaml:/config/powersync.yaml:ro
-    command: ["start", "-r", "unified"]
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
     restart: unless-stopped
 
+  # ==========================================
+  # 2. BASE DE DATOS INTERNA DE POWERSYNC (MONGO)
+  # ==========================================
   mongo:
     image: mongo:7
     container_name: ingexpert-powersync-mongo
     command: --replSet rs0 --bind_ip_all --quiet
-    ports:
-      - "27017:27017"
+    # Ya no exponemos el 27017 al exterior por seguridad. 
+    # Solo los contenedores de PowerSync pueden hablarle.
+    networks:
+      - powersync-net
     volumes:
       - powersync-mongo-data:/data/db
     restart: unless-stopped
@@ -32,11 +38,74 @@ services:
     image: mongo:7
     depends_on:
       - mongo
+    networks:
+      - powersync-net
     restart: on-failure
     entrypoint:
       - bash
       - -c
       - 'mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version: 1, members: [{ _id: 0, host : "mongo:27017" }]})'''
 
+  # ==========================================
+  # 3. POWERSYNC - PRODUCCIÓN (MAIN)
+  # ==========================================
+  powersync-prod:
+    image: journeyapps/powersync-service:latest
+    container_name: ingexpert-powersync-prod
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
+    networks:
+      - powersync-net
+    labels:
+      # Caddy lee esto y enruta el tráfico automáticamente
+      caddy: ingexpert-sync-prod.alecastro.dev
+      caddy.reverse_proxy: "{{upstreams 8080}}"
+    environment:
+      PS_PORT: 8080
+      # Usa una DB separada dentro del mismo Mongo
+      PS_MONGO_URI: mongodb://mongo:27017/powersync_prod?replicaSet=rs0
+      PS_DATA_SOURCE_URI: ${PROD_DB_URI}
+      PS_JWKS_URL: ${PROD_JWKS_URL}
+      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
+    volumes:
+      - ./powersync.yaml:/config/powersync.yaml:ro
+    command: ["start", "-r", "unified"]
+    restart: unless-stopped
+
+  # ==========================================
+  # 4. POWERSYNC - DESARROLLO (DEV)
+  # ==========================================
+  powersync-dev:
+    image: journeyapps/powersync-service:latest
+    container_name: ingexpert-powersync-dev
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
+    networks:
+      - powersync-net
+    labels:
+      # Caddy lee esto y enruta el tráfico a dev
+      caddy: ingexpert-sync-dev.alecastro.dev
+      caddy.reverse_proxy: "{{upstreams 8080}}"
+    environment:
+      PS_PORT: 8080
+      # Usa una DB separada dentro del mismo Mongo
+      PS_MONGO_URI: mongodb://mongo:27017/powersync_dev?replicaSet=rs0
+      PS_DATA_SOURCE_URI: ${DEV_DB_URI}
+      PS_JWKS_URL: ${DEV_JWKS_URL}
+      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
+    volumes:
+      - ./powersync.yaml:/config/powersync.yaml:ro
+    command: ["start", "-r", "unified"]
+    restart: unless-stopped
+
+# ==========================================
+# REDES Y VOLÚMENES
+# ==========================================
+networks:
+  powersync-net:
+
 volumes:
   powersync-mongo-data:
+  caddy_data:
