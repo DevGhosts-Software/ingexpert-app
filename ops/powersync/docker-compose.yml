@@ -105,6 +105,7 @@ services:
 # ==========================================
 networks:
   powersync-net:
+    name: powersync-net
     enable_ipv6: true
     ipam:
       config:
