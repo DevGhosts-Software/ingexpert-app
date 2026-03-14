@@ -34,7 +34,6 @@
     "supabase:functions:deploy": "pnpm --filter @ingexpert/database supabase:functions:deploy",
     "supabase:functions:deploy:all": "pnpm --filter @ingexpert/database supabase:functions:deploy:all",
     "supabase:functions:serve": "pnpm --filter @ingexpert/database supabase:functions:serve",
-    "supabase:secrets:set": "pnpm --filter @ingexpert/database supabase:secrets:set",
     "type-check": "turbo run type-check",
     "version:sync": "tsx scripts/sync-version.ts"
   },
