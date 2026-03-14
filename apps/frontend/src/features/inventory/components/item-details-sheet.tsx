@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { ImageIcon, Loader2, MapPin, Package } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -8,10 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { StorageImage } from '@/components/ui/storage-image';
-import { trpc } from '@/lib/trpc';
-import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
 import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
-import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 
 import { type InventoryItem, TYPE_COLORS, TYPE_CONFIG } from './inventory-table.types';
 
@@ -38,37 +35,24 @@ function MetaRow({
 // ─── Kit components (read-only) ───────────────────────────────────────────────
 
 function KitComponentsReadonly({ kitId }: { kitId: string }) {
-  const componentsMode = useMigrationProcedureMode('kits.getComponents');
   const { components: localComponents, isFetching: isLocalFetching } = useLocalKitComponents(
     kitId,
-    componentsMode !== 'api',
+    true,
   );
-  const useApiComponents = componentsMode === 'api' || localComponents.length === 0;
-  const { data: rawComponents, isLoading: isApiLoading } = trpc.kits.getComponents.useQuery(kitId, {
-    enabled: useApiComponents,
-  });
 
   const components = useMemo(
     () =>
-      (useApiComponents ? (rawComponents ?? []) : localComponents).map((c) => ({
+      localComponents.map((c) => ({
         id: c.componentId,
         name: c.component.name,
         code: c.component.code,
         unit: c.component.unit,
         quantity: Number(c.quantity),
       })),
-    [localComponents, rawComponents, useApiComponents],
+    [localComponents],
   );
 
-  useEffect(() => {
-    emitMigrationSourceSelection({
-      procedure: 'kits.getComponents',
-      mode: componentsMode,
-      source: useApiComponents ? 'api' : 'local',
-    });
-  }, [componentsMode, useApiComponents]);
-
-  if (isApiLoading || (isLocalFetching && !useApiComponents)) {
+  if (isLocalFetching) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />

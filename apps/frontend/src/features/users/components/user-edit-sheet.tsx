@@ -9,9 +9,7 @@ import { toast } from 'sonner';
 
 import { UpdateUserSchema, UserRole } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
-import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
 import { useLocalWorkAreas } from '@/lib/api-migration-local-reads';
-import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -59,13 +57,8 @@ interface UserEditSheetProps {
 
 export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSheetProps) {
   const utils = trpc.useUtils();
-  const workAreasMode = useMigrationProcedureMode('adminUsers.getWorkAreas');
   const localWorkAreas = useLocalWorkAreas();
-  const useApiWorkAreas = workAreasMode === 'api' || localWorkAreas.length === 0;
-  const { data: apiWorkAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery(undefined, {
-    enabled: useApiWorkAreas,
-  });
-  const workAreas = useApiWorkAreas ? apiWorkAreas : localWorkAreas;
+  const workAreas = localWorkAreas;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(EditUserFormSchema),
@@ -86,20 +79,10 @@ export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSh
     }
   }, [open, user, form]);
 
-  useEffect(() => {
-    emitMigrationSourceSelection({
-      procedure: 'adminUsers.getWorkAreas',
-      mode: workAreasMode,
-      source: useApiWorkAreas ? 'api' : 'local',
-    });
-  }, [useApiWorkAreas, workAreasMode]);
-
   const updateMutation = trpc.adminUsers.update.useMutation({
     onSuccess: () => {
       toast.success('Usuario actualizado correctamente');
       void utils.adminUsers.list.invalidate();
-      void utils.adminUsers.getStats.invalidate();
-      void utils.adminUsers.getWorkAreas.invalidate();
       onClose();
     },
     onError: (error) => toast.error(error.message ?? 'Error al actualizar el usuario'),

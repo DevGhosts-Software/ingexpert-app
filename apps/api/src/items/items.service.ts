@@ -1,14 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Item, ItemType, Prisma } from '@ingexpert/database';
-import {
-  CreateItemDto,
-  ItemCounts,
-  ItemEntity,
-  ItemPaginationDto,
-  ItemStats,
-  UpdateItemDto,
-} from '@ingexpert/schema';
+import { CreateItemDto, ItemEntity, ItemPaginationDto, UpdateItemDto } from '@ingexpert/schema';
 
 @Injectable()
 export class ItemsService {
@@ -176,50 +169,6 @@ export class ItemsService {
         ),
       );
     }
-  }
-
-  async getStats(): Promise<ItemStats> {
-    const [total, products, equipment, tools, kits] = await Promise.all([
-      this.prisma.item.count(),
-      this.prisma.item.count({ where: { type: ItemType.PRODUCT } }),
-      this.prisma.item.count({ where: { type: ItemType.EQUIPMENT } }),
-      this.prisma.item.count({ where: { type: ItemType.TOOL } }),
-      this.prisma.item.count({ where: { type: ItemType.KIT } }),
-    ]);
-    return { total, products, equipment, tools, kits };
-  }
-
-  async getCounts(search?: string, location?: string): Promise<ItemCounts> {
-    const conditions: Prisma.ItemWhereInput[] = [];
-    if (location) conditions.push({ location });
-    if (search) {
-      conditions.push({
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { code: { contains: search, mode: 'insensitive' } },
-          { location: { contains: search, mode: 'insensitive' } },
-        ],
-      });
-    }
-    const base: Prisma.ItemWhereInput = conditions.length > 0 ? { AND: conditions } : {};
-
-    const [all, products, equipment, tools, kits] = await Promise.all([
-      this.prisma.item.count({ where: base }),
-      this.prisma.item.count({ where: { ...base, type: ItemType.PRODUCT } }),
-      this.prisma.item.count({ where: { ...base, type: ItemType.EQUIPMENT } }),
-      this.prisma.item.count({ where: { ...base, type: ItemType.TOOL } }),
-      this.prisma.item.count({ where: { ...base, type: ItemType.KIT } }),
-    ]);
-    return { ALL: all, PRODUCT: products, EQUIPMENT: equipment, TOOL: tools, KIT: kits };
-  }
-
-  async getLocations(): Promise<string[]> {
-    const result = await this.prisma.item.findMany({
-      select: { location: true },
-      distinct: ['location'],
-      orderBy: { location: 'asc' },
-    });
-    return result.map((r) => r.location);
   }
 
   async findAll(): Promise<ItemEntity[]> {

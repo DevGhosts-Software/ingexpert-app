@@ -1,12 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MovementType, Prisma } from '@ingexpert/database';
+import { Prisma } from '@ingexpert/database';
 import {
   CreateMovementDto,
   MovementEntityWithDetails,
   MovementHeaderEntity,
   MovementFiltersDto,
-  MovementStats,
 } from '@ingexpert/schema';
 
 @Injectable()
@@ -128,36 +127,6 @@ export class MovementsService {
     }
 
     return this.mapMovementWithDetails(movement);
-  }
-
-  async getStats(filters?: MovementFiltersDto): Promise<MovementStats> {
-    const firstOfMonth = new Date();
-    firstOfMonth.setDate(1);
-    firstOfMonth.setHours(0, 0, 0, 0);
-
-    const baseWhere: Prisma.MovementWhereInput = {};
-    if (filters?.createdById) baseWhere.createdById = filters.createdById;
-    if (filters?.dateFrom || filters?.dateTo) {
-      baseWhere.date = {};
-      if (filters.dateFrom)
-        (baseWhere.date as Prisma.DateTimeFilter).gte = new Date(filters.dateFrom);
-      if (filters.dateTo) {
-        const end = new Date(filters.dateTo);
-        end.setUTCHours(23, 59, 59, 999);
-        (baseWhere.date as Prisma.DateTimeFilter).lte = end;
-      }
-    }
-
-    const [total, purchases, returns, exits, writeoffs, thisMonth] = await Promise.all([
-      this.prisma.movement.count({ where: baseWhere }),
-      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.PURCHASE } }),
-      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.RETURN } }),
-      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.EXIT } }),
-      this.prisma.movement.count({ where: { ...baseWhere, type: MovementType.WRITEOFF } }),
-      this.prisma.movement.count({ where: { ...baseWhere, date: { gte: firstOfMonth } } }),
-    ]);
-
-    return { total, purchases, returns, exits, writeoffs, thisMonth };
   }
 
   async getProjects() {

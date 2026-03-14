@@ -7,15 +7,6 @@ import { KitImportRow, SetKitComponentsDto } from '@ingexpert/schema';
 export class KitsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getComponents(kitId: string) {
-    return this.prisma.kitDetail.findMany({
-      where: { kitId },
-      include: {
-        component: true,
-      },
-    });
-  }
-
   async getAllWithComponents() {
     const kits = await this.prisma.item.findMany({
       where: { type: ItemType.KIT },

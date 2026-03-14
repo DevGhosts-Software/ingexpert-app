@@ -6,7 +6,6 @@ import {
   CreateProjectSchema,
   ProjectEntitySchema,
   ProjectListSchema,
-  ProjectStatsSchema,
   UpdateProjectSchema,
   ProjectPaginationSchema,
 } from '@ingexpert/schema';
@@ -47,20 +46,6 @@ export class ProjectsRouter {
         .output(z.array(ProjectEntitySchema))
         .query(async () => {
           return this.projectsService.findAll();
-        }),
-
-      getStats: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/projects/stats',
-            tags: ['projects'],
-            summary: 'Get project statistics',
-          },
-        })
-        .output(ProjectStatsSchema)
-        .query(async () => {
-          return this.projectsService.getStats();
         }),
 
       create: this.trpc.adminProcedure

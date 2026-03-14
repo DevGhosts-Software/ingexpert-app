@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import { trpc } from '@/lib/trpc';
-import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
-import { compareNumericFields } from '@/lib/api-migration-parity';
-import { emitMigrationParity, emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -91,10 +88,6 @@ function StatCard({
 export default function DashboardPage() {
   const { data: me } = trpc.users.me.useQuery();
   const isAdmin = me?.role === 'ADMIN';
-  const itemStatsMode = useMigrationProcedureMode('items.getStats');
-  const movementStatsMode = useMigrationProcedureMode('movements.getStats');
-  const projectStatsMode = useMigrationProcedureMode('projects.getStats');
-  const userStatsMode = useMigrationProcedureMode('adminUsers.getStats');
 
   const localItemStatsQuery = useQuery<LocalItemStatsRow>(`
     SELECT
@@ -167,147 +160,15 @@ export default function DashboardPage() {
     };
   }, [localUserStatsQuery.data]);
 
-  const useApiItemStats = itemStatsMode !== 'local';
-  const useApiMovementStats = movementStatsMode !== 'local';
-  const useApiProjectStats = projectStatsMode !== 'local';
-  const useApiUserStats = userStatsMode !== 'local';
+  const itemStats = localItemStats;
+  const movStats = localMovementStats;
+  const projStats = localProjectStats;
+  const userStats = localUserStats;
 
-  const { data: apiItemStats, isLoading: loadingApiItems } = trpc.items.getStats.useQuery(
-    undefined,
-    {
-      enabled: useApiItemStats,
-    },
-  );
-  const { data: apiMovStats, isLoading: loadingApiMov } = trpc.movements.getStats.useQuery(
-    undefined,
-    {
-      enabled: useApiMovementStats,
-    },
-  );
-  const { data: apiProjStats, isLoading: loadingApiProj } = trpc.projects.getStats.useQuery(
-    undefined,
-    {
-      enabled: useApiProjectStats,
-    },
-  );
-  const { data: apiUserStats, isLoading: loadingApiUsers } = trpc.adminUsers.getStats.useQuery(
-    undefined,
-    { enabled: isAdmin && useApiUserStats },
-  );
-
-  const itemStats = itemStatsMode === 'local' ? localItemStats : apiItemStats;
-  const movStats = movementStatsMode === 'local' ? localMovementStats : apiMovStats;
-  const projStats = projectStatsMode === 'local' ? localProjectStats : apiProjStats;
-  const userStats = userStatsMode === 'local' ? localUserStats : apiUserStats;
-
-  const loadingItems =
-    itemStatsMode === 'local' ? localItemStatsQuery.isFetching : loadingApiItems || !apiItemStats;
-  const loadingMov =
-    movementStatsMode === 'local'
-      ? localMovementStatsQuery.isFetching
-      : loadingApiMov || !apiMovStats;
-  const loadingProj =
-    projectStatsMode === 'local'
-      ? localProjectStatsQuery.isFetching
-      : loadingApiProj || !apiProjStats;
-  const loadingUsers =
-    userStatsMode === 'local'
-      ? localUserStatsQuery.isFetching
-      : loadingApiUsers || (isAdmin && !apiUserStats);
-
-  useEffect(() => {
-    emitMigrationSourceSelection({
-      procedure: 'items.getStats',
-      mode: itemStatsMode,
-      source: useApiItemStats ? 'api' : 'local',
-    });
-    emitMigrationSourceSelection({
-      procedure: 'movements.getStats',
-      mode: movementStatsMode,
-      source: useApiMovementStats ? 'api' : 'local',
-    });
-    emitMigrationSourceSelection({
-      procedure: 'projects.getStats',
-      mode: projectStatsMode,
-      source: useApiProjectStats ? 'api' : 'local',
-    });
-    emitMigrationSourceSelection({
-      procedure: 'adminUsers.getStats',
-      mode: userStatsMode,
-      source: useApiUserStats ? 'api' : 'local',
-    });
-  }, [
-    itemStatsMode,
-    movementStatsMode,
-    projectStatsMode,
-    userStatsMode,
-    useApiItemStats,
-    useApiMovementStats,
-    useApiProjectStats,
-    useApiUserStats,
-  ]);
-
-  useEffect(() => {
-    if (itemStatsMode !== 'dual-run' || !apiItemStats) return;
-    const parity = compareNumericFields(localItemStats, apiItemStats, [
-      'total',
-      'products',
-      'equipment',
-      'tools',
-      'kits',
-    ]);
-    emitMigrationParity({
-      procedure: 'items.getStats',
-      mode: 'dual-run',
-      matches: parity.matches,
-      mismatchKeys: parity.mismatchKeys,
-    });
-  }, [apiItemStats, itemStatsMode, localItemStats]);
-
-  useEffect(() => {
-    if (movementStatsMode !== 'dual-run' || !apiMovStats) return;
-    const parity = compareNumericFields(localMovementStats, apiMovStats, [
-      'total',
-      'purchases',
-      'returns',
-      'exits',
-      'writeoffs',
-      'thisMonth',
-    ]);
-    emitMigrationParity({
-      procedure: 'movements.getStats',
-      mode: 'dual-run',
-      matches: parity.matches,
-      mismatchKeys: parity.mismatchKeys,
-    });
-  }, [apiMovStats, localMovementStats, movementStatsMode]);
-
-  useEffect(() => {
-    if (projectStatsMode !== 'dual-run' || !apiProjStats) return;
-    const parity = compareNumericFields(localProjectStats, apiProjStats, ['total']);
-    emitMigrationParity({
-      procedure: 'projects.getStats',
-      mode: 'dual-run',
-      matches: parity.matches,
-      mismatchKeys: parity.mismatchKeys,
-    });
-  }, [apiProjStats, localProjectStats, projectStatsMode]);
-
-  useEffect(() => {
-    if (!isAdmin || userStatsMode !== 'dual-run' || !apiUserStats) return;
-    const parity = compareNumericFields(localUserStats, apiUserStats, [
-      'total',
-      'admins',
-      'active',
-      'inactive',
-    ]);
-    emitMigrationParity({
-      procedure: 'adminUsers.getStats',
-      mode: 'dual-run',
-      matches: parity.matches,
-      mismatchKeys: parity.mismatchKeys,
-    });
-  }, [apiUserStats, isAdmin, localUserStats, userStatsMode]);
+  const loadingItems = localItemStatsQuery.isFetching;
+  const loadingMov = localMovementStatsQuery.isFetching;
+  const loadingProj = localProjectStatsQuery.isFetching;
+  const loadingUsers = localUserStatsQuery.isFetching;
 
   const displayName = me?.name ?? me?.email ?? '…';
 

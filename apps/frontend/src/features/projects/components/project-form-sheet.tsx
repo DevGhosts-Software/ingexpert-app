@@ -9,9 +9,7 @@ import { toast } from 'sonner';
 
 import { CreateProjectSchema, type CreateProjectDto } from '@ingexpert/schema';
 import { trpc } from '@/lib/trpc';
-import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
 import { useLocalUserNames } from '@/lib/api-migration-local-reads';
-import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -64,14 +62,8 @@ interface ProjectFormSheetProps {
 export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSheetProps) {
   const utils = trpc.useUtils();
   const isEdit = mode === 'edit';
-  const usersListMode = useMigrationProcedureMode('users.listNames');
   const localUsers = useLocalUserNames();
-  const useApiUsers = usersListMode === 'api' || localUsers.length === 0;
-
-  const { data: apiUsers = [] } = trpc.users.listNames.useQuery(undefined, {
-    enabled: useApiUsers,
-  });
-  const users = useApiUsers ? apiUsers : localUsers;
+  const users = localUsers;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(ProjectFormSchema),
@@ -91,14 +83,6 @@ export function ProjectFormSheet({ mode, project, open, onClose }: ProjectFormSh
       form.reset({ name: '', contact: '', address: '', managerId: '' });
     }
   }, [open, isEdit, project, form]);
-
-  useEffect(() => {
-    emitMigrationSourceSelection({
-      procedure: 'users.listNames',
-      mode: usersListMode,
-      source: useApiUsers ? 'api' : 'local',
-    });
-  }, [usersListMode, useApiUsers]);
 
   function invalidateAll() {
     return Promise.all([

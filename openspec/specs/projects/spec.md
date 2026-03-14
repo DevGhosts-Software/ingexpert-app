@@ -78,25 +78,25 @@ Project-facing screens used in dashboard workflows MUST support loading from loc
 - **WHEN** the user applies search, sorting, or pagination controls on projects page
 - **THEN** the UI MUST apply those controls against local query results consistently while offline
 
-## Requirement: Project form dependencies SHALL support local-first reads
+## Requirement: Project form dependencies SHALL use local-only synchronized reads after cutover
 
-Project create/edit flows MUST resolve manager selection data from local PowerSync-backed `users` rows first, with runtime API fallback for rollback safety.
+Project create/edit forms MUST resolve manager selection from synchronized local user rows once migration is finalized, without runtime API fallback branches.
 
-#### Scenario: Project form opens while API is degraded
+#### Scenario: Project form opens in finalized migration mode
 
-- **WHEN** the project form is opened under degraded API conditions
+- **WHEN** a user opens project create/edit form
 - **THEN** manager options MUST be populated from synchronized local user rows
-- **THEN** the form MUST remain operable without blocking on a live `users.listNames` request
+- **THEN** no runtime `users.listNames` API fallback branch may execute
 
-## Requirement: Project read migration SHALL keep UX parity
+## Requirement: Project migrated read paths SHALL be local-only at runtime
 
-Project list and stats reads migrated from API to local-first execution MUST maintain equivalent user-visible behavior for filtering, sorting, and totals.
+Project list and stats reads that have passed migration acceptance MUST run from local data only.
 
-#### Scenario: Project list read path is migrated
+#### Scenario: Projects dashboard cards and lists render
 
-- **WHEN** project list reads use local-first data as primary source
-- **THEN** list ordering, filtering, and pagination behavior MUST remain consistent with accepted API-era behavior
-- **THEN** API fallback MUST be available during stabilization
+- **WHEN** projects list or stats data is requested in migrated flows
+- **THEN** values MUST come from local synchronized data with parity-preserved semantics
+- **THEN** retired project read/stats API endpoints MUST not be called
 
 ## Requirement: Project stats cutover SHALL retain deterministic totals
 

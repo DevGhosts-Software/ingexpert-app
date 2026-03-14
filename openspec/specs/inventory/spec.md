@@ -61,7 +61,7 @@ Adding a new `Decimal` column to `Item` causes a TypeScript error in `mapItem()`
 ---
 
 ## Bulk Import Pattern
- 
+
 For batch writes (Excel import), use the **pre-fetch + bulk** pattern (not a single `$transaction`):
 
 1. One query: `findMany` all existing items by `code`.
@@ -209,25 +209,25 @@ Inventory write flows MUST not include hidden awaited tRPC reads/mutations that 
 - **THEN** save flow MUST finish from local operations only
 - **THEN** the UI MUST communicate queued sync state instead of waiting for network recovery
 
-## Requirement: Inventory local-computable reads SHALL use local-first with API fallback control
+## Requirement: Inventory local-computable reads SHALL run without runtime API fallback
 
-Inventory read procedures classified as local-computable (for example kit component expansion reads) MUST use local PowerSync reads as primary source with a runtime API fallback switch.
+Inventory reads already accepted for local-first execution MUST use PowerSync/SQLite as the only runtime read source.
 
-#### Scenario: Local-first kit component read
+#### Scenario: Kit component composition is requested
 
 - **WHEN** the UI requests kit component composition for an existing kit
-- **THEN** the client MUST resolve components from local `kit_details` + `items` data first
-- **THEN** the client MUST retain a configurable API fallback mode for rollback
+- **THEN** the client MUST resolve components from local synchronized tables
+- **THEN** no runtime API fallback branch may execute for this read path
 
-## Requirement: Inventory read candidates SHALL cut over to local-first execution
+## Requirement: Inventory dashboard aggregates SHALL be computed locally after cutover
 
-Inventory read procedures classified as migration candidates MUST transition to local PowerSync/SQLite reads once parity gates pass.
+Lightweight inventory card metrics in dashboard and inventory surfaces MUST be derived locally once parity acceptance has been completed.
 
-#### Scenario: Inventory read candidate passes dual-run validation
+#### Scenario: Inventory cards render after migration finalization
 
-- **WHEN** parity criteria are satisfied for an inventory read candidate
-- **THEN** the frontend MUST use local-first data as the primary source for that read
-- **THEN** API fallback MUST remain available during stabilization
+- **WHEN** the dashboard or inventory cards request aggregate counts
+- **THEN** totals MUST be computed from local SQLite synchronized data
+- **THEN** removed API aggregate endpoints MUST not be called
 
 ## Requirement: Inventory stats migration SHALL preserve aggregate parity
 

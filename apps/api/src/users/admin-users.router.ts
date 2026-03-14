@@ -8,7 +8,6 @@ import {
   GrantAuthSchema,
   UpdateUserSchema,
   UserEntitySchema,
-  UserStatsSchema,
 } from '@ingexpert/schema';
 
 @Injectable()
@@ -85,34 +84,6 @@ export class AdminUsersRouter {
         .output(z.array(UserEntitySchema))
         .query(async () => {
           return await this.adminUsersService.findAll();
-        }),
-
-      getStats: this.trpc.adminProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/admin/users/stats',
-            tags: ['admin-users'],
-            summary: 'Get user statistics',
-          },
-        })
-        .output(UserStatsSchema)
-        .query(async () => {
-          return await this.adminUsersService.getStats();
-        }),
-
-      getWorkAreas: this.trpc.adminProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/admin/users/work-areas',
-            tags: ['admin-users'],
-            summary: 'Get available work areas',
-          },
-        })
-        .output(z.array(z.string()))
-        .query(async () => {
-          return await this.adminUsersService.getWorkAreas();
         }),
 
       // Primitive input — excluded from OpenAPI spec

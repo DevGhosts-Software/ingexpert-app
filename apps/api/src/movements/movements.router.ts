@@ -8,7 +8,6 @@ import {
   MovementFiltersSchema,
   MovementHeaderEntitySchema,
   MovementProjectSchema,
-  MovementStatsSchema,
 } from '@ingexpert/schema';
 import { UserRole } from '@ingexpert/database';
 import { z } from 'zod';
@@ -45,23 +44,6 @@ export class MovementsRouter {
         .input(z.string().uuid('El ID del movimiento debe ser un UUID válido.'))
         .query(async ({ input }) => {
           return this.movementsService.findOne(input);
-        }),
-
-      getStats: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/movements/stats',
-            tags: ['movements'],
-            summary: 'Get movement statistics',
-          },
-        })
-        .input(MovementFiltersSchema.optional())
-        .output(MovementStatsSchema)
-        .query(async ({ input, ctx }) => {
-          const filters =
-            ctx.user.role !== UserRole.ADMIN ? { ...input, createdById: ctx.user.id } : input;
-          return this.movementsService.getStats(filters);
         }),
 
       getProjects: this.trpc.protectedProcedure

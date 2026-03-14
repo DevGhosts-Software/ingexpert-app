@@ -66,11 +66,6 @@ export class ProjectsService {
     return projects.map((p) => this.mapProject(p));
   }
 
-  async getStats(): Promise<{ total: number }> {
-    const total = await this.prisma.project.count();
-    return { total };
-  }
-
   async create(input: CreateProjectDto): Promise<ProjectEntity> {
     const project = await this.prisma.project.create({ data: input, include: MANAGER_INCLUDE });
     return this.mapProject(project);

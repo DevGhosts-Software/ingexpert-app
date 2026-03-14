@@ -32,9 +32,6 @@ export function ItemDeleteDialog({ item, open, onClose }: ItemDeleteDialogProps)
       toast.success(`"${item?.name}" eliminado correctamente`);
       if (item?.imageUrl) void deleteFile(item.imageUrl);
       void utils.items.list.invalidate();
-      void utils.items.getStats.invalidate();
-      void utils.items.getCounts.invalidate();
-      void utils.items.getLocations.invalidate();
       onClose();
     },
     onError: (error) => {

@@ -3,11 +3,9 @@ import { TrpcService } from '../trpc/trpc.service';
 import { ItemsService } from './items.service';
 import {
   CreateItemSchema,
-  ItemCountsSchema,
   ItemEntitySchema,
   ItemListSchema,
   ItemPaginationSchema,
-  ItemStatsSchema,
   UpdateItemSchema,
 } from '@ingexpert/schema';
 import { z } from 'zod';
@@ -87,54 +85,6 @@ export class ItemsRouter {
         .mutation(async ({ input }) => {
           await this.itemsService.importMany(input);
           return { success: true };
-        }),
-
-      getStats: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/items/stats',
-            tags: ['items'],
-            summary: 'Get item statistics',
-          },
-        })
-        .output(ItemStatsSchema)
-        .query(async () => {
-          return this.itemsService.getStats();
-        }),
-
-      getCounts: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/items/counts',
-            tags: ['items'],
-            summary: 'Get item type counts',
-          },
-        })
-        .input(
-          z.object({
-            search: z.string().optional(),
-            location: z.string().optional(),
-          }),
-        )
-        .output(ItemCountsSchema)
-        .query(async ({ input }) => {
-          return this.itemsService.getCounts(input.search, input.location);
-        }),
-
-      getLocations: this.trpc.protectedProcedure
-        .meta({
-          openapi: {
-            method: 'GET',
-            path: '/items/locations',
-            tags: ['items'],
-            summary: 'Get distinct item locations',
-          },
-        })
-        .output(z.array(z.string()))
-        .query(async () => {
-          return this.itemsService.getLocations();
         }),
 
       getAll: this.trpc.adminProcedure

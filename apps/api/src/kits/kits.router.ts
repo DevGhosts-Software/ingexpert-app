@@ -13,13 +13,6 @@ export class KitsRouter {
 
   public get router() {
     return this.trpc.router({
-      // Primitive input — excluded from OpenAPI spec
-      getComponents: this.trpc.protectedProcedure
-        .input(z.string().uuid())
-        .query(async ({ input }) => {
-          return this.kitsService.getComponents(input);
-        }),
-
       getAllWithComponents: this.trpc.protectedProcedure
         .meta({
           openapi: {

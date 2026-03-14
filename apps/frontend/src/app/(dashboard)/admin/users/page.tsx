@@ -1,12 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { trpc } from '@/lib/trpc';
-import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
-import { compareNumericFields } from '@/lib/api-migration-parity';
-import { emitMigrationParity, emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 import { useDebounce } from '@/hooks/use-debounce';
 import { UserStats } from '@/features/users/components/user-stats';
 import { UserTable } from '@/features/users/components/user-table';
@@ -33,8 +30,6 @@ export default function UsersPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('all');
   const [workAreaFilter, setWorkAreaFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
-  const workAreasMode = useMigrationProcedureMode('adminUsers.getWorkAreas');
-  const userStatsMode = useMigrationProcedureMode('adminUsers.getStats');
 
   const { data: allUsers = [], isLoading } = trpc.adminUsers.list.useQuery();
   const localWorkAreasQuery = useQuery<LocalWorkAreaRow>(
@@ -64,43 +59,8 @@ export default function UsersPage() {
     };
   }, [localStatsQuery.data]);
 
-  const useApiWorkAreas = workAreasMode === 'api' || localWorkAreas.length === 0;
-  const { data: apiWorkAreas = [] } = trpc.adminUsers.getWorkAreas.useQuery(undefined, {
-    enabled: useApiWorkAreas,
-  });
-  const workAreas = useApiWorkAreas ? apiWorkAreas : localWorkAreas;
-
-  const useApiStats = userStatsMode !== 'local';
-  const { data: apiStats = DEFAULT_STATS } = trpc.adminUsers.getStats.useQuery(undefined, {
-    enabled: useApiStats,
-  });
-  const stats = userStatsMode === 'local' ? localStats : apiStats;
-
-  useEffect(() => {
-    emitMigrationSourceSelection({
-      procedure: 'adminUsers.getWorkAreas',
-      mode: workAreasMode,
-      source: useApiWorkAreas ? 'api' : 'local',
-    });
-  }, [useApiWorkAreas, workAreasMode]);
-
-  useEffect(() => {
-    if (userStatsMode !== 'dual-run') {
-      return;
-    }
-    const parity = compareNumericFields(localStats, apiStats, [
-      'total',
-      'admins',
-      'active',
-      'inactive',
-    ]);
-    emitMigrationParity({
-      procedure: 'adminUsers.getStats',
-      mode: 'dual-run',
-      matches: parity.matches,
-      mismatchKeys: parity.mismatchKeys,
-    });
-  }, [apiStats, localStats, userStatsMode]);
+  const workAreas = localWorkAreas;
+  const stats = localStats;
 
   // Client-side filtering + pagination over the already-fetched list
   const { tableData, pageCount, roleCounts } = useMemo(() => {

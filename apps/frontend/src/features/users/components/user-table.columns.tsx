@@ -384,7 +384,6 @@ function DeleteUserDialog({
     onSuccess: () => {
       toast.success('Usuario eliminado correctamente');
       void utils.adminUsers.list.invalidate();
-      void utils.adminUsers.getStats.invalidate();
       onClose();
     },
     onError: (err) => toast.error(err.message ?? 'Error al eliminar el usuario'),

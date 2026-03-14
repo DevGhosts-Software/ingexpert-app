@@ -15,7 +15,6 @@ import {
   GrantAuthDto,
   UpdateUserDto,
   type UserEntity,
-  type UserStats,
 } from '@ingexpert/schema';
 
 // Shape returned by queries that include staff → workArea
@@ -194,25 +193,6 @@ export class AdminUsersService {
       include: { staff: { include: { workArea: true } } },
     });
     return this.mapUser(user);
-  }
-
-  // ── Stats ────────────────────────────────────────────────────────────────────
-
-  async getStats(): Promise<UserStats> {
-    const [total, admins, withArea] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { role: 'ADMIN' } }),
-      this.prisma.staff.count({ where: { workAreaId: { not: null } } }),
-    ]);
-    return { total, admins, active: withArea, inactive: total - withArea };
-  }
-
-  async getWorkAreas(): Promise<string[]> {
-    const rows = await this.prisma.workArea.findMany({
-      orderBy: { name: 'asc' },
-      select: { name: true },
-    });
-    return rows.map((r) => r.name);
   }
 
   // ── CRUD ─────────────────────────────────────────────────────────────────────

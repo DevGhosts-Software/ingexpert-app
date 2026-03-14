@@ -117,13 +117,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
   const invalidateAll = useCallback(
     () =>
-      Promise.all([
-        utils.items.list.invalidate(),
-        utils.items.getStats.invalidate(),
-        utils.items.getCounts.invalidate(),
-        utils.items.getLocations.invalidate(),
-        utils.kits.getAllWithComponents.invalidate(),
-      ]),
+      Promise.all([utils.items.list.invalidate(), utils.kits.getAllWithComponents.invalidate()]),
     [utils],
   );
 
