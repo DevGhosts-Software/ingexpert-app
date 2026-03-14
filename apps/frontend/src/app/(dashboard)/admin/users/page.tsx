@@ -42,10 +42,10 @@ export default function UsersPage() {
   );
   const localStatsQuery = useQuery<LocalUserStatsRow>(`
     SELECT
-      (SELECT COUNT(*) FROM users) AS total,
+      (SELECT COUNT(*) FROM users) AS total, 
       (SELECT COUNT(*) FROM users WHERE role = 'ADMIN') AS admins,
       (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL) AS active,
-      ((SELECT COUNT(*) FROM users) - (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL)) AS inactive
+      ((SELECT COUNT(*) FROM users) - (SELECT COUNT(*) FROM staff WHERE work_area_id IS NOT NULL)) AS inactive 
   `);
   const localWorkAreas = useMemo(
     () => (localWorkAreasQuery.data ?? []).map((row) => row.name),

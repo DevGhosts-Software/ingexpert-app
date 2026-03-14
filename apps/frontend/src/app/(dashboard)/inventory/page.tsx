@@ -72,7 +72,7 @@ export default function InventoryPage() {
       code,
       name,
       location,
-      stock,
+      stock, 
       unit,
       type,
       image_url
@@ -86,7 +86,7 @@ export default function InventoryPage() {
       component.name AS "componentName",
       component.code AS "componentCode",
       kd.quantity,
-      component.unit AS "unit"
+      component.unit AS "unit" 
     FROM kit_details kd
     INNER JOIN items kit ON kit.id = kd.kit_id
     INNER JOIN items component ON component.id = kd.item_id

@@ -7,7 +7,7 @@ import { Boxes, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
-import { CreateItemSchema, type CreateItemDto } from '@ingexpert/schema';
+import { type CreateItemDto, CreateItemSchema } from '@ingexpert/schema';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -35,8 +35,8 @@ import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-fi
 import {
   type InventoryItem,
   type ItemType,
-  TYPE_CONFIG,
   TYPE_COLORS,
+  TYPE_CONFIG,
 } from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 

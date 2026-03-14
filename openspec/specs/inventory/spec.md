@@ -61,7 +61,7 @@ Adding a new `Decimal` column to `Item` causes a TypeScript error in `mapItem()`
 ---
 
 ## Bulk Import Pattern
-
+ 
 For batch writes (Excel import), use the **pre-fetch + bulk** pattern (not a single `$transaction`):
 
 1. One query: `findMany` all existing items by `code`.

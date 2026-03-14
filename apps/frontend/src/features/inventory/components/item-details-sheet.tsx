@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Boxes, ImageIcon, Loader2, MapPin, Package } from 'lucide-react';
+import { ImageIcon, Loader2, MapPin, Package } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,7 +13,7 @@ import { useMigrationProcedureMode } from '@/lib/api-migration-flags';
 import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
 import { emitMigrationSourceSelection } from '@/lib/api-migration-telemetry';
 
-import { type InventoryItem, TYPE_CONFIG, TYPE_COLORS } from './inventory-table.types';
+import { type InventoryItem, TYPE_COLORS, TYPE_CONFIG } from './inventory-table.types';
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
 

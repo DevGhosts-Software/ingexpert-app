@@ -32,7 +32,7 @@ export default function ProjectsPage() {
       p.contact,
       p.address,
       p.manager_id,
-      COALESCE(u.name, u.email, '—') AS manager
+      COALESCE(u.name, u.email, '—') AS manager 
     FROM projects p
     LEFT JOIN users u ON u.id = p.manager_id
   `);
