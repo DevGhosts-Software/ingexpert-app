@@ -99,67 +99,6 @@ export class ItemsService {
     return this.mapItem(item);
   }
 
-  async createBatch(items: CreateItemDto[]): Promise<void> {
-    await this.prisma.item.createMany({
-      data: items.map((item) => ({
-        name: item.name,
-        code: item.code,
-        location: item.location,
-        stock: new Prisma.Decimal(item.stock),
-        unit: item.unit,
-        type: item.type,
-        imageUrl: item.imageUrl ?? '',
-      })),
-    });
-  }
-
-  async importMany(items: CreateItemDto[]): Promise<void> {
-    const codes = items.map((i) => i.code);
-
-    // Find all items that already exist by code
-    const existing = await this.prisma.item.findMany({
-      where: { code: { in: codes } },
-      select: { id: true, code: true },
-    });
-    const existingMap = new Map(existing.map((e) => [e.code, e.id]));
-
-    const toCreate = items.filter((i) => !existingMap.has(i.code));
-    const toUpdate = items.filter((i) => existingMap.has(i.code));
-
-    if (toCreate.length > 0) {
-      await this.prisma.item.createMany({
-        data: toCreate.map((item) => ({
-          name: item.name,
-          code: item.code,
-          location: item.location,
-          stock: new Prisma.Decimal(item.stock),
-          unit: item.unit,
-          type: item.type,
-          imageUrl: item.imageUrl ?? '',
-        })),
-      });
-    }
-
-    // For existing items, increment stock instead of replacing it
-    if (toUpdate.length > 0) {
-      await Promise.all(
-        toUpdate.map((item) =>
-          this.prisma.item.update({
-            where: { id: existingMap.get(item.code)! },
-            data: {
-              name: item.name,
-              location: item.location,
-              unit: item.unit,
-              type: item.type,
-              imageUrl: item.imageUrl ?? '',
-              stock: { increment: new Prisma.Decimal(item.stock) },
-            },
-          }),
-        ),
-      );
-    }
-  }
-
   async findAll(): Promise<ItemEntity[]> {
     const items = await this.prisma.item.findMany({
       orderBy: { name: 'asc' },

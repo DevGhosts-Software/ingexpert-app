@@ -4,10 +4,11 @@ import { useCallback, useRef, useState } from 'react';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import { AlertCircle, FileUp, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 import type { CreateItemDto, KitImportRow } from '@ingexpert/schema';
 import { ItemType } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
+import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -100,7 +101,7 @@ interface ImportExcelDialogProps {
 }
 
 export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
-  const utils = trpc.useUtils();
+  const powerSyncDb = usePowerSyncDatabase();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedRows, setParsedRows] = useState<CreateItemDto[]>([]);
   const [parsedKitRows, setParsedKitRows] = useState<KitImportRow[]>([]);
@@ -111,15 +112,6 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const [importedCount, setImportedCount] = useState(0);
   const totalCount = parsedRows.length + parsedKitRows.length;
   const progress = totalCount > 0 ? Math.round((importedCount / totalCount) * 100) : 0;
-
-  const upsertMutation = trpc.items.importMany.useMutation();
-  const kitImportMutation = trpc.kits.importMany.useMutation();
-
-  const invalidateAll = useCallback(
-    () =>
-      Promise.all([utils.items.list.invalidate(), utils.kits.getAllWithComponents.invalidate()]),
-    [utils],
-  );
 
   const handleClose = useCallback(() => {
     if (isImporting) return;
@@ -190,7 +182,33 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         }
         let done = 0;
         for (const chunk of chunks) {
-          await upsertMutation.mutateAsync(chunk);
+          await powerSyncDb.writeTransaction(async (tx) => {
+            for (const item of chunk) {
+              await tx.execute(
+                `
+                  INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  ON CONFLICT(code) DO UPDATE SET
+                    name = excluded.name,
+                    location = excluded.location,
+                    unit = excluded.unit,
+                    type = excluded.type,
+                    image_url = excluded.image_url,
+                    stock = items.stock + excluded.stock
+                `,
+                [
+                  uuidv4(),
+                  item.code,
+                  item.name,
+                  item.location,
+                  item.stock,
+                  item.unit,
+                  item.type,
+                  item.imageUrl ?? '',
+                ],
+              );
+            }
+          });
           done += chunk.length;
           setImportedCount(done);
         }
@@ -198,14 +216,89 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
       // ── Kits (in chunks) ─────────────────────────────────────────────────────
       if (parsedKitRows.length > 0) {
-        const kitChunks: KitImportRow[][] = [];
-        for (let i = 0; i < parsedKitRows.length; i += CHUNK_SIZE) {
-          kitChunks.push(parsedKitRows.slice(i, i + CHUNK_SIZE));
+        const groupedByKit = new Map<
+          string,
+          { kitCode: string; kitName: string; components: KitImportRow[]; rowCount: number }
+        >();
+        for (const row of parsedKitRows) {
+          const existing = groupedByKit.get(row.kitCode);
+          if (existing) {
+            existing.components.push(row);
+            existing.rowCount += 1;
+          } else {
+            groupedByKit.set(row.kitCode, {
+              kitCode: row.kitCode,
+              kitName: row.kitName,
+              components: [row],
+              rowCount: 1,
+            });
+          }
         }
+
+        const groupedEntries = Array.from(groupedByKit.values());
+        const kitChunks: (typeof groupedEntries)[] = [];
+        let currentChunk: typeof groupedEntries = [];
+        let currentRows = 0;
+        for (const kitEntry of groupedEntries) {
+          if (currentRows > 0 && currentRows + kitEntry.rowCount > CHUNK_SIZE) {
+            kitChunks.push(currentChunk);
+            currentChunk = [];
+            currentRows = 0;
+          }
+          currentChunk.push(kitEntry);
+          currentRows += kitEntry.rowCount;
+        }
+        if (currentChunk.length > 0) {
+          kitChunks.push(currentChunk);
+        }
+
         let done = parsedRows.length;
         for (const chunk of kitChunks) {
-          await kitImportMutation.mutateAsync(chunk);
-          done += chunk.length;
+          await powerSyncDb.writeTransaction(async (tx) => {
+            for (const kitEntry of chunk) {
+              await tx.execute(
+                `
+                  INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  ON CONFLICT(code) DO UPDATE SET
+                    name = excluded.name,
+                    type = 'KIT',
+                    unit = excluded.unit,
+                    location = excluded.location
+                `,
+                [uuidv4(), kitEntry.kitCode, kitEntry.kitName, '-', 0, 'kit', 'KIT', ''],
+              );
+
+              await tx.execute(
+                `
+                  DELETE FROM kit_details
+                  WHERE kit_id = (
+                    SELECT id
+                    FROM items
+                    WHERE code = ? AND type = 'KIT'
+                    LIMIT 1
+                  )
+                `,
+                [kitEntry.kitCode],
+              );
+
+              for (const component of kitEntry.components) {
+                await tx.execute(
+                  `
+                    INSERT INTO kit_details (id, kit_id, item_id, quantity)
+                    SELECT ?, kit.id, comp.id, ?
+                    FROM items kit, items comp
+                    WHERE kit.code = ?
+                      AND kit.type = 'KIT'
+                      AND comp.code = ?
+                    LIMIT 1
+                  `,
+                  [uuidv4(), component.quantity, kitEntry.kitCode, component.componentCode],
+                );
+              }
+            }
+          });
+          done += chunk.reduce((acc, entry) => acc + entry.rowCount, 0);
           setImportedCount(done);
         }
       }
@@ -213,7 +306,6 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
       toast.success(
         `Importación completada: ${parsedRows.length} items, ${parsedKitRows.length} filas de kits`,
       );
-      void invalidateAll();
       setParsedRows([]);
       setParsedKitRows([]);
       setFileName('');
@@ -225,7 +317,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
     } finally {
       setIsImporting(false);
     }
-  }, [parsedRows, parsedKitRows, upsertMutation, kitImportMutation, invalidateAll, onClose]);
+  }, [parsedRows, parsedKitRows, onClose, powerSyncDb]);
 
   const itemChunkCount = Math.ceil(parsedRows.length / CHUNK_SIZE);
   const kitChunkCount = Math.ceil(parsedKitRows.length / CHUNK_SIZE);

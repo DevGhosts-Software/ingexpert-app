@@ -3,12 +3,13 @@
 import { useCallback, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { z } from 'zod';
 import { UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { UpdateUserSchema, UserRole } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
+import { updateAdminUser } from '@/lib/admin-control-function';
 import { useLocalWorkAreas } from '@/lib/api-migration-local-reads';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,7 +57,6 @@ interface UserEditSheetProps {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSheetProps) {
-  const utils = trpc.useUtils();
   const localWorkAreas = useLocalWorkAreas();
   const workAreas = localWorkAreas;
 
@@ -79,13 +79,14 @@ export function UserEditSheet({ user, open, onClose, canChangeRole }: UserEditSh
     }
   }, [open, user, form]);
 
-  const updateMutation = trpc.adminUsers.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormValues }) => updateAdminUser(id, data),
     onSuccess: () => {
       toast.success('Usuario actualizado correctamente');
-      void utils.adminUsers.list.invalidate();
       onClose();
     },
-    onError: (error) => toast.error(error.message ?? 'Error al actualizar el usuario'),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : 'Error al actualizar el usuario'),
   });
 
   const onSubmit = useCallback(

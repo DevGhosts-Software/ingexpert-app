@@ -5,7 +5,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { TrpcModule } from './trpc/trpc.module';
 import { AppRouter } from './trpc/app.router';
-import { UsersModule } from './users/users.module';
 import { ItemsModule } from './items/items.module';
 import { MovementsModule } from './movements/movements.module';
 import { KitsModule } from './kits/kits.module';
@@ -25,7 +24,6 @@ import { ProjectsModule } from './projects/projects.module';
     ]),
     PrismaModule,
     TrpcModule,
-    UsersModule,
     ItemsModule,
     MovementsModule,
     KitsModule,

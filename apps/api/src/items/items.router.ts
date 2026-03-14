@@ -64,21 +64,6 @@ export class ItemsRouter {
           return this.itemsService.update(id, data);
         }),
 
-      // Array inputs — excluded from OpenAPI spec
-      createBatch: this.trpc.adminProcedure
-        .input(z.array(CreateItemSchema))
-        .mutation(async ({ input }) => {
-          await this.itemsService.createBatch(input);
-          return { success: true };
-        }),
-      importMany: this.trpc.adminProcedure
-        .input(z.array(CreateItemSchema))
-        .output(z.object({ success: z.boolean() }))
-        .mutation(async ({ input }) => {
-          await this.itemsService.importMany(input);
-          return { success: true };
-        }),
-
       getAll: this.trpc.adminProcedure
         .meta({
           openapi: {

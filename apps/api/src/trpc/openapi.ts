@@ -14,6 +14,6 @@ export function createOpenApiDocument(appRouter: AppRouterType) {
         bearerFormat: 'JWT',
       },
     },
-    tags: ['auth', 'users', 'admin-users', 'items', 'kits', 'movements', 'projects'],
+    tags: ['auth', 'users', 'items', 'kits', 'movements', 'projects'],
   });
 }

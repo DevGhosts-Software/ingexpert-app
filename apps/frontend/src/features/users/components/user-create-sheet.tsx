@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { UserRole } from '@ingexpert/schema';
-import { trpc } from '@/lib/trpc';
+import { createAdminUser, createAdminUserWithoutAuth } from '@/lib/admin-control-function';
 import { useLocalWorkAreas } from '@/lib/api-migration-local-reads';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -111,7 +112,6 @@ function PasswordInput({
 }
 
 export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
-  const utils = trpc.useUtils();
   const localWorkAreas = useLocalWorkAreas();
   const workAreas = localWorkAreas;
 
@@ -144,26 +144,24 @@ export function UserCreateSheet({ open, onClose }: UserCreateSheetProps) {
     }
   }, [open, form]);
 
-  function invalidate() {
-    void utils.adminUsers.list.invalidate();
-  }
-
-  const createMutation = trpc.adminUsers.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: createAdminUser,
     onSuccess: () => {
       toast.success('Usuario creado correctamente');
-      invalidate();
       onClose();
     },
-    onError: (error) => toast.error(error.message ?? 'Error al crear el usuario'),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : 'Error al crear el usuario'),
   });
 
-  const createWithoutAuthMutation = trpc.adminUsers.createWithoutAuth.useMutation({
+  const createWithoutAuthMutation = useMutation({
+    mutationFn: createAdminUserWithoutAuth,
     onSuccess: () => {
       toast.success('Usuario creado sin acceso al sistema');
-      invalidate();
       onClose();
     },
-    onError: (error) => toast.error(error.message ?? 'Error al crear el usuario'),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : 'Error al crear el usuario'),
   });
 
   const isPending = createMutation.isPending || createWithoutAuthMutation.isPending;

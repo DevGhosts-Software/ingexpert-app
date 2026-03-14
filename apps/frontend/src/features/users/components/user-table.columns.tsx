@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useMutation } from '@tanstack/react-query';
 import {
   Briefcase,
   Eye,
@@ -41,6 +42,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  grantAdminUserAuth,
+  removeAdminUser,
+  revokeAdminUserAuth,
+  updateAdminUserPassword,
+} from '@/lib/admin-control-function';
+import {
   Form,
   FormControl,
   FormField,
@@ -49,7 +56,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { trpc } from '@/lib/trpc';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { UserEditSheet } from './user-edit-sheet';
 import type { UserEntity, UserRole } from './user-table.types';
@@ -121,13 +127,16 @@ function ResetPasswordDialog({
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const mutation = trpc.adminUsers.updatePassword.useMutation({
+  const mutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      updateAdminUserPassword(id, password),
     onSuccess: () => {
       toast.success('Contraseña restablecida correctamente');
       form.reset();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al restablecer la contraseña'),
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Error al restablecer la contraseña'),
   });
 
   const onSubmit = ({ password }: ResetPwValues) => {
@@ -225,20 +234,20 @@ function GrantAuthDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
   const form = useForm<GrantAuthPwValues>({
     resolver: zodResolver(GrantAuthPwSchema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const mutation = trpc.adminUsers.grantAuth.useMutation({
+  const mutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      grantAdminUserAuth({ id, password }),
     onSuccess: () => {
       toast.success(`Acceso otorgado a ${user.name ?? user.email}`);
-      void utils.adminUsers.list.invalidate();
       form.reset();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al otorgar acceso'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Error al otorgar acceso'),
   });
 
   return (
@@ -327,14 +336,13 @@ function RevokeAuthDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
-  const mutation = trpc.adminUsers.revokeAuth.useMutation({
+  const mutation = useMutation({
+    mutationFn: (id: string) => revokeAdminUserAuth(id),
     onSuccess: () => {
       toast.success(`Acceso revocado para ${user.name ?? user.email}`);
-      void utils.adminUsers.list.invalidate();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al revocar acceso'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Error al revocar acceso'),
   });
 
   return (
@@ -379,15 +387,14 @@ function DeleteUserDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const utils = trpc.useUtils();
-
-  const mutation = trpc.adminUsers.remove.useMutation({
+  const mutation = useMutation({
+    mutationFn: (id: string) => removeAdminUser(id),
     onSuccess: () => {
       toast.success('Usuario eliminado correctamente');
-      void utils.adminUsers.list.invalidate();
       onClose();
     },
-    onError: (err) => toast.error(err.message ?? 'Error al eliminar el usuario'),
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar el usuario'),
   });
 
   return (

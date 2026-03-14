@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import { trpc } from '@/lib/trpc';
+import { useLocalUsers } from '@/lib/api-migration-local-reads';
 import { useDebounce } from '@/hooks/use-debounce';
 import { UserStats } from '@/features/users/components/user-stats';
 import { UserTable } from '@/features/users/components/user-table';
@@ -31,7 +31,7 @@ export default function UsersPage() {
   const [workAreaFilter, setWorkAreaFilter] = useState('all');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
 
-  const { data: allUsers = [], isLoading } = trpc.adminUsers.list.useQuery();
+  const allUsers = useLocalUsers();
   const localWorkAreasQuery = useQuery<LocalWorkAreaRow>(
     'SELECT name FROM work_areas ORDER BY name ASC',
   );
@@ -142,7 +142,7 @@ export default function UsersPage() {
       <UserStats stats={stats} />
       <UserTable
         users={tableData}
-        isLoading={isLoading}
+        isLoading={false}
         pageCount={pageCount}
         pagination={pagination}
         onPaginationChange={handlePaginationChange}

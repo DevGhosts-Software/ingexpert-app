@@ -5,6 +5,15 @@ import { useQuery } from '@powersync/react';
 
 type WorkAreaRow = { name: string };
 type UserNameRow = { id: string; name: string | null; email: string };
+type UserRow = {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'USER';
+  name: string | null;
+  avatar: string | null;
+  has_auth: number | string | null;
+  work_area: string | null;
+};
 
 type KitComponentRow = {
   component_id: string;
@@ -28,6 +37,39 @@ export function useLocalUserNames(): UserNameRow[] {
     'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC',
   );
   return query.data ?? [];
+}
+
+export function useLocalUsers() {
+  const query = useQuery<UserRow>(
+    `
+      SELECT
+        u.id,
+        u.email,
+        u.role,
+        u.name,
+        u.avatar,
+        u.has_auth,
+        wa.name AS work_area
+      FROM users u
+      LEFT JOIN staff s ON s.id = u.id
+      LEFT JOIN work_areas wa ON wa.id = s.work_area_id
+      ORDER BY u.email ASC
+    `,
+  );
+
+  return useMemo(
+    () =>
+      (query.data ?? []).map((row) => ({
+        id: row.id,
+        email: row.email,
+        role: row.role,
+        name: row.name ?? null,
+        avatar: row.avatar ?? null,
+        hasAuth: Number(row.has_auth ?? 0) === 1,
+        workArea: row.work_area ?? null,
+      })),
+    [query.data],
+  );
 }
 
 export function useLocalKitComponents(kitId: string, enabled: boolean) {
