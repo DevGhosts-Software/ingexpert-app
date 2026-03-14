@@ -374,11 +374,23 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
         return;
       }
 
-      const { error } = await supabase.from('items').update(payload).eq('id', entry.id);
-      if (error) {
-        throw new Error(buildUploadFailureMessage('items', entry.id, error));
+      if (entry.op === UpdateType.PATCH) {
+        const { error } = await supabase.from('items').update(payload).eq('id', entry.id);
+        if (error) {
+          throw new Error(buildUploadFailureMessage('items', entry.id, error));
+        }
+        return;
       }
-      return;
+
+      if (entry.op === UpdateType.DELETE) {
+        const { error } = await supabase.from('items').delete().eq('id', entry.id);
+        if (error) {
+          throw new Error(buildUploadFailureMessage('items', entry.id, error));
+        }
+        return;
+      }
+
+      throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
     }
 
     if (uploadTable === 'projects') {
