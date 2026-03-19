@@ -18,7 +18,7 @@ export type LocalComponent = {
   name: string;
   code: string;
   unit: string;
-  stock: number;
+  totalInventory: number;
   quantity: number;
   type: ItemType;
 };
@@ -51,23 +51,69 @@ export function AddComponentInput({
   const searchSql =
     normalizedQuery.length >= 2
       ? `
-      SELECT id, name, code, unit, stock, type
-      FROM items
-      WHERE (
-        LOWER(name) LIKE '%${escapedQuery}%'
-        OR LOWER(code) LIKE '%${escapedQuery}%'
+      WITH candidates AS (
+        SELECT id, name, code, unit, type
+        FROM items
+        WHERE (
+          LOWER(name) LIKE '%${escapedQuery}%'
+          OR LOWER(code) LIKE '%${escapedQuery}%'
+        )
+        ${typeFilterSql}
+      ),
+      movement_totals AS (
+        SELECT
+          md.item_id,
+          SUM(
+            CASE
+              WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return')
+                THEN ABS(COALESCE(md.quantity, 0))
+              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo')
+                THEN -ABS(COALESCE(md.quantity, 0))
+              WHEN LOWER(TRIM(m.type)) IN ('ajuste_positivo')
+                THEN ABS(COALESCE(md.quantity, 0))
+              ELSE 0
+            END
+          ) AS warehouse_delta,
+          SUM(
+            CASE
+              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit')
+                THEN ABS(COALESCE(md.quantity, 0))
+              WHEN LOWER(TRIM(m.type)) IN ('devolucion', 'return')
+                THEN -ABS(COALESCE(md.quantity, 0))
+              ELSE 0
+            END
+          ) AS onsite_delta
+        FROM movement_details md
+        INNER JOIN movements m ON m.id = md.movement_id
+        INNER JOIN candidates c ON c.id = md.item_id
+        GROUP BY md.item_id
       )
-      ${typeFilterSql}
-      ORDER BY name ASC
+      SELECT
+        c.id,
+        c.name,
+        c.code,
+        c.unit,
+        c.type,
+        COALESCE(
+          COALESCE(mt.warehouse_delta, 0) + COALESCE(mt.onsite_delta, 0),
+          0
+        ) AS total_inventory
+      FROM candidates c
+      LEFT JOIN movement_totals mt ON mt.item_id = c.id
+      WHERE (
+        LOWER(c.name) LIKE '%${escapedQuery}%'
+        OR LOWER(c.code) LIKE '%${escapedQuery}%'
+      )
+      ORDER BY c.name ASC
       LIMIT 10
     `
-      : 'SELECT id, name, code, unit, stock, type FROM items WHERE 1 = 0';
+      : "SELECT id, name, code, unit, type, 0 AS total_inventory FROM items WHERE 1 = 0";
   const { data: results, isFetching } = useQuery<{
     id: string;
     name: string;
     code: string;
     unit: string;
-    stock: number | string | null;
+    total_inventory: number | string | null;
     type: ItemType;
   }>(searchSql);
 
@@ -77,7 +123,7 @@ export function AddComponentInput({
     () =>
       (results ?? [])
         .filter((i) => !excludeIds.includes(i.id))
-        .map((i) => ({ ...i, stock: Number(i.stock ?? 0) })),
+        .map((i) => ({ ...i, totalInventory: Number(i.total_inventory ?? 0) })),
     [results, excludeIds],
   );
 
@@ -93,7 +139,7 @@ export function AddComponentInput({
       name: item.name,
       code: item.code,
       unit: item.unit,
-      stock: item.stock,
+      totalInventory: item.totalInventory,
       quantity: 1,
       type: item.type as ItemType,
     });
@@ -189,14 +235,14 @@ export function AddComponentInput({
                       <span
                         className={cn(
                           'text-[11px] font-mono leading-tight',
-                          item.stock === 0
+                          item.totalInventory === 0
                             ? 'text-destructive'
-                            : item.stock <= 5
+                            : item.totalInventory <= 5
                               ? 'text-amber-600 dark:text-amber-400'
                               : 'text-emerald-600 dark:text-emerald-400',
                         )}
                       >
-                        {item.stock} {item.unit}
+                        {item.totalInventory} {item.unit}
                       </span>
                     )}
                   </div>

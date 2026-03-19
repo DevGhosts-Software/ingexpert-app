@@ -156,10 +156,32 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
               {!isKit && (
                 <MetaRow
                   icon={Package}
-                  label="Stock"
+                  label="Almacén"
                   value={
                     <span className="font-mono">
-                      {item.stock} {item.unit}
+                      {item.warehouseInventory} {item.unit}
+                    </span>
+                  }
+                />
+              )}
+              {!isKit && (
+                <MetaRow
+                  icon={Package}
+                  label="En obra"
+                  value={
+                    <span className="font-mono">
+                      {item.onsiteInventory} {item.unit}
+                    </span>
+                  }
+                />
+              )}
+              {!isKit && (
+                <MetaRow
+                  icon={Package}
+                  label="Total"
+                  value={
+                    <span className="font-mono">
+                      {item.totalInventory} {item.unit}
                     </span>
                   }
                 />

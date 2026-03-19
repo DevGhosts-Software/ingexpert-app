@@ -182,7 +182,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         name: row.name,
         code: row.code,
         unit: row.unit,
-        stock: Number(row.stock ?? 0),
+        totalInventory: Number(row.stock ?? 0),
         quantity: Number(row.quantity ?? 0),
         type: row.type as MovementItem['type'],
       });
