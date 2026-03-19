@@ -30,12 +30,14 @@ export function AddComponentInput({
   onAdd,
   disabled,
   allowedTypes,
+  inventoryDisplayMode = 'total',
 }: {
   excludeIds: string[];
   onAdd: (item: LocalComponent) => void;
   disabled?: boolean;
   /** If provided, only items of these types are returned from the server. */
   allowedTypes?: ItemType[];
+  inventoryDisplayMode?: 'total' | 'warehouse' | 'onsite';
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -94,6 +96,8 @@ export function AddComponentInput({
         c.code,
         c.unit,
         c.type,
+        COALESCE(mt.warehouse_delta, 0) AS warehouse_inventory,
+        COALESCE(mt.onsite_delta, 0) AS onsite_inventory,
         COALESCE(
           COALESCE(mt.warehouse_delta, 0) + COALESCE(mt.onsite_delta, 0),
           0
@@ -107,12 +111,14 @@ export function AddComponentInput({
       ORDER BY c.name ASC
       LIMIT 10
     `
-      : "SELECT id, name, code, unit, type, 0 AS total_inventory FROM items WHERE 1 = 0";
+      : 'SELECT id, name, code, unit, type, 0 AS warehouse_inventory, 0 AS onsite_inventory, 0 AS total_inventory FROM items WHERE 1 = 0';
   const { data: results, isFetching } = useQuery<{
     id: string;
     name: string;
     code: string;
     unit: string;
+    warehouse_inventory: number | string | null;
+    onsite_inventory: number | string | null;
     total_inventory: number | string | null;
     type: ItemType;
   }>(searchSql);
@@ -123,7 +129,12 @@ export function AddComponentInput({
     () =>
       (results ?? [])
         .filter((i) => !excludeIds.includes(i.id))
-        .map((i) => ({ ...i, totalInventory: Number(i.total_inventory ?? 0) })),
+        .map((i) => ({
+          ...i,
+          warehouseInventory: Number(i.warehouse_inventory ?? 0),
+          onsiteInventory: Number(i.onsite_inventory ?? 0),
+          totalInventory: Number(i.total_inventory ?? 0),
+        })),
     [results, excludeIds],
   );
 
@@ -203,6 +214,12 @@ export function AddComponentInput({
               const config = TYPE_CONFIG[item.type as ItemType];
               const TypeIcon = config.icon;
               const isKit = item.type === 'KIT';
+              const shownInventory =
+                inventoryDisplayMode === 'warehouse'
+                  ? item.warehouseInventory
+                  : inventoryDisplayMode === 'onsite'
+                    ? item.onsiteInventory
+                    : item.totalInventory;
               return (
                 <li
                   key={item.id}
@@ -235,14 +252,14 @@ export function AddComponentInput({
                       <span
                         className={cn(
                           'text-[11px] font-mono leading-tight',
-                          item.totalInventory === 0
+                          shownInventory === 0
                             ? 'text-destructive'
-                            : item.totalInventory <= 5
+                            : shownInventory <= 5
                               ? 'text-amber-600 dark:text-amber-400'
                               : 'text-emerald-600 dark:text-emerald-400',
                         )}
                       >
-                        {item.totalInventory} {item.unit}
+                        {shownInventory} {item.unit}
                       </span>
                     )}
                   </div>
@@ -261,11 +278,13 @@ export function AddComponentInput({
 function QtyInput({
   componentId,
   value,
+  max,
   onQtyChange,
   disabled,
 }: {
   componentId: string;
   value: number;
+  max?: number;
   onQtyChange: (componentId: string, qty: number) => void;
   disabled?: boolean;
 }) {
@@ -280,6 +299,8 @@ function QtyInput({
     <Input
       type="text"
       inputMode="numeric"
+      min={1}
+      max={max}
       value={display}
       disabled={disabled}
       className="h-7 w-16 text-xs text-right"
@@ -287,11 +308,12 @@ function QtyInput({
         const raw = e.target.value;
         setDisplay(raw);
         const n = parseInt(raw, 10);
-        if (!isNaN(n) && n >= 1) onQtyChange(componentId, n);
+        if (!isNaN(n) && n >= 1) onQtyChange(componentId, max && max > 0 ? Math.min(n, max) : n);
       }}
       onBlur={() => {
         const n = parseInt(display, 10);
-        const safe = isNaN(n) || n < 1 ? 1 : n;
+        const bounded = isNaN(n) || n < 1 ? 1 : n;
+        const safe = max && max > 0 ? Math.min(bounded, max) : bounded;
         setDisplay(String(safe));
         onQtyChange(componentId, safe);
       }}
@@ -310,6 +332,9 @@ interface KitComponentsBuilderProps {
   disabled?: boolean;
   /** If provided, search is restricted to these types (server-side). */
   allowedTypes?: ItemType[];
+  inventoryDisplayMode?: 'total' | 'warehouse' | 'onsite';
+  getQuantityMax?: (componentId: string) => number | null;
+  renderComponentMeta?: (component: LocalComponent) => React.ReactNode;
 }
 
 export function KitComponentsBuilder({
@@ -320,6 +345,9 @@ export function KitComponentsBuilder({
   onQtyChange,
   disabled,
   allowedTypes,
+  inventoryDisplayMode,
+  getQuantityMax,
+  renderComponentMeta,
 }: KitComponentsBuilderProps) {
   return (
     <div className="space-y-2">
@@ -329,6 +357,7 @@ export function KitComponentsBuilder({
         onAdd={onAdd}
         disabled={disabled}
         allowedTypes={allowedTypes}
+        inventoryDisplayMode={inventoryDisplayMode}
       />
 
       {components.length > 0 && (
@@ -342,6 +371,7 @@ export function KitComponentsBuilder({
           {components.map((comp) => {
             const config = TYPE_CONFIG[comp.type];
             const TypeIcon = config.icon;
+            const max = getQuantityMax?.(comp.componentId) ?? null;
             return (
               <div
                 key={comp.componentId}
@@ -355,6 +385,7 @@ export function KitComponentsBuilder({
                 <QtyInput
                   componentId={comp.componentId}
                   value={comp.quantity}
+                  max={max && max > 0 ? max : undefined}
                   onQtyChange={onQtyChange}
                   disabled={disabled}
                 />
@@ -368,6 +399,9 @@ export function KitComponentsBuilder({
                 >
                   <X className="h-3 w-3" />
                 </Button>
+                {renderComponentMeta ? (
+                  <div className="col-span-4 -mt-1">{renderComponentMeta(comp)}</div>
+                ) : null}
               </div>
             );
           })}

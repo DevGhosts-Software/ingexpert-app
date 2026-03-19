@@ -130,11 +130,51 @@ type LocalKitDetailRow = {
   stock: number | string | null;
   type: string;
 };
+type LocalItemStockRow = {
+  item_id: string;
+  warehouse_inventory: number | string | null;
+  onsite_inventory: number | string | null;
+};
+type LocalItemStockSnapshotRow = {
+  warehouse_inventory: number | string | null;
+  onsite_inventory: number | string | null;
+};
 
 interface MovementFormSheetProps {
   open: boolean;
   onClose: () => void;
 }
+
+const ITEM_STOCK_SNAPSHOT_SQL = `
+  SELECT
+    COALESCE(
+      SUM(
+        CASE
+          WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo')
+            THEN ABS(COALESCE(md.quantity, 0))
+          WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo')
+            THEN -ABS(COALESCE(md.quantity, 0))
+          ELSE 0
+        END
+      ),
+      0
+    ) AS warehouse_inventory,
+    COALESCE(
+      SUM(
+        CASE
+          WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit')
+            THEN ABS(COALESCE(md.quantity, 0))
+          WHEN LOWER(TRIM(m.type)) IN ('devolucion', 'return')
+            THEN -ABS(COALESCE(md.quantity, 0))
+          ELSE 0
+        END
+      ),
+      0
+    ) AS onsite_inventory
+  FROM movement_details md
+  INNER JOIN movements m ON m.id = md.movement_id
+  WHERE md.item_id = ?
+`;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -225,6 +265,130 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
   });
 
   const watchedType = form.watch('type');
+  const selectedItemIdsSql = useMemo(() => {
+    const ids = [...new Set(movementItems.map((item) => item.componentId.trim()).filter(Boolean))];
+    return ids.map((id) => `'${id.replaceAll("'", "''")}'`).join(', ');
+  }, [movementItems]);
+  const itemStockQuerySql = useMemo(() => {
+    if (!selectedItemIdsSql) {
+      return `
+        SELECT
+          '' AS item_id,
+          0 AS warehouse_inventory,
+          0 AS onsite_inventory
+        WHERE 1 = 0
+      `;
+    }
+
+    return `
+      WITH selected_items AS (
+        SELECT id AS item_id
+        FROM items
+        WHERE id IN (${selectedItemIdsSql})
+      ),
+      movement_totals AS (
+        SELECT
+          md.item_id,
+          SUM(
+            CASE
+              WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo')
+                THEN ABS(COALESCE(md.quantity, 0))
+              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo')
+                THEN -ABS(COALESCE(md.quantity, 0))
+              ELSE 0
+            END
+          ) AS warehouse_inventory,
+          SUM(
+            CASE
+              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit')
+                THEN ABS(COALESCE(md.quantity, 0))
+              WHEN LOWER(TRIM(m.type)) IN ('devolucion', 'return')
+                THEN -ABS(COALESCE(md.quantity, 0))
+              ELSE 0
+            END
+          ) AS onsite_inventory
+        FROM movement_details md
+        INNER JOIN movements m ON m.id = md.movement_id
+        INNER JOIN selected_items si ON si.item_id = md.item_id
+        GROUP BY md.item_id
+      )
+      SELECT
+        si.item_id,
+        COALESCE(mt.warehouse_inventory, 0) AS warehouse_inventory,
+        COALESCE(mt.onsite_inventory, 0) AS onsite_inventory
+      FROM selected_items si
+      LEFT JOIN movement_totals mt ON mt.item_id = si.item_id
+    `;
+  }, [selectedItemIdsSql]);
+  const itemStockQuery = useQuery<LocalItemStockRow>(itemStockQuerySql);
+  const inventoryByItemId = useMemo(() => {
+    const source = new Map<string, { warehouseInventory: number; onsiteInventory: number }>();
+    for (const row of itemStockQuery.data ?? []) {
+      source.set(row.item_id, {
+        warehouseInventory: Number(row.warehouse_inventory ?? 0),
+        onsiteInventory: Number(row.onsite_inventory ?? 0),
+      });
+    }
+    return source;
+  }, [itemStockQuery.data]);
+  const getQuantityLimitForType = useCallback(
+    (itemId: string, movementType: FormValues['type'] = watchedType): number | null => {
+      const inventory = inventoryByItemId.get(itemId) ?? {
+        warehouseInventory: 0,
+        onsiteInventory: 0,
+      };
+      if (movementType === 'EXIT' || movementType === 'WRITEOFF')
+        return inventory.warehouseInventory;
+      if (movementType === 'RETURN') return inventory.onsiteInventory;
+      return null;
+    },
+    [inventoryByItemId, watchedType],
+  );
+  const quantityStatusByItemId = useMemo(() => {
+    const status = new Map<
+      string,
+      {
+        helperText: string;
+        max: number | null;
+        isZero: boolean;
+        isExceeded: boolean;
+      }
+    >();
+
+    for (const item of movementItems) {
+      const inventory = inventoryByItemId.get(item.componentId) ?? {
+        warehouseInventory: 0,
+        onsiteInventory: 0,
+      };
+      const max = getQuantityLimitForType(item.componentId, watchedType);
+      const isZero = max !== null && max <= 0;
+      const isExceeded = max !== null && item.quantity > max;
+
+      let helperText = `Inventario en almacén: ${inventory.warehouseInventory}`;
+      if (watchedType === 'EXIT' || watchedType === 'WRITEOFF') {
+        helperText = `Disponible en almacén: ${inventory.warehouseInventory}`;
+      } else if (watchedType === 'RETURN') {
+        helperText = `Actualmente en sitio: ${inventory.onsiteInventory}`;
+      }
+
+      status.set(item.componentId, {
+        helperText,
+        max,
+        isZero,
+        isExceeded,
+      });
+    }
+
+    return status;
+  }, [getQuantityLimitForType, inventoryByItemId, movementItems, watchedType]);
+  const hasStockConstraintViolation = useMemo(
+    () =>
+      Array.from(quantityStatusByItemId.values()).some((itemStatus) => {
+        if (itemStatus.max === null) return false;
+        return itemStatus.isZero || itemStatus.isExceeded;
+      }),
+    [quantityStatusByItemId],
+  );
 
   const handleTypeSelect = useCallback(
     (type: FormValues['type']) => {
@@ -290,11 +454,17 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     setMovementItems((prev) => prev.filter((i) => i.componentId !== componentId));
   }, []);
 
-  const handleQtyChange = useCallback((componentId: string, qty: number) => {
-    setMovementItems((prev) =>
-      prev.map((i) => (i.componentId === componentId ? { ...i, quantity: qty } : i)),
-    );
-  }, []);
+  const handleQtyChange = useCallback(
+    (componentId: string, qty: number) => {
+      const normalizedQty = Number.isFinite(qty) ? Math.max(1, Math.floor(qty)) : 1;
+      const max = getQuantityLimitForType(componentId);
+      const boundedQty = max !== null && max > 0 ? Math.min(normalizedQty, max) : normalizedQty;
+      setMovementItems((prev) =>
+        prev.map((i) => (i.componentId === componentId ? { ...i, quantity: boundedQty } : i)),
+      );
+    },
+    [getQuantityLimitForType],
+  );
 
   const excludeIds: string[] = [];
 
@@ -308,13 +478,19 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         toast.error('Agrega al menos un ítem al movimiento');
         return;
       }
+      if (hasStockConstraintViolation) {
+        toast.error(
+          'La cantidad solicitada excede el stock disponible para este tipo de movimiento',
+        );
+        return;
+      }
       setPendingPayload({
         ...values,
         destination: values.destination || undefined,
         details: movementItems.map((i) => ({ itemId: i.componentId, quantity: i.quantity })),
       });
     },
-    [movementItems],
+    [hasStockConstraintViolation, movementItems],
   );
 
   // Called when user confirms in the dialog
@@ -333,6 +509,30 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
 
     try {
       await powerSyncDb.writeTransaction(async (tx) => {
+        for (const detail of pendingPayload.details) {
+          const stockSnapshot = await tx.getOptional<LocalItemStockSnapshotRow>(
+            ITEM_STOCK_SNAPSHOT_SQL,
+            [detail.itemId],
+          );
+          const warehouseInventory = Number(stockSnapshot?.warehouse_inventory ?? 0);
+          const onsiteInventory = Number(stockSnapshot?.onsite_inventory ?? 0);
+
+          if (
+            (pendingPayload.type === 'EXIT' || pendingPayload.type === 'WRITEOFF') &&
+            warehouseInventory - detail.quantity < 0
+          ) {
+            throw new Error(
+              `Stock insuficiente en almacén para el ítem ${detail.itemId}: disponible ${warehouseInventory}, solicitado ${detail.quantity}`,
+            );
+          }
+
+          if (pendingPayload.type === 'RETURN' && onsiteInventory - detail.quantity < 0) {
+            throw new Error(
+              `Stock insuficiente en sitio para el ítem ${detail.itemId}: disponible ${onsiteInventory}, solicitado ${detail.quantity}`,
+            );
+          }
+        }
+
         await tx.execute(
           `
             INSERT INTO movements (
@@ -691,6 +891,24 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                     onAdd={handleAddItem}
                     onRemove={handleRemoveItem}
                     onQtyChange={handleQtyChange}
+                    inventoryDisplayMode="warehouse"
+                    getQuantityMax={(componentId) => getQuantityLimitForType(componentId)}
+                    renderComponentMeta={(component) => {
+                      const status = quantityStatusByItemId.get(component.componentId);
+                      if (!status) return null;
+                      return (
+                        <p
+                          className={cn(
+                            'text-[11px]',
+                            status.max !== null && (status.isZero || status.isExceeded)
+                              ? 'text-destructive'
+                              : 'text-muted-foreground',
+                          )}
+                        >
+                          {status.helperText}
+                        </p>
+                      );
+                    }}
                   />
                 </div>
 
@@ -698,7 +916,12 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
                   <Button type="button" variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
-                  <Button type="submit">Revisar y confirmar</Button>
+                  <Button
+                    type="submit"
+                    disabled={movementItems.length === 0 || hasStockConstraintViolation}
+                  >
+                    Revisar y confirmar
+                  </Button>
                 </div>
               </form>
             </Form>

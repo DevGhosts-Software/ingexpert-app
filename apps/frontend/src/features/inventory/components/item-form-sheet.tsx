@@ -201,7 +201,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         name: item.name,
         code: item.code,
         location: item.location,
-        stock: item.totalInventory,
+        stock: item.warehouseInventory,
         unit: item.unit,
         type: item.type,
         imageUrl: item.imageUrl ?? undefined,
@@ -247,11 +247,13 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
           );
 
           if (values.type !== 'KIT') {
-            const currentStock = Number(item.totalInventory ?? 0);
+            const currentStock = Number(item.warehouseInventory ?? 0);
             const stockDelta = normalizedStock - currentStock;
             if (stockDelta !== 0) {
               if (!currentUserId) {
-                throw new Error('No se pudo identificar el usuario actual para registrar el ajuste');
+                throw new Error(
+                  'No se pudo identificar el usuario actual para registrar el ajuste',
+                );
               }
               const movementId = uuidv4();
               const adjustmentType = stockDelta > 0 ? 'PURCHASE' : 'WRITEOFF';
@@ -565,7 +567,9 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                     name="stock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{isEdit ? 'Stock deseado' : 'Stock inicial'}</FormLabel>
+                        <FormLabel>
+                          {isEdit ? 'Stock de almacén deseado' : 'Stock inicial'}
+                        </FormLabel>
                         <FormControl>
                           <StockInput
                             value={field.value}
@@ -610,6 +614,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                     onQtyChange={handleKitQtyChange}
                     disabled={isPending}
                     allowedTypes={['PRODUCT', 'TOOL']}
+                    inventoryDisplayMode="warehouse"
                   />
                 </div>
               )}
