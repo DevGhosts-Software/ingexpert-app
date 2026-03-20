@@ -302,23 +302,11 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       if (typeof rawType === 'string') {
         const normalizedType = rawType.trim().toLowerCase();
         if (normalizedType === 'ajuste_positivo') {
-          movementPayload.type = 'PURCHASE';
-          if (
-            movementPayload.destination === null ||
-            movementPayload.destination === undefined ||
-            movementPayload.destination === ''
-          ) {
-            movementPayload.destination = '__stock_adjustment__';
-          }
+          movementPayload.type = 'STOCK_ADJUSTMENT_IN';
+          movementPayload.destination = null;
         } else if (normalizedType === 'ajuste_negativo') {
-          movementPayload.type = 'WRITEOFF';
-          if (
-            movementPayload.destination === null ||
-            movementPayload.destination === undefined ||
-            movementPayload.destination === ''
-          ) {
-            movementPayload.destination = '__stock_adjustment__';
-          }
+          movementPayload.type = 'STOCK_ADJUSTMENT_OUT';
+          movementPayload.destination = null;
         }
       }
 

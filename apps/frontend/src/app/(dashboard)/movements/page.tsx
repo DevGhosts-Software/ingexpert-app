@@ -104,10 +104,11 @@ export default function MovementsPage() {
       'exit',
       'salida',
       'writeoff',
-      'baja'
+      'baja',
+      'stock_adjustment_in',
+      'stock_adjustment_out'
     )
-      AND COALESCE(m.destination, '') <> '__stock_adjustment__'
-    GROUP BY
+     GROUP BY
       m.id, m.type, m.created_by_id, m.destination, m.observations,
       m.responsible_delivery_id, m.responsible_receipt_id, m.date, m.project_id,
       p.name, creator.name, delivery.name, receipt.name

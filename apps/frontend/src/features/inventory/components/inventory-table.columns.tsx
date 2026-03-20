@@ -93,21 +93,16 @@ function ColHeader({
 
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
-function formatMovementType(value: string, destination: string | null): string {
-  if (destination === '__stock_adjustment__') {
-    if (value === 'purchase' || value === 'compra' || value === 'ajuste_positivo') {
-      return 'Ajuste positivo';
-    }
-    if (value === 'writeoff' || value === 'baja' || value === 'ajuste_negativo') {
-      return 'Ajuste negativo';
-    }
-  }
-  if (value === 'compra' || value === 'purchase') return 'Compra';
-  if (value === 'salida' || value === 'exit') return 'Salida';
-  if (value === 'devolucion' || value === 'return') return 'Devolución';
-  if (value === 'baja' || value === 'writeoff') return 'Baja';
-  if (value === 'ajuste_positivo') return 'Ajuste positivo';
-  if (value === 'ajuste_negativo') return 'Ajuste negativo';
+function formatMovementType(value: string): string {
+  const normalized = value.toLowerCase().trim();
+  if (normalized === 'stock_adjustment_in') return 'Ajuste de stock (entrada)';
+  if (normalized === 'stock_adjustment_out') return 'Ajuste de stock (salida)';
+  if (normalized === 'compra' || normalized === 'purchase') return 'Compra';
+  if (normalized === 'salida' || normalized === 'exit') return 'Salida';
+  if (normalized === 'devolucion' || normalized === 'return') return 'Devolución';
+  if (normalized === 'baja' || normalized === 'writeoff') return 'Baja';
+  if (normalized === 'ajuste_positivo') return 'Ajuste positivo';
+  if (normalized === 'ajuste_negativo') return 'Ajuste negativo';
   return value;
 }
 
@@ -134,7 +129,9 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
           'return',
           'writeoff',
           'ajuste_positivo',
-          'ajuste_negativo'
+          'ajuste_negativo',
+          'stock_adjustment_in',
+          'stock_adjustment_out'
         )
       ORDER BY m.date DESC
       LIMIT 12
@@ -193,10 +190,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
                     className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b px-2 py-1.5 text-xs last:border-b-0"
                   >
                     <span className="font-medium text-foreground">
-                      {formatMovementType(
-                        movement.movement_type,
-                        movement.movement_destination ?? null,
-                      )}
+                      {formatMovementType(movement.movement_type)}
                     </span>
                     <span className="text-muted-foreground">
                       {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: es })}

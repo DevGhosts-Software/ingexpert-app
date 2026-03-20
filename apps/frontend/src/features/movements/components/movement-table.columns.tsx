@@ -22,16 +22,31 @@ import type { MovementRow } from './movement-table.types';
 
 // ─── Row accent colors by movement type ──────────────────────────────────────
 
-export const MOVEMENT_ROW_ACCENT: Record<'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF', string> = {
+export const MOVEMENT_ROW_ACCENT: Record<
+  'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | 'STOCK_ADJUSTMENT_IN' | 'STOCK_ADJUSTMENT_OUT',
+  string
+> = {
   PURCHASE: 'inset 2px 0 0 #2563eb',
   RETURN: 'inset 2px 0 0 #16a34a',
   EXIT: 'inset 2px 0 0 #ea580c',
   WRITEOFF: 'inset 2px 0 0 #dc2626',
+  STOCK_ADJUSTMENT_IN: 'inset 2px 0 0 #8b5cf6',
+  STOCK_ADJUSTMENT_OUT: 'inset 2px 0 0 #6b7280',
 };
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
 
-export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' }) {
+export function TypeBadge({
+  type,
+}: {
+  type:
+    | 'PURCHASE'
+    | 'RETURN'
+    | 'EXIT'
+    | 'WRITEOFF'
+    | 'STOCK_ADJUSTMENT_IN'
+    | 'STOCK_ADJUSTMENT_OUT';
+}) {
   if (type === 'PURCHASE') {
     return (
       <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
@@ -53,6 +68,22 @@ export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WR
       <Badge className="gap-1.5 bg-red-100 text-red-800 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
         <Trash2 className="h-3 w-3" />
         Baja
+      </Badge>
+    );
+  }
+  if (type === 'STOCK_ADJUSTMENT_IN') {
+    return (
+      <Badge className="gap-1.5 bg-violet-100 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800">
+        <ArrowDownCircle className="h-3 w-3" />
+        Ajuste stock (entrada)
+      </Badge>
+    );
+  }
+  if (type === 'STOCK_ADJUSTMENT_OUT') {
+    return (
+      <Badge className="gap-1.5 bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-100 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800">
+        <ArrowUpCircle className="h-3 w-3" />
+        Ajuste stock (salida)
       </Badge>
     );
   }

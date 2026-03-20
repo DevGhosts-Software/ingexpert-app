@@ -3,6 +3,8 @@ enum MovementType {
   PURCHASE
   RETURN
   WRITEOFF
+  STOCK_ADJUSTMENT_IN
+  STOCK_ADJUSTMENT_OUT
 }
 
 model Movement {

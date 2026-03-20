@@ -254,7 +254,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                 );
               }
               const movementId = uuidv4();
-              const adjustmentType = stockDelta > 0 ? 'PURCHASE' : 'WRITEOFF';
+              const adjustmentType =
+                stockDelta > 0 ? 'STOCK_ADJUSTMENT_IN' : 'STOCK_ADJUSTMENT_OUT';
               const adjustmentQty = Math.abs(stockDelta);
               const nowIso = new Date().toISOString();
 
@@ -276,8 +277,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                   movementId,
                   adjustmentType,
                   currentUserId,
-                  '__stock_adjustment__',
-                  'Ajuste automático desde edición de stock',
+                  null,
+                  'Ajuste de stock desde edición de inventario',
                   null,
                   null,
                   nowIso,
@@ -313,7 +314,8 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
               throw new Error('No se pudo identificar el usuario actual para registrar el ajuste');
             }
             const movementId = uuidv4();
-            const adjustmentType = normalizedStock > 0 ? 'PURCHASE' : 'WRITEOFF';
+            const adjustmentType =
+              normalizedStock > 0 ? 'STOCK_ADJUSTMENT_IN' : 'STOCK_ADJUSTMENT_OUT';
             const adjustmentQty = Math.abs(normalizedStock);
             const nowIso = new Date().toISOString();
 
@@ -335,7 +337,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                 movementId,
                 adjustmentType,
                 currentUserId,
-                '__stock_adjustment__',
+                null,
                 'Stock inicial desde creación de ítem',
                 null,
                 null,
