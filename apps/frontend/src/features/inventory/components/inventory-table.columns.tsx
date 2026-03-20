@@ -16,6 +16,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -132,8 +133,63 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
   );
 }
 
-export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
+type SelectionScopeState = {
+  checked: boolean;
+  indeterminate: boolean;
+};
+
+type InventoryColumnOptions = {
+  isAdmin: boolean;
+  selectionState: SelectionScopeState;
+  onToggleScope: () => void;
+  isRowSelected: (id: string) => boolean;
+  onToggleRow: (id: string) => void;
+};
+
+export function getColumns({
+  isAdmin,
+  selectionState,
+  onToggleScope,
+  isRowSelected,
+  onToggleRow,
+}: InventoryColumnOptions): ColumnDef<InventoryItem>[] {
+  const selectionColumn: ColumnDef<InventoryItem> | null = isAdmin
+    ? {
+        id: 'select',
+        header: () => (
+          <div className="flex justify-center">
+            <Checkbox
+              checked={
+                selectionState.checked
+                  ? true
+                  : selectionState.indeterminate
+                    ? 'indeterminate'
+                    : false
+              }
+              onCheckedChange={() => onToggleScope()}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="Seleccionar elementos filtrados"
+              className="size-5"
+            />
+          </div>
+        ),
+        cell: ({ row }) => (
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              checked={isRowSelected(row.original.id)}
+              onCheckedChange={() => onToggleRow(row.original.id)}
+              aria-label={`Seleccionar ${row.original.name}`}
+              className="size-5"
+            />
+          </div>
+        ),
+        enableSorting: false,
+        size: 44,
+      }
+    : null;
+
   return [
+    ...(selectionColumn ? [selectionColumn] : []),
     {
       id: 'image',
       header: () => <span className="sr-only">Imagen</span>,
