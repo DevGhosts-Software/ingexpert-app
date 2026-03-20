@@ -77,6 +77,8 @@ export default function MovementsPage() {
         WHEN LOWER(TRIM(m.type)) IN ('return', 'devolucion') THEN 'RETURN'
         WHEN LOWER(TRIM(m.type)) IN ('exit', 'salida') THEN 'EXIT'
         WHEN LOWER(TRIM(m.type)) IN ('writeoff', 'baja') THEN 'WRITEOFF'
+        WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_in') THEN 'STOCK_ADJUSTMENT_IN'
+        WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_out') THEN 'STOCK_ADJUSTMENT_OUT'
       END AS type,
       m.created_by_id,
       m.destination,

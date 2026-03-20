@@ -47,7 +47,9 @@ export function TypeBadge({
     | 'STOCK_ADJUSTMENT_IN'
     | 'STOCK_ADJUSTMENT_OUT';
 }) {
-  if (type === 'PURCHASE') {
+  const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
+
+  if (normalizedType === 'PURCHASE') {
     return (
       <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
         <ArrowDownCircle className="h-3 w-3" />
@@ -55,7 +57,7 @@ export function TypeBadge({
       </Badge>
     );
   }
-  if (type === 'RETURN') {
+  if (normalizedType === 'RETURN') {
     return (
       <Badge className="gap-1.5 bg-green-100 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
         <RotateCcw className="h-3 w-3" />
@@ -63,7 +65,7 @@ export function TypeBadge({
       </Badge>
     );
   }
-  if (type === 'WRITEOFF') {
+  if (normalizedType === 'WRITEOFF') {
     return (
       <Badge className="gap-1.5 bg-red-100 text-red-800 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
         <Trash2 className="h-3 w-3" />
@@ -71,7 +73,7 @@ export function TypeBadge({
       </Badge>
     );
   }
-  if (type === 'STOCK_ADJUSTMENT_IN') {
+  if (normalizedType === 'STOCK_ADJUSTMENT_IN') {
     return (
       <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
         <ArrowDownCircle className="h-3 w-3" />
@@ -79,7 +81,7 @@ export function TypeBadge({
       </Badge>
     );
   }
-  if (type === 'STOCK_ADJUSTMENT_OUT') {
+  if (normalizedType === 'STOCK_ADJUSTMENT_OUT') {
     return (
       <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
         <ArrowUpCircle className="h-3 w-3" />
@@ -100,8 +102,9 @@ export function TypeBadge({
 
 function ContextCell({ row }: { row: MovementRow }) {
   const { type, projectName, destination, responsibleDeliveryName, responsibleReceiptName } = row;
+  const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
 
-  switch (type) {
+  switch (normalizedType) {
     case 'PURCHASE':
     case 'STOCK_ADJUSTMENT_IN':
       return responsibleReceiptName ? (
