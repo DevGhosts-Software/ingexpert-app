@@ -9,6 +9,7 @@ import {
   ArrowUpCircle,
   ClipboardList,
   PackagePlus,
+  Plus,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
@@ -62,6 +63,8 @@ import {
   KitComponentsBuilder,
   type LocalComponent,
 } from '@/features/inventory/components/kit-components-builder';
+
+import { PurchaseItemCreateDialog, type CreatedItem } from './purchase-item-create-dialog';
 
 // ─── Type card config ─────────────────────────────────────────────────────────
 
@@ -183,10 +186,14 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
 
   // ── Items list state ────────────────────────────────────────────────────────
   const [movementItems, setMovementItems] = useState<MovementItem[]>([]);
+  const [isCreateItemDialogOpen, setIsCreateItemDialogOpen] = useState(false);
 
   // Reset items when sheet closes
   useEffect(() => {
-    if (!open) setMovementItems([]);
+    if (!open) {
+      setMovementItems([]);
+      setIsCreateItemDialogOpen(false);
+    }
   }, [open]);
 
   // ── Support data ────────────────────────────────────────────────────────────
@@ -209,6 +216,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
     FROM kit_details kd
     INNER JOIN items component ON component.id = kd.item_id
   `);
+  const existingItemCodesQuery = useQuery<{ code: string }>('SELECT code FROM items');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const projects = projectsQuery.data ?? [];
@@ -464,6 +472,29 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
       );
     },
     [getQuantityLimitForType],
+  );
+
+  const handleItemCreated = useCallback((item: CreatedItem, quantity: number) => {
+    const newItem: MovementItem = {
+      componentId: item.id,
+      name: item.name,
+      code: item.code,
+      unit: item.unit,
+      totalInventory: 0,
+      quantity,
+      type: item.type,
+    };
+    setMovementItems((prev) => {
+      const exists = prev.find((i) => i.componentId === item.id);
+      if (exists) return prev;
+      return [...prev, newItem];
+    });
+    setIsCreateItemDialogOpen(false);
+  }, []);
+
+  const existingItemCodes = useMemo(
+    () => (existingItemCodesQuery.data ?? []).map((row) => row.code),
+    [existingItemCodesQuery.data],
   );
 
   const excludeIds: string[] = [];
@@ -863,18 +894,32 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
 
                 {/* Items */}
                 <div className="space-y-2">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Ítems del movimiento
-                      {movementItems.length > 0 && (
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          ({movementItems.length})
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Los kits se expanden en sus componentes — sale todo o nada.
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        Ítems del movimiento
+                        {movementItems.length > 0 && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            ({movementItems.length})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Los kits se expanden en sus componentes — sale todo o nada.
+                      </p>
+                    </div>
+                    {watchedType === 'PURCHASE' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsCreateItemDialogOpen(true)}
+                        className="shrink-0"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Crear ítem
+                      </Button>
+                    )}
                   </div>
                   <KitComponentsBuilder
                     components={movementItems}
@@ -967,6 +1012,14 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create item dialog for PURCHASE movements */}
+      <PurchaseItemCreateDialog
+        open={isCreateItemDialogOpen}
+        onClose={() => setIsCreateItemDialogOpen(false)}
+        onItemCreated={handleItemCreated}
+        existingCodes={existingItemCodes}
+      />
     </>
   );
 }
