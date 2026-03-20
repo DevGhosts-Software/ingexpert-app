@@ -335,9 +335,34 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
         throw new Error(`Operation ${entry.op} is not supported for table ${entry.table}`);
       }
 
+      const movementPayload = { ...payload };
+      const rawType = movementPayload.type;
+      if (typeof rawType === 'string') {
+        const normalizedType = rawType.trim().toLowerCase();
+        if (normalizedType === 'ajuste_positivo') {
+          movementPayload.type = 'PURCHASE';
+          if (
+            movementPayload.destination === null ||
+            movementPayload.destination === undefined ||
+            movementPayload.destination === ''
+          ) {
+            movementPayload.destination = '__stock_adjustment__';
+          }
+        } else if (normalizedType === 'ajuste_negativo') {
+          movementPayload.type = 'WRITEOFF';
+          if (
+            movementPayload.destination === null ||
+            movementPayload.destination === undefined ||
+            movementPayload.destination === ''
+          ) {
+            movementPayload.destination = '__stock_adjustment__';
+          }
+        }
+      }
+
       const { error } = await supabase
         .from('movements')
-        .upsert({ id: entry.id, ...payload }, { onConflict: 'id', ignoreDuplicates: true });
+        .upsert({ id: entry.id, ...movementPayload }, { onConflict: 'id', ignoreDuplicates: true });
       if (error) {
         if (isDuplicateKeyError(error)) {
           return;

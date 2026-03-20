@@ -43,7 +43,9 @@ interface InventoryTableToolbarProps {
     code: string;
     name: string;
     location: string;
-    stock: number;
+    warehouseInventory: number;
+    onsiteInventory: number;
+    totalInventory: number;
     unit: string;
     type: string;
   }>;
@@ -93,7 +95,9 @@ export function InventoryTableToolbar({
           CODIGO: item.code,
           NOMBRE: item.name,
           UBICACION: item.location,
-          STOCK: item.stock,
+          INVENTARIO_ALMACEN: item.warehouseInventory,
+          INVENTARIO_OBRA: item.onsiteInventory,
+          INVENTARIO_TOTAL: item.totalInventory,
           UNIDAD: item.unit,
           TIPO: TYPE_ES[item.type] ?? item.type,
         }));

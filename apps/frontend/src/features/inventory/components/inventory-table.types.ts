@@ -1,10 +1,24 @@
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import { Boxes, Hammer, Package, Wrench } from 'lucide-react';
-import type { ItemCounts, ItemEntity, ItemType } from '@ingexpert/schema';
+import type { ItemCounts, ItemType } from '@ingexpert/schema';
 
-// Re-export shared entity types so callers within this feature only need one import
-export type { ItemEntity as InventoryItem } from '@ingexpert/schema';
 export type { ItemType } from '@ingexpert/schema';
+
+export type InventoryMetrics = {
+  warehouseInventory: number;
+  onsiteInventory: number;
+  totalInventory: number;
+};
+
+export type InventoryItem = {
+  id: string;
+  code: string;
+  name: string;
+  location: string;
+  unit: string;
+  type: ItemType;
+  imageUrl: string;
+} & InventoryMetrics;
 
 export const TYPE_CONFIG: Record<
   ItemType,
@@ -63,8 +77,8 @@ export const TAB_ITEMS: Array<{ value: string; label: string; type: ItemType | '
 ];
 
 export interface InventoryTableProps {
-  items: ItemEntity[];
-  exportItems: ItemEntity[];
+  items: InventoryItem[];
+  exportItems: InventoryItem[];
   exportKitRows: Array<{
     kitName: string;
     kitCode: string;
@@ -88,5 +102,5 @@ export interface InventoryTableProps {
   allLocations?: string[];
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
-  onRowClick: (item: ItemEntity) => void;
+  onRowClick: (item: InventoryItem) => void;
 }
