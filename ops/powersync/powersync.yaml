@@ -16,7 +16,7 @@ sync_config:
       global:
         # Baseline policy: sync all rows to all authenticated users.
         data:
-          - SELECT id, code, name, location, stock, unit, CAST(type as TEXT) AS type, image_url FROM items
+          - SELECT id, code, name, location, unit, CAST(type as TEXT) AS type, image_url FROM items
           - SELECT id, kit_id, item_id, quantity FROM kit_details
           - SELECT id, CAST(type as TEXT) AS type, created_by_id, destination, observations, responsible_delivery_id, responsible_receipt_id, date, project_id FROM movements
           - SELECT id, movement_id, item_id, quantity FROM movement_details

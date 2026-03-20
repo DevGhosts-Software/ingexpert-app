@@ -233,7 +233,15 @@ export default function InventoryPage() {
         pageSize: pagination.pageSize,
         offset,
       }),
-    [debouncedSearch, locationFilter, typeFilter, sortBy, sortDirection, pagination.pageSize, offset],
+    [
+      debouncedSearch,
+      locationFilter,
+      typeFilter,
+      sortBy,
+      sortDirection,
+      pagination.pageSize,
+      offset,
+    ],
   );
 
   const pagedCountSql = useMemo(() => {

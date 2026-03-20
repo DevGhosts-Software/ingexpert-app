@@ -342,7 +342,9 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm block text-center">{row.getValue('warehouseInventory')}</span>
+        <span className="font-mono text-sm block text-center">
+          {row.getValue('warehouseInventory')}
+        </span>
       ),
     },
     {
@@ -357,7 +359,9 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
         </div>
       ),
       cell: ({ row }) => (
-        <span className="font-mono text-sm block text-center">{row.getValue('onsiteInventory')}</span>
+        <span className="font-mono text-sm block text-center">
+          {row.getValue('onsiteInventory')}
+        </span>
       ),
     },
     {

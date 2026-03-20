@@ -41,11 +41,13 @@ You can also set secrets inline, for example:
 
 ## SQL execution order
 
-Run migrations in filename order:
+Migration files use ISO timestamp prefixes (YYYYMMDDHHMMSS) for proper Supabase CLI change detection. Run migrations in filename order:
 
-1. `00_core-functions.sql`
-2. `01_inventory-ledger-trigger.sql`
-3. `02_powersync pubilcation.sql`
-4. `03_powersync-upload-permissions.sql`
-5. `04_powersync-rls.sql`
-6. `05_app-data bucket policies.sql`
+1. `20240101000000_core-functions.sql`
+2. `20240101000001_inventory-ledger-trigger.sql`
+3. `20240101000002_powersync-publication.sql`
+4. `20240101000003_powersync-upload-permissions.sql`
+5. `20240101000004_powersync-rls.sql`
+6. `20240101000005_app-data-bucket-policies.sql`
+
+**Note:** When creating new migrations, use `supabase migration new <name>` to generate files with proper timestamp prefixes.
