@@ -22,7 +22,7 @@ Items MUST be creatable from both the inventory management form (admin-only) and
 - **WHEN** a user creates an item from the purchase movement form
 - **THEN** the item MUST have all required fields (name, code, location, unit, type)
 - **THEN** the item MUST follow the same validation rules as items created from inventory management
-- **THEN** the item type MUST be limited to PRODUCT, TOOL, or MATERIAL (KIT is NOT available)
+- **THEN** the item type MUST be limited to PRODUCT, EQUIPMENT, or TOOL (KIT is NOT available)
 
 #### Scenario: KIT items must be created via inventory management
 

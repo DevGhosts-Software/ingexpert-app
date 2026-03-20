@@ -14,7 +14,7 @@ The system MUST allow authenticated users to create new items directly from the 
 #### Scenario: KIT type is NOT available for creation from purchase form
 
 - **WHEN** a user opens the item creation form from a PURCHASE movement
-- **THEN** the type selector MUST only show PRODUCT, TOOL, and MATERIAL options
+- **THEN** the type selector MUST only show PRODUCT, EQUIPMENT, and TOOL options
 - **THEN** KIT type MUST NOT be available for selection
 - **THEN** a hint MUST explain that KIT items must be created via inventory management
 
