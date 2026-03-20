@@ -1,5 +1,16 @@
 # Offline Inventory Ledger Sync Spec — Ingexpert
 
+> **⚠️ OBSOLETE**
+>
+> This spec is now obsolete. Stock is no longer maintained as a persistent column
+> in the `items` table. Instead, stock is calculated on-the-fly from the
+> `movements` ledger via SQL queries. The trigger-based reconciliation approach
+> described below has been removed.
+>
+> See `remove-obsolete-stock-column` change for migration details.
+
+---
+
 ## Requirement: Movement detail trigger SHALL reconcile item stock on all row changes
 
 The system SHALL implement a PostgreSQL trigger function on `movement_details` that executes for `INSERT`, `UPDATE`, and `DELETE` and updates `items.stock` using the parent `movements.type` as the stock direction source.

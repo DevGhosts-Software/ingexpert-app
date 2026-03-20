@@ -7,7 +7,7 @@ import { Boxes, PackagePlus, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
-import { type CreateItemDto, CreateItemSchema } from '@ingexpert/schema';
+import { ItemType } from '@ingexpert/schema';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
@@ -30,12 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { ImageUploadField, type ImageUploadFieldHandle } from './image-upload-field';
-import {
-  type InventoryItem,
-  type ItemType,
-  TYPE_COLORS,
-  TYPE_CONFIG,
-} from './inventory-table.types';
+import { type InventoryItem, TYPE_COLORS, TYPE_CONFIG } from './inventory-table.types';
 import { KitComponentsBuilder, type LocalComponent } from './kit-components-builder';
 
 // ─── Type cards ───────────────────────────────────────────────────────────────
@@ -91,14 +86,17 @@ function StockInput({
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
-const ItemFormSchema = CreateItemSchema.extend({
+const ItemFormSchema = z.object({
   name: z.string().min(1, 'Nombre requerido'),
   code: z.string().min(1, 'Código requerido'),
   location: z.string().min(1, 'Ubicación requerida'),
   stock: z.number().min(0, 'Stock mínimo es 0'),
   unit: z.string().min(1, 'Unidad requerida'),
+  type: z.nativeEnum(ItemType),
+  imageUrl: z.string().optional(),
+  kitComponents: z.array(z.object({ item_id: z.string(), quantity: z.number() })).optional(),
 });
-type FormValues = CreateItemDto;
+type FormValues = z.infer<typeof ItemFormSchema>;
 
 interface ItemFormSheetProps {
   mode: 'create' | 'edit';
@@ -304,20 +302,56 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
         } else {
           await tx.execute(
             `
-              INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              INSERT INTO items (id, code, name, location, unit, type, image_url)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
             `,
-            [
-              itemId,
-              values.code,
-              values.name,
-              values.location,
-              normalizedStock,
-              values.unit,
-              values.type,
-              imageUrl,
-            ],
+            [itemId, values.code, values.name, values.location, values.unit, values.type, imageUrl],
           );
+
+          if (normalizedStock !== 0 && values.type !== 'KIT') {
+            if (!currentUserId) {
+              throw new Error('No se pudo identificar el usuario actual para registrar el ajuste');
+            }
+            const movementId = uuidv4();
+            const adjustmentType = normalizedStock > 0 ? 'PURCHASE' : 'WRITEOFF';
+            const adjustmentQty = Math.abs(normalizedStock);
+            const nowIso = new Date().toISOString();
+
+            await tx.execute(
+              `
+                INSERT INTO movements (
+                  id,
+                  type,
+                  created_by_id,
+                  destination,
+                  observations,
+                  responsible_delivery_id,
+                  responsible_receipt_id,
+                  date,
+                  project_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [
+                movementId,
+                adjustmentType,
+                currentUserId,
+                '__stock_adjustment__',
+                'Stock inicial desde creación de ítem',
+                null,
+                null,
+                nowIso,
+                null,
+              ],
+            );
+
+            await tx.execute(
+              `
+                INSERT INTO movement_details (id, movement_id, item_id, quantity)
+                VALUES (?, ?, ?, ?)
+              `,
+              [uuidv4(), movementId, itemId, adjustmentQty],
+            );
+          }
         }
 
         if (values.type === 'KIT') {

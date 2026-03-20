@@ -21,7 +21,6 @@ type KitComponentRow = {
   name: string;
   code: string;
   unit: string;
-  stock: number | string | null;
   type: string;
   location: string;
   image_url: string | null;
@@ -81,7 +80,6 @@ export function useLocalKitComponents(kitId: string, enabled: boolean) {
         i.name,
         i.code,
         i.unit,
-        i.stock,
         i.type,
         i.location,
         i.image_url
@@ -90,7 +88,7 @@ export function useLocalKitComponents(kitId: string, enabled: boolean) {
       WHERE kd.kit_id = '${kitId}'
       ORDER BY i.name ASC
     `
-    : "SELECT item_id AS component_id, quantity, '' AS name, '' AS code, '' AS unit, 0 AS stock, '' AS type, '' AS location, '' AS image_url FROM kit_details WHERE 1 = 0";
+    : "SELECT item_id AS component_id, quantity, '' AS name, '' AS code, '' AS unit, '' AS type, '' AS location, '' AS image_url FROM kit_details WHERE 1 = 0";
 
   const query = useQuery<KitComponentRow>(sql);
 
@@ -104,7 +102,7 @@ export function useLocalKitComponents(kitId: string, enabled: boolean) {
           name: row.name,
           code: row.code,
           location: row.location,
-          stock: Number(row.stock ?? 0),
+          stock: 0, // Stock is now calculated from movements
           unit: row.unit,
           type: row.type as 'PRODUCT' | 'EQUIPMENT' | 'TOOL' | 'KIT',
           imageUrl: row.image_url ?? '',

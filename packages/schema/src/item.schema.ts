@@ -11,7 +11,6 @@ export const CreateItemSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
   location: z.string().min(1),
-  stock: z.number().default(0),
   unit: z.string().min(1),
   type: z.nativeEnum(ItemType),
   imageUrl: z.string().optional(),
@@ -41,9 +40,8 @@ export type ItemPaginationDto = z.infer<typeof ItemPaginationSchema>;
  * Wire representation of an Item returned by the API.
  * Derived from the Prisma `Item` model: adding a new DB column will cause a
  * type error in `ItemsService.mapItem()` until the mapping is updated.
- * `stock` is overridden from `Decimal` → `number` (serialized by the service).
  */
-export type ItemEntity = Omit<Item, 'stock'> & { stock: number };
+export type ItemEntity = Item;
 
 /** Global unfiltered inventory statistics (for summary cards). */
 export type ItemStats = {
@@ -70,7 +68,6 @@ export const ItemEntitySchema = z.object({
   code: z.string(),
   name: z.string(),
   location: z.string(),
-  stock: z.number(),
   unit: z.string(),
   type: z.nativeEnum(ItemType),
   imageUrl: z.string(),

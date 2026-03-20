@@ -2,13 +2,11 @@ import type { AbstractPowerSyncDatabase, CrudEntry, PowerSyncCredentials } from 
 import { UpdateType, type PowerSyncBackendConnector } from '@powersync/web';
 import { supabase } from '@/lib/supabase';
 
-const MOVEMENT_OPTIMISTIC_SOURCE = 'movement-optimistic-stock';
 const MISSING_SESSION_ERROR = 'Cannot upload PowerSync CRUD without an active Supabase session';
 const POWERSYNC_PERMISSION_REMEDIATION =
   'Permission remediation required: run packages/database/supabase/migrations/03_powersync-upload-permissions.sql in your Supabase SQL editor, then re-run the verification queries in that file.';
 
 type CrudPayload = Record<string, unknown>;
-type CrudSource = { source?: string };
 type ConnectorDebugListener = () => void;
 export type SupabaseUploadError = {
   message: string;
@@ -69,23 +67,8 @@ export function getPowerSyncConnectorDebugSnapshot(): PowerSyncConnectorDebugSta
   return connectorDebugState;
 }
 
-export function isMovementOptimisticItemsUpdate(entry: CrudEntry): boolean {
-  const isItemsTable = entry.table === 'Item' || entry.table === 'items';
-  if (!isItemsTable || entry.op !== UpdateType.PATCH) {
-    return false;
-  }
-
-  const entryMetadata = parseCrudMetadata(entry.metadata);
-  if (entryMetadata?.source === MOVEMENT_OPTIMISTIC_SOURCE) {
-    return true;
-  }
-
-  const opMetadata = parseCrudMetadata(readMetadataFromPayload(entry.opData));
-  return opMetadata?.source === MOVEMENT_OPTIMISTIC_SOURCE;
-}
-
-export function shouldSkipCrudUpload(entry: CrudEntry): boolean {
-  return isMovementOptimisticItemsUpdate(entry);
+export function shouldSkipCrudUpload(_entry: CrudEntry): boolean {
+  return false;
 }
 
 export function isRecoverablePowerSyncUploadError(message: string): boolean {
@@ -164,29 +147,8 @@ export function normalizeUploadCrudTable(
   return null;
 }
 
-function parseCrudMetadata(rawMetadata: string | undefined): CrudSource | null {
-  if (!rawMetadata) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(rawMetadata) as unknown;
-    if (parsed && typeof parsed === 'object') {
-      return parsed as CrudSource;
-    }
-  } catch {
-    // Metadata may be plain text; ignore if it's not valid JSON.
-  }
-
-  return null;
-}
-
-function readMetadataFromPayload(payload?: Record<string, unknown>): string | undefined {
-  const metadata = payload?._metadata;
-  return typeof metadata === 'string' ? metadata : undefined;
-}
-
 function omitLocalMetadata(payload: CrudPayload): CrudPayload {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { _metadata, ...rest } = payload;
   return rest;
 }

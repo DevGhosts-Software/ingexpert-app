@@ -51,7 +51,7 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   return ItemType.PRODUCT;
 }
 
-// Expected columns: CODIGO NOMBRE UBICACION STOCK UNIDAD [TIPO]
+// Expected columns: CODIGO NOMBRE UBICACION UNIDAD [TIPO]
 // KIT rows are excluded — they are handled via the Kits sheet
 function parseInventoryRows(rows: RawExcelRow[]): CreateItemDto[] {
   return rows
@@ -61,14 +61,12 @@ function parseInventoryRows(rows: RawExcelRow[]): CreateItemDto[] {
       const code = String(row['CODIGO'] ?? '').trim();
       const name = String(row['NOMBRE'] ?? '').trim();
       const location = String(row['UBICACION'] ?? '').trim();
-      const stock = Number(row['STOCK'] ?? 0);
       const unit = String(row['UNIDAD'] ?? 'unidad').trim();
 
       return {
         code: code || name.slice(0, 20),
         name,
         location: location || 'Sin ubicacion',
-        stock: isNaN(stock) ? 0 : stock,
         unit: unit || 'unidad',
         type: parseItemType(row['TIPO']),
         imageUrl: '',
@@ -186,22 +184,20 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             for (const item of chunk) {
               await tx.execute(
                 `
-                  INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  INSERT INTO items (id, code, name, location, unit, type, image_url)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(code) DO UPDATE SET
                     name = excluded.name,
                     location = excluded.location,
                     unit = excluded.unit,
                     type = excluded.type,
-                    image_url = excluded.image_url,
-                    stock = items.stock + excluded.stock
+                    image_url = excluded.image_url
                 `,
                 [
                   uuidv4(),
                   item.code,
                   item.name,
                   item.location,
-                  item.stock,
                   item.unit,
                   item.type,
                   item.imageUrl ?? '',
@@ -258,15 +254,15 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
             for (const kitEntry of chunk) {
               await tx.execute(
                 `
-                  INSERT INTO items (id, code, name, location, stock, unit, type, image_url)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  INSERT INTO items (id, code, name, location, unit, type, image_url)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
                   ON CONFLICT(code) DO UPDATE SET
                     name = excluded.name,
                     type = 'KIT',
                     unit = excluded.unit,
                     location = excluded.location
                 `,
-                [uuidv4(), kitEntry.kitCode, kitEntry.kitName, '-', 0, 'kit', 'KIT', ''],
+                [uuidv4(), kitEntry.kitCode, kitEntry.kitName, '-', 'kit', 'KIT', ''],
               );
 
               await tx.execute(
@@ -334,10 +330,8 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
           </DialogTitle>
           <DialogDescription>
             Hoja <span className="font-mono font-medium text-foreground">Inventario</span>:{' '}
-            <span className="font-mono text-foreground">
-              CODIGO · NOMBRE · UBICACION · STOCK · UNIDAD
-            </span>
-            . Hoja <span className="font-mono font-medium text-foreground">Kits</span> (opcional):{' '}
+            <span className="font-mono text-foreground">CODIGO · NOMBRE · UBICACION · UNIDAD</span>.
+            Hoja <span className="font-mono font-medium text-foreground">Kits</span> (opcional):{' '}
             <span className="font-mono text-foreground">
               KIT · CODIGO_KIT · COMPONENTE · CODIGO_COMPONENTE · CANTIDAD
             </span>

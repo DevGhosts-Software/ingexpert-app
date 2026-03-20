@@ -503,9 +503,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
 
     const movementId = uuidv4();
     const movementDate = new Date().toISOString();
-    const stockDeltaSign =
-      pendingPayload.type === 'PURCHASE' || pendingPayload.type === 'RETURN' ? 1 : -1;
-    const optimisticMetadata = JSON.stringify({ source: 'movement-optimistic-stock' });
 
     try {
       await powerSyncDb.writeTransaction(async (tx) => {
@@ -565,12 +562,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
             `INSERT INTO movement_details (id, movement_id, item_id, quantity) VALUES (?, ?, ?, ?)`,
             [uuidv4(), movementId, detail.itemId, detail.quantity],
           );
-
-          await tx.execute(`UPDATE items SET stock = stock + ?, _metadata = ? WHERE id = ?`, [
-            stockDeltaSign * detail.quantity,
-            optimisticMetadata,
-            detail.itemId,
-          ]);
         }
       });
 
