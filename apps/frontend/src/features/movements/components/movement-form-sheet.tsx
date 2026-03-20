@@ -150,9 +150,9 @@ const ITEM_STOCK_SNAPSHOT_SQL = `
     COALESCE(
       SUM(
         CASE
-          WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo')
+          WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo', 'stock_adjustment_in')
             THEN ABS(COALESCE(md.quantity, 0))
-          WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo')
+          WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo', 'stock_adjustment_out')
             THEN -ABS(COALESCE(md.quantity, 0))
           ELSE 0
         END
@@ -291,9 +291,9 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
           md.item_id,
           SUM(
             CASE
-              WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo')
+              WHEN LOWER(TRIM(m.type)) IN ('compra', 'purchase', 'devolucion', 'return', 'importacion_excel', 'import_excel', 'ajuste_positivo', 'stock_adjustment_in')
                 THEN ABS(COALESCE(md.quantity, 0))
-              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo')
+              WHEN LOWER(TRIM(m.type)) IN ('salida', 'exit', 'baja', 'writeoff', 'ajuste_negativo', 'stock_adjustment_out')
                 THEN -ABS(COALESCE(md.quantity, 0))
               ELSE 0
             END

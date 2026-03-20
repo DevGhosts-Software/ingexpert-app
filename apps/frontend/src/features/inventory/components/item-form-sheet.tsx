@@ -293,11 +293,6 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
                 `,
                 [uuidv4(), movementId, item.id, adjustmentQty],
               );
-
-              await tx.execute('UPDATE items SET stock = stock + ? WHERE id = ?', [
-                stockDelta,
-                item.id,
-              ]);
             }
           }
         } else {

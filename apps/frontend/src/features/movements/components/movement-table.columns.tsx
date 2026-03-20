@@ -30,8 +30,8 @@ export const MOVEMENT_ROW_ACCENT: Record<
   RETURN: 'inset 2px 0 0 #16a34a',
   EXIT: 'inset 2px 0 0 #ea580c',
   WRITEOFF: 'inset 2px 0 0 #dc2626',
-  STOCK_ADJUSTMENT_IN: 'inset 2px 0 0 #8b5cf6',
-  STOCK_ADJUSTMENT_OUT: 'inset 2px 0 0 #6b7280',
+  STOCK_ADJUSTMENT_IN: 'inset 2px 0 0 #9333ea',
+  STOCK_ADJUSTMENT_OUT: 'inset 2px 0 0 #9333ea',
 };
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
@@ -73,17 +73,17 @@ export function TypeBadge({
   }
   if (type === 'STOCK_ADJUSTMENT_IN') {
     return (
-      <Badge className="gap-1.5 bg-violet-100 text-violet-800 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800">
+      <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
         <ArrowDownCircle className="h-3 w-3" />
-        Ajuste stock (entrada)
+        Ajuste
       </Badge>
     );
   }
   if (type === 'STOCK_ADJUSTMENT_OUT') {
     return (
-      <Badge className="gap-1.5 bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-100 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800">
+      <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
         <ArrowUpCircle className="h-3 w-3" />
-        Ajuste stock (salida)
+        Ajuste
       </Badge>
     );
   }
@@ -101,87 +101,90 @@ export function TypeBadge({
 function ContextCell({ row }: { row: MovementRow }) {
   const { type, projectName, destination, responsibleDeliveryName, responsibleReceiptName } = row;
 
-  if (type === 'PURCHASE') {
-    return responsibleReceiptName ? (
-      <div className="flex items-center gap-1.5 text-sm">
-        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
-          {responsibleReceiptName}
-        </span>
-      </div>
-    ) : (
-      <span className="text-muted-foreground text-sm">—</span>
-    );
-  }
+  switch (type) {
+    case 'PURCHASE':
+    case 'STOCK_ADJUSTMENT_IN':
+      return responsibleReceiptName ? (
+        <div className="flex items-center gap-1.5 text-sm">
+          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+            {responsibleReceiptName}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground text-sm">—</span>
+      );
 
-  if (type === 'RETURN') {
-    return (
-      <div className="space-y-0.5">
-        {projectName ? (
-          <div className="flex items-center gap-1.5 text-sm">
-            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="truncate max-w-[180px] font-medium" title={projectName}>
-              {projectName}
-            </span>
-          </div>
-        ) : null}
-        {responsibleReceiptName ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
-              Devuelve: {responsibleReceiptName}
-            </span>
-          </div>
-        ) : null}
-        {!projectName && !responsibleReceiptName && (
-          <span className="text-muted-foreground text-sm">—</span>
-        )}
-      </div>
-    );
-  }
-
-  if (type === 'EXIT') {
-    const primary = projectName ?? destination;
-    const isPrimProject = !!projectName;
-    return (
-      <div className="space-y-0.5">
-        {primary ? (
-          <div className="flex items-center gap-1.5 text-sm">
-            {isPrimProject ? (
+    case 'RETURN':
+      return (
+        <div className="space-y-0.5">
+          {projectName ? (
+            <div className="flex items-center gap-1.5 text-sm">
               <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            ) : (
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            )}
-            <span className="truncate max-w-[180px] font-medium" title={primary}>
-              {primary}
-            </span>
-          </div>
-        ) : null}
-        {projectName && destination ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={destination}>
-              {destination}
-            </span>
-          </div>
-        ) : null}
-        {responsibleDeliveryName ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={responsibleDeliveryName}>
-              Entrega: {responsibleDeliveryName}
-            </span>
-          </div>
-        ) : null}
-        {!primary && !responsibleDeliveryName && (
-          <span className="text-muted-foreground text-sm">—</span>
-        )}
-      </div>
-    );
-  }
+              <span className="truncate max-w-[180px] font-medium" title={projectName}>
+                {projectName}
+              </span>
+            </div>
+          ) : null}
+          {responsibleReceiptName ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+                Devuelve: {responsibleReceiptName}
+              </span>
+            </div>
+          ) : null}
+          {!projectName && !responsibleReceiptName && (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+      );
 
-  // WRITEOFF — no project/destination/responsible, show nothing meaningful
-  return <span className="text-muted-foreground text-sm">—</span>;
+    case 'EXIT': {
+      const primary = projectName ?? destination;
+      const isPrimProject = !!projectName;
+      return (
+        <div className="space-y-0.5">
+          {primary ? (
+            <div className="flex items-center gap-1.5 text-sm">
+              {isPrimProject ? (
+                <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              ) : (
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              )}
+              <span className="truncate max-w-[180px] font-medium" title={primary}>
+                {primary}
+              </span>
+            </div>
+          ) : null}
+          {projectName && destination ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={destination}>
+                {destination}
+              </span>
+            </div>
+          ) : null}
+          {responsibleDeliveryName ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={responsibleDeliveryName}>
+                Entrega: {responsibleDeliveryName}
+              </span>
+            </div>
+          ) : null}
+          {!primary && !responsibleDeliveryName && (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+      );
+    }
+
+    case 'WRITEOFF':
+    case 'STOCK_ADJUSTMENT_OUT':
+    default:
+      return <span className="text-muted-foreground text-sm">—</span>;
+  }
 }
 
 // ─── NotesCell ────────────────────────────────────────────────────────────────
