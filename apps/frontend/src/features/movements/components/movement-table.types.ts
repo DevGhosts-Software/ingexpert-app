@@ -4,7 +4,14 @@ import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-
 export type { MovementHeaderEntity as MovementRow } from '@ingexpert/schema';
 type MovementRow = MovementHeaderEntity;
 
-export type ActiveTab = 'all' | 'purchase' | 'return' | 'exit' | 'writeoff';
+export type ActiveTab =
+  | 'all'
+  | 'purchase'
+  | 'return'
+  | 'exit'
+  | 'writeoff'
+  | 'stockAdjustmentIn'
+  | 'stockAdjustmentOut';
 
 export type TypeCounts = {
   all: number;
@@ -12,6 +19,8 @@ export type TypeCounts = {
   return: number;
   exit: number;
   writeoff: number;
+  stockAdjustmentIn: number;
+  stockAdjustmentOut: number;
 };
 
 export type { MovementHeaderEntity };

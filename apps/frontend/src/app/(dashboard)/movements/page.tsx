@@ -15,7 +15,15 @@ import type {
   TypeCounts,
 } from '@/features/movements/components/movement-table.types';
 
-const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0, writeoff: 0 };
+const DEFAULT_COUNTS: TypeCounts = {
+  all: 0,
+  purchase: 0,
+  return: 0,
+  exit: 0,
+  writeoff: 0,
+  stockAdjustmentIn: 0,
+  stockAdjustmentOut: 0,
+};
 
 type LocalMovementRow = {
   id: string;
@@ -197,12 +205,23 @@ export default function MovementsPage() {
   const users = usersQuery.data ?? [];
 
   const { tableData, exportMovements, pageCount, typeCounts, stats } = useMemo(() => {
-    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
+    const typeMap: Record<
+      ActiveTab,
+      | 'PURCHASE'
+      | 'RETURN'
+      | 'EXIT'
+      | 'WRITEOFF'
+      | 'STOCK_ADJUSTMENT_IN'
+      | 'STOCK_ADJUSTMENT_OUT'
+      | undefined
+    > = {
       all: undefined,
       purchase: 'PURCHASE',
       return: 'RETURN',
       exit: 'EXIT',
       writeoff: 'WRITEOFF',
+      stockAdjustmentIn: 'STOCK_ADJUSTMENT_IN',
+      stockAdjustmentOut: 'STOCK_ADJUSTMENT_OUT',
     };
 
     const preCreatedByFiltered = allMovements.filter((movement) => {
@@ -275,6 +294,8 @@ export default function MovementsPage() {
         return: preType.filter((m) => m.type === 'RETURN').length,
         exit: preType.filter((m) => m.type === 'EXIT').length,
         writeoff: preType.filter((m) => m.type === 'WRITEOFF').length,
+        stockAdjustmentIn: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_IN').length,
+        stockAdjustmentOut: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_OUT').length,
       } satisfies TypeCounts,
       stats: {
         total: preDateFiltered.length,
