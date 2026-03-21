@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { getColumns } from './inventory-table.columns';
+import { getColumns, type InventoryTableMeta } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
 import { type InventoryTableProps, TYPE_COLORS } from './inventory-table.types';
 
@@ -173,21 +173,22 @@ export function InventoryTable({
 
   const isRowSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
-  const columns = useMemo(
-    () =>
-      getColumns({
-        isAdmin,
-        selectionState: headerSelectionState,
-        onToggleScope: handleToggleCurrentScope,
-        isRowSelected,
-        onToggleRow: handleToggleRow,
-      }),
-    [handleToggleCurrentScope, handleToggleRow, headerSelectionState, isAdmin, isRowSelected],
+  const tableMeta = useMemo<InventoryTableMeta>(
+    () => ({
+      selectionState: headerSelectionState,
+      onToggleScope: handleToggleCurrentScope,
+      isRowSelected,
+      onToggleRow: handleToggleRow,
+    }),
+    [handleToggleCurrentScope, handleToggleRow, headerSelectionState, isRowSelected],
   );
+
+  const columns = useMemo(() => getColumns(isAdmin), [isAdmin]);
 
   const table = useReactTable({
     data: filteredItems,
     columns,
+    meta: tableMeta,
     pageCount,
     state: { sorting, pagination },
     onSortingChange,
@@ -228,6 +229,7 @@ export function InventoryTable({
         exportItems={exportItems}
         exportKitRows={exportKitRows}
         selectedIds={selectedIds}
+        selectedCount={selectedCount}
         hasSelection={selectedCount > 0}
         globalSelectionChecked={globalSelectionState.checked}
         globalSelectionIndeterminate={globalSelectionState.indeterminate}

@@ -60,6 +60,7 @@ interface InventoryTableToolbarProps {
     unit: string;
   }>;
   selectedIds: Set<string>;
+  selectedCount: number;
   hasSelection: boolean;
   globalSelectionChecked: boolean;
   globalSelectionIndeterminate: boolean;
@@ -81,6 +82,7 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
   exportItems,
   exportKitRows,
   selectedIds,
+  selectedCount,
   hasSelection,
   globalSelectionChecked,
   globalSelectionIndeterminate,
@@ -281,7 +283,11 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
                 disabled={isExporting}
               >
                 <Download className="h-4 w-4" />
-                {isExporting ? 'Exportando...' : hasSelection ? 'Exportar selección' : 'Exportar'}
+                {isExporting
+                  ? 'Exportando...'
+                  : hasSelection
+                    ? `Exportar (${selectedCount})`
+                    : 'Exportar'}
               </Button>
               <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
                 <Plus className="h-4 w-4" />
