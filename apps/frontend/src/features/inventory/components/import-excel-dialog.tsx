@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { read as xlsxRead, utils as xlsxUtils } from 'xlsx';
 import { AlertCircle, FileUp, Upload } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CreateItemDto, KitImportRow } from '@ingexpert/schema';
 import { ItemType } from '@ingexpert/schema';
 import { usePowerSyncDatabase } from '@/components/providers/powersync-provider';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,10 +22,20 @@ import {
 import { Progress } from '@/components/ui/progress';
 
 const CHUNK_SIZE = 100;
+const EXCEL_IMPORT_OBSERVATION = 'Importación de stock desde Excel';
 
 interface RawExcelRow {
   [key: string]: unknown;
 }
+
+type ExistingItemRow = {
+  id: string;
+};
+
+type ParsedInventoryImportRow = CreateItemDto & {
+  warehouseInventory: number;
+  onsiteInventory: number;
+};
 
 /** Normalize a header key: uppercase + strip diacritics (e.g. "Ubicación" → "UBICACION"). */
 function normalizeKey(key: string): string {
@@ -51,17 +62,40 @@ function parseItemType(value: unknown): CreateItemDto['type'] {
   return ItemType.PRODUCT;
 }
 
+function parseNumericCell(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.replace(/\s/g, '').replace(',', '.').trim();
+    if (!normalized) {
+      return 0;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
 // Expected columns: CODIGO NOMBRE UBICACION UNIDAD [TIPO]
 // KIT rows are excluded — they are handled via the Kits sheet
-function parseInventoryRows(rows: RawExcelRow[]): CreateItemDto[] {
+function parseInventoryRows(rows: RawExcelRow[]): ParsedInventoryImportRow[] {
   return rows
     .map(normalizeRow)
     .filter((row) => row['NOMBRE'] || row['CODIGO'])
-    .map((row): CreateItemDto => {
+    .map((row): ParsedInventoryImportRow => {
       const code = String(row['CODIGO'] ?? '').trim();
       const name = String(row['NOMBRE'] ?? '').trim();
       const location = String(row['UBICACION'] ?? '').trim();
       const unit = String(row['UNIDAD'] ?? 'unidad').trim();
+      const warehouseInventory = Math.max(
+        parseNumericCell(row['INVENTARIO_ALMACEN'] ?? row['STOCK'] ?? row['STOCK_INICIAL']),
+        0,
+      );
+      const onsiteInventory = Math.max(parseNumericCell(row['INVENTARIO_OBRA']), 0);
 
       return {
         code: code || name.slice(0, 20),
@@ -70,6 +104,8 @@ function parseInventoryRows(rows: RawExcelRow[]): CreateItemDto[] {
         unit: unit || 'unidad',
         type: parseItemType(row['TIPO']),
         imageUrl: '',
+        warehouseInventory,
+        onsiteInventory,
       };
     })
     .filter((item) => item.type !== ItemType.KIT); // kits handled separately
@@ -101,15 +137,36 @@ interface ImportExcelDialogProps {
 export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
   const powerSyncDb = usePowerSyncDatabase();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [parsedRows, setParsedRows] = useState<CreateItemDto[]>([]);
+  const [parsedRows, setParsedRows] = useState<ParsedInventoryImportRow[]>([]);
   const [parsedKitRows, setParsedKitRows] = useState<KitImportRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [isImporting, setIsImporting] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const totalCount = parsedRows.length + parsedKitRows.length;
   const progress = totalCount > 0 ? Math.round((importedCount / totalCount) * 100) : 0;
+
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) {
+        setCurrentUserId(session?.user.id ?? null);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user.id ?? null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleClose = useCallback(() => {
     if (isImporting) return;
@@ -168,13 +225,18 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
   const handleImport = useCallback(async () => {
     if (parsedRows.length === 0 && parsedKitRows.length === 0) return;
+    if (!currentUserId) {
+      toast.error('No se pudo identificar el usuario actual para registrar la importación.');
+      return;
+    }
+
     setIsImporting(true);
     setImportedCount(0);
 
     try {
       // ── Items (in chunks) ────────────────────────────────────────────────────
       if (parsedRows.length > 0) {
-        const chunks: CreateItemDto[][] = [];
+        const chunks: ParsedInventoryImportRow[][] = [];
         for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
           chunks.push(parsedRows.slice(i, i + CHUNK_SIZE));
         }
@@ -182,27 +244,128 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         for (const chunk of chunks) {
           await powerSyncDb.writeTransaction(async (tx) => {
             for (const item of chunk) {
-              await tx.execute(
-                `
-                  INSERT INTO items (id, code, name, location, unit, type, image_url)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(code) DO UPDATE SET
-                    name = excluded.name,
-                    location = excluded.location,
-                    unit = excluded.unit,
-                    type = excluded.type,
-                    image_url = excluded.image_url
-                `,
-                [
-                  uuidv4(),
-                  item.code,
-                  item.name,
-                  item.location,
-                  item.unit,
-                  item.type,
-                  item.imageUrl ?? '',
-                ],
+              const nowIso = new Date().toISOString();
+              const existingItem = await tx.getOptional<ExistingItemRow>(
+                'SELECT id FROM items WHERE code = ? LIMIT 1',
+                [item.code],
               );
+              const itemId = existingItem?.id ?? uuidv4();
+
+              if (existingItem?.id) {
+                await tx.execute(
+                  `
+                    UPDATE items
+                    SET name = ?, location = ?, unit = ?, type = ?, image_url = ?
+                    WHERE id = ?
+                  `,
+                  [
+                    item.name,
+                    item.location,
+                    item.unit,
+                    item.type,
+                    item.imageUrl ?? '',
+                    itemId,
+                  ],
+                );
+              } else {
+                await tx.execute(
+                  `
+                    INSERT INTO items (id, code, name, location, unit, type, image_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                  `,
+                  [
+                    itemId,
+                    item.code,
+                    item.name,
+                    item.location,
+                    item.unit,
+                    item.type,
+                    item.imageUrl ?? '',
+                  ],
+                );
+              }
+
+              const totalImportedQuantity = Number(
+                (item.warehouseInventory + item.onsiteInventory).toFixed(2),
+              );
+
+              if (totalImportedQuantity > 0) {
+                const movementId = uuidv4();
+
+                await tx.execute(
+                  `
+                    INSERT INTO movements (
+                      id,
+                      type,
+                      created_by_id,
+                      destination,
+                      observations,
+                      responsible_delivery_id,
+                      responsible_receipt_id,
+                      date,
+                      project_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  `,
+                  [
+                    movementId,
+                    'PURCHASE',
+                    currentUserId,
+                    null,
+                    `${EXCEL_IMPORT_OBSERVATION}: ${item.code}`,
+                    null,
+                    null,
+                    nowIso,
+                    null,
+                  ],
+                );
+
+                await tx.execute(
+                  `
+                    INSERT INTO movement_details (id, movement_id, item_id, quantity)
+                    VALUES (?, ?, ?, ?)
+                  `,
+                  [uuidv4(), movementId, itemId, totalImportedQuantity],
+                );
+              }
+
+              if (item.onsiteInventory > 0) {
+                const movementId = uuidv4();
+
+                await tx.execute(
+                  `
+                    INSERT INTO movements (
+                      id,
+                      type,
+                      created_by_id,
+                      destination,
+                      observations,
+                      responsible_delivery_id,
+                      responsible_receipt_id,
+                      date,
+                      project_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  `,
+                  [
+                    movementId,
+                    'EXIT',
+                    currentUserId,
+                    'Importación desde Excel - Obra',
+                    `${EXCEL_IMPORT_OBSERVATION}: ${item.code}`,
+                    null,
+                    null,
+                    nowIso,
+                    null,
+                  ],
+                );
+
+                await tx.execute(
+                  `
+                    INSERT INTO movement_details (id, movement_id, item_id, quantity)
+                    VALUES (?, ?, ?, ?)
+                  `,
+                  [uuidv4(), movementId, itemId, item.onsiteInventory],
+                );
+              }
             }
           });
           done += chunk.length;
@@ -252,44 +415,51 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         for (const chunk of kitChunks) {
           await powerSyncDb.writeTransaction(async (tx) => {
             for (const kitEntry of chunk) {
-              await tx.execute(
-                `
-                  INSERT INTO items (id, code, name, location, unit, type, image_url)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)
-                  ON CONFLICT(code) DO UPDATE SET
-                    name = excluded.name,
-                    type = 'KIT',
-                    unit = excluded.unit,
-                    location = excluded.location
-                `,
-                [uuidv4(), kitEntry.kitCode, kitEntry.kitName, '-', 'kit', 'KIT', ''],
-              );
-
-              await tx.execute(
-                `
-                  DELETE FROM kit_details
-                  WHERE kit_id = (
-                    SELECT id
-                    FROM items
-                    WHERE code = ? AND type = 'KIT'
-                    LIMIT 1
-                  )
-                `,
+              let kitId = uuidv4();
+              const existingKit = await tx.getOptional<ExistingItemRow>(
+                `SELECT id FROM items WHERE code = ? AND type = 'KIT' LIMIT 1`,
                 [kitEntry.kitCode],
               );
 
+              if (existingKit?.id) {
+                kitId = existingKit.id;
+                await tx.execute(
+                  `
+                    UPDATE items
+                    SET name = ?, type = 'KIT', unit = ?, location = ?, image_url = ?
+                    WHERE id = ?
+                  `,
+                  [kitEntry.kitName, 'kit', '-', '', kitId],
+                );
+              } else {
+                await tx.execute(
+                  `
+                    INSERT INTO items (id, code, name, location, unit, type, image_url)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                  `,
+                  [kitId, kitEntry.kitCode, kitEntry.kitName, '-', 'kit', 'KIT', ''],
+                );
+              }
+
+              await tx.execute('DELETE FROM kit_details WHERE kit_id = ?', [kitId]);
+
               for (const component of kitEntry.components) {
+                const componentItem = await tx.getOptional<ExistingItemRow>(
+                  `SELECT id FROM items WHERE code = ? AND type != 'KIT' LIMIT 1`,
+                  [component.componentCode],
+                );
+                if (!componentItem?.id) {
+                  throw new Error(
+                    `No existe un componente con código "${component.componentCode}" para el kit "${kitEntry.kitCode}"`,
+                  );
+                }
+
                 await tx.execute(
                   `
                     INSERT INTO kit_details (id, kit_id, item_id, quantity)
-                    SELECT ?, kit.id, comp.id, ?
-                    FROM items kit, items comp
-                    WHERE kit.code = ?
-                      AND kit.type = 'KIT'
-                      AND comp.code = ?
-                    LIMIT 1
+                    VALUES (?, ?, ?, ?)
                   `,
-                  [uuidv4(), component.quantity, kitEntry.kitCode, component.componentCode],
+                  [uuidv4(), kitId, componentItem.id, component.quantity],
                 );
               }
             }
@@ -308,12 +478,13 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
       setImportedCount(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
       onClose();
-    } catch {
+    } catch (error) {
+      console.error('Import failed', error);
       toast.error('Error durante la importacion. Algunos items pueden haberse guardado.');
     } finally {
       setIsImporting(false);
     }
-  }, [parsedRows, parsedKitRows, onClose, powerSyncDb]);
+  }, [currentUserId, parsedRows, parsedKitRows, onClose, powerSyncDb]);
 
   const itemChunkCount = Math.ceil(parsedRows.length / CHUNK_SIZE);
   const kitChunkCount = Math.ceil(parsedKitRows.length / CHUNK_SIZE);
@@ -322,13 +493,17 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-md" hideClose={isImporting}>
+      <DialogContent
+        className="max-w-md"
+        hideClose={isImporting}
+        aria-describedby="import-excel-description"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileUp className="h-5 w-5" />
             Importar desde Excel
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="import-excel-description">
             Hoja <span className="font-mono font-medium text-foreground">Inventario</span>:{' '}
             <span className="font-mono text-foreground">CODIGO · NOMBRE · UBICACION · UNIDAD</span>.
             Hoja <span className="font-mono font-medium text-foreground">Kits</span> (opcional):{' '}

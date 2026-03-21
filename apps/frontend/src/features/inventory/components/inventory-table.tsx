@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { getColumns } from './inventory-table.columns';
+import { getColumns, type InventoryTableMeta } from './inventory-table.columns';
 import { InventoryTableToolbar } from './inventory-table-toolbar';
 import { type InventoryTableProps, TYPE_COLORS } from './inventory-table.types';
 
@@ -42,6 +42,25 @@ export function InventoryTable({
   onRowClick,
 }: InventoryTableProps) {
   const [imageFilter, setImageFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const validIds = new Set(exportItems.map((item) => item.id));
+    setSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+
+      for (const id of prev) {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [exportItems]);
 
   const filteredItems = useMemo(() => {
     let result = [...items];
@@ -50,17 +69,126 @@ export function InventoryTable({
     return result;
   }, [items, imageFilter]);
 
+  const filteredExportItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const baseItems = exportItems.filter((item) => {
+      const matchesSearch =
+        normalizedSearch === '' ||
+        item.name.toLowerCase().includes(normalizedSearch) ||
+        item.code.toLowerCase().includes(normalizedSearch) ||
+        item.location.toLowerCase().includes(normalizedSearch);
+      const matchesLocation = locationFilter === 'all' || item.location === locationFilter;
+      const matchesImage =
+        imageFilter === 'all' || (imageFilter === 'has' ? Boolean(item.imageUrl) : !item.imageUrl);
+
+      return matchesSearch && matchesLocation && matchesImage;
+    });
+
+    if (typeFilter === 'ALL') {
+      return baseItems;
+    }
+
+    return baseItems.filter((item) => item.type === typeFilter);
+  }, [exportItems, imageFilter, locationFilter, search, typeFilter]);
+
+  const selectedCount = selectedIds.size;
+  const currentScopeIds = useMemo(
+    () => filteredExportItems.map((item) => item.id),
+    [filteredExportItems],
+  );
+
+  const selectedInCurrentScopeCount = useMemo(() => {
+    let count = 0;
+    for (const id of currentScopeIds) {
+      if (selectedIds.has(id)) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [currentScopeIds, selectedIds]);
+
+  const headerSelectionState = useMemo(
+    () => ({
+      checked: currentScopeIds.length > 0 && selectedInCurrentScopeCount === currentScopeIds.length,
+      indeterminate:
+        selectedInCurrentScopeCount > 0 && selectedInCurrentScopeCount < currentScopeIds.length,
+    }),
+    [currentScopeIds.length, selectedInCurrentScopeCount],
+  );
+
+  const globalSelectionState = useMemo(
+    () => ({
+      checked: exportItems.length > 0 && selectedCount === exportItems.length,
+      indeterminate: selectedCount > 0 && selectedCount < exportItems.length,
+    }),
+    [exportItems.length, selectedCount],
+  );
+
   const pageLocations = useMemo(
     () => Array.from(new Set(items.map((i) => i.location))).sort(),
     [items],
   );
   const locationOptions = allLocations && allLocations.length > 0 ? allLocations : pageLocations;
 
+  const handleToggleRow = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleCurrentScope = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const shouldSelectAll = currentScopeIds.some((id) => !next.has(id));
+
+      if (shouldSelectAll) {
+        for (const id of currentScopeIds) {
+          next.add(id);
+        }
+      } else {
+        for (const id of currentScopeIds) {
+          next.delete(id);
+        }
+      }
+
+      return next;
+    });
+  }, [currentScopeIds]);
+
+  const handleToggleGlobalSelection = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === exportItems.length && exportItems.length > 0) {
+        return new Set();
+      }
+
+      return new Set(exportItems.map((item) => item.id));
+    });
+  }, [exportItems]);
+
+  const isRowSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
+
+  const tableMeta = useMemo<InventoryTableMeta>(
+    () => ({
+      selectionState: headerSelectionState,
+      onToggleScope: handleToggleCurrentScope,
+      isRowSelected,
+      onToggleRow: handleToggleRow,
+    }),
+    [handleToggleCurrentScope, handleToggleRow, headerSelectionState, isRowSelected],
+  );
+
   const columns = useMemo(() => getColumns(isAdmin), [isAdmin]);
 
   const table = useReactTable({
     data: filteredItems,
     columns,
+    meta: tableMeta,
     pageCount,
     state: { sorting, pagination },
     onSortingChange,
@@ -100,6 +228,12 @@ export function InventoryTable({
         isAdmin={isAdmin}
         exportItems={exportItems}
         exportKitRows={exportKitRows}
+        selectedIds={selectedIds}
+        selectedCount={selectedCount}
+        hasSelection={selectedCount > 0}
+        globalSelectionChecked={globalSelectionState.checked}
+        globalSelectionIndeterminate={globalSelectionState.indeterminate}
+        onToggleGlobalSelection={handleToggleGlobalSelection}
       />
 
       <div className="rounded-md border overflow-x-auto">
@@ -139,7 +273,7 @@ export function InventoryTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={selectedIds.has(row.original.id) ? 'selected' : undefined}
                   className="cursor-pointer"
                   style={{ boxShadow: TYPE_COLORS[row.original.type].rowAccent }}
                   onClick={() => onRowClick(row.original)}

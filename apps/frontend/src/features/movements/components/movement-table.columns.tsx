@@ -16,9 +16,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import type { MovementRow } from './movement-table.types';
+import type { MovementRow, MovementTableMeta } from './movement-table.types';
 
 // ─── Row accent colors by movement type ──────────────────────────────────────
 
@@ -38,6 +39,7 @@ export const MOVEMENT_ROW_ACCENT: Record<
 
 export function TypeBadge({
   type,
+  observations,
 }: {
   type:
     | 'PURCHASE'
@@ -46,8 +48,19 @@ export function TypeBadge({
     | 'WRITEOFF'
     | 'STOCK_ADJUSTMENT_IN'
     | 'STOCK_ADJUSTMENT_OUT';
+  observations?: string | null;
 }) {
   const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
+  const normalizedObservations = observations?.toLowerCase().trim() ?? '';
+
+  if (normalizedObservations.includes('importación de stock desde excel')) {
+    return (
+      <Badge className="gap-1.5 bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
+        <ArrowDownCircle className="h-3 w-3" />
+        Importación desde Excel
+      </Badge>
+    );
+  }
 
   if (normalizedType === 'PURCHASE') {
     return (
@@ -219,12 +232,58 @@ function NotesCell({ observations }: { observations: string | null }) {
 export function getColumns(): ColumnDef<MovementRow>[] {
   return [
     {
+      id: 'select',
+      meta: { center: true, width: 'w-[44px]' },
+      header: ({ table }) => {
+        const meta = table.options.meta as MovementTableMeta | undefined;
+        if (!meta) {
+          return null;
+        }
+
+        return (
+          <div className="flex justify-center">
+            <Checkbox
+              checked={
+                meta.selectionState.checked
+                  ? true
+                  : meta.selectionState.indeterminate
+                    ? 'indeterminate'
+                    : false
+              }
+              onCheckedChange={() => meta.onToggleScope()}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="Seleccionar movimientos filtrados"
+              className="size-5"
+            />
+          </div>
+        );
+      },
+      cell: ({ row, table }) => {
+        const meta = table.options.meta as MovementTableMeta | undefined;
+        if (!meta) {
+          return null;
+        }
+
+        return (
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              checked={meta.isRowSelected(row.original.id)}
+              onCheckedChange={() => meta.onToggleRow(row.original.id)}
+              aria-label={`Seleccionar movimiento ${row.original.id}`}
+              className="size-5"
+            />
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
+    {
       accessorKey: 'type',
       meta: { center: true, width: 'w-[130px]' },
       header: () => <span className="font-medium">Tipo</span>,
       cell: ({ row }) => (
         <div className="flex justify-center">
-          <TypeBadge type={row.original.type} />
+          <TypeBadge type={row.original.type} observations={row.original.observations} />
         </div>
       ),
       enableSorting: false,

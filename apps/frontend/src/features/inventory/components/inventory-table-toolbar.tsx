@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { ChevronDown, Download, Filter, ImageOff, Plus, Search, Upload } from 'lucide-react';
 import { utils as xlsxUtils, write as xlsxWrite, writeFile as xlsxWriteFile } from 'xlsx';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import { ImportExcelDialog } from './import-excel-dialog';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ interface InventoryTableToolbarProps {
   typeCounts: ItemCounts;
   isAdmin: boolean;
   exportItems: Array<{
+    id: string;
     code: string;
     name: string;
     location: string;
@@ -57,9 +59,15 @@ interface InventoryTableToolbarProps {
     quantity: number;
     unit: string;
   }>;
+  selectedIds: Set<string>;
+  selectedCount: number;
+  hasSelection: boolean;
+  globalSelectionChecked: boolean;
+  globalSelectionIndeterminate: boolean;
+  onToggleGlobalSelection: () => void;
 }
 
-export function InventoryTableToolbar({
+export const InventoryTableToolbar = memo(function InventoryTableToolbar({
   search,
   onSearchChange,
   locationFilter,
@@ -73,10 +81,27 @@ export function InventoryTableToolbar({
   isAdmin,
   exportItems,
   exportKitRows,
+  selectedIds,
+  selectedCount,
+  hasSelection,
+  globalSelectionChecked,
+  globalSelectionIndeterminate,
+  onToggleGlobalSelection,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  const selectedExportItems = useMemo(
+    () => exportItems.filter((item) => selectedIds.has(item.id)),
+    [exportItems, selectedIds],
+  );
+
+  const selectedKitCodes = useMemo(
+    () =>
+      new Set(selectedExportItems.filter((item) => item.type === 'KIT').map((item) => item.code)),
+    [selectedExportItems],
+  );
 
   const handleExport = useCallback(async () => {
     setIsExporting(true);
@@ -88,8 +113,13 @@ export function InventoryTableToolbar({
         KIT: 'KIT',
       };
 
+      const exportSourceItems = hasSelection ? selectedExportItems : exportItems;
+      const exportSourceKitRows = hasSelection
+        ? exportKitRows.filter((row) => selectedKitCodes.has(row.kitCode))
+        : exportKitRows;
+
       // Sheet 1: all items except kits
-      const inventoryRows = exportItems
+      const inventoryRows = exportSourceItems
         .filter((item) => item.type !== 'KIT')
         .map((item) => ({
           CODIGO: item.code,
@@ -103,7 +133,7 @@ export function InventoryTableToolbar({
         }));
 
       // Sheet 2: kit compositions (one row per component)
-      const kitRows = exportKitRows.map((row) => ({
+      const kitRows = exportSourceKitRows.map((row) => ({
         KIT: row.kitName,
         CODIGO_KIT: row.kitCode,
         COMPONENTE: row.componentName,
@@ -139,14 +169,18 @@ export function InventoryTableToolbar({
         xlsxWriteFile(wb, fileName);
       }
 
-      toast.success('Inventario exportado correctamente');
+      toast.success(
+        hasSelection
+          ? 'Elementos seleccionados exportados correctamente'
+          : 'Inventario exportado correctamente',
+      );
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       toast.error('Error al exportar el inventario');
     } finally {
       setIsExporting(false);
     }
-  }, [exportItems, exportKitRows]);
+  }, [exportItems, exportKitRows, hasSelection, selectedExportItems, selectedKitCodes]);
 
   return (
     <div className="space-y-4">
@@ -249,7 +283,11 @@ export function InventoryTableToolbar({
                 disabled={isExporting}
               >
                 <Download className="h-4 w-4" />
-                {isExporting ? 'Exportando...' : 'Exportar'}
+                {isExporting
+                  ? 'Exportando...'
+                  : hasSelection
+                    ? `Exportar (${selectedCount})`
+                    : 'Exportar'}
               </Button>
               <Button size="sm" className="gap-1.5" onClick={() => setAddItemOpen(true)}>
                 <Plus className="h-4 w-4" />
@@ -269,17 +307,36 @@ export function InventoryTableToolbar({
 
       {/* Type tabs */}
       <Tabs value={activeTab} onValueChange={onTabChange}>
-        <TabsList>
-          {TAB_ITEMS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
-              {tab.label}
-              <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
-                {typeCounts[tab.type as keyof ItemCounts]}
-              </Badge>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <TabsList>
+            {TAB_ITEMS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                {tab.label}
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs font-mono">
+                  {typeCounts[tab.type as keyof ItemCounts]}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {hasSelection ? (
+            <label className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-sm font-medium">
+              <Checkbox
+                checked={
+                  globalSelectionChecked
+                    ? true
+                    : globalSelectionIndeterminate
+                      ? 'indeterminate'
+                      : false
+                }
+                onCheckedChange={() => onToggleGlobalSelection()}
+                aria-label="Seleccionar todos los elementos existentes"
+                className="size-5"
+              />
+              <span>¿Seleccionar todos los elementos existentes?</span>
+            </label>
+          ) : null}
+        </div>
       </Tabs>
     </div>
   );
-}
+});

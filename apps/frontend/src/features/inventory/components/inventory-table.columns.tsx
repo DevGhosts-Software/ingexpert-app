@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +47,7 @@ type MovementHistoryRow = {
   movement_id: string;
   movement_type: string;
   movement_destination: string | null;
+  movement_observations: string | null;
   date: string;
   quantity: number | string | null;
 };
@@ -93,7 +95,12 @@ function ColHeader({
 
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
-function formatMovementType(value: string): string {
+function formatMovementType(value: string, observations?: string | null): string {
+  const normalizedObservations = observations?.toLowerCase().trim() ?? '';
+  if (normalizedObservations.includes('importación de stock desde excel')) {
+    return 'Importación desde Excel';
+  }
+
   const normalized = value.toLowerCase().trim();
   if (normalized === 'stock_adjustment_in') return 'Ajuste de stock (entrada)';
   if (normalized === 'stock_adjustment_out') return 'Ajuste de stock (salida)';
@@ -114,6 +121,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
         m.id AS movement_id,
         LOWER(m.type) AS movement_type,
         m.destination AS movement_destination,
+        m.observations AS movement_observations,
         m.date,
         md.quantity
       FROM movement_details md
@@ -190,7 +198,10 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
                     className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b px-2 py-1.5 text-xs last:border-b-0"
                   >
                     <span className="font-medium text-foreground">
-                      {formatMovementType(movement.movement_type)}
+                      {formatMovementType(
+                        movement.movement_type,
+                        movement.movement_observations,
+                      )}
                     </span>
                     <span className="text-muted-foreground">
                       {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: es })}
@@ -220,8 +231,68 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
   );
 }
 
+type SelectionScopeState = {
+  checked: boolean;
+  indeterminate: boolean;
+};
+
+export type InventoryTableMeta = {
+  selectionState: SelectionScopeState;
+  onToggleScope: () => void;
+  isRowSelected: (id: string) => boolean;
+  onToggleRow: (id: string) => void;
+};
+
 export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
+  const selectionColumn: ColumnDef<InventoryItem> | null = isAdmin
+    ? {
+        id: 'select',
+        header: ({ table }) => {
+          const meta = table.options.meta as InventoryTableMeta | undefined;
+          if (!meta) {
+            return null;
+          }
+          return (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={
+                  meta.selectionState.checked
+                    ? true
+                    : meta.selectionState.indeterminate
+                      ? 'indeterminate'
+                      : false
+                }
+                onCheckedChange={() => meta.onToggleScope()}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Seleccionar elementos filtrados"
+                className="size-5"
+              />
+            </div>
+          );
+        },
+        cell: ({ row, table }) => {
+          const meta = table.options.meta as InventoryTableMeta | undefined;
+          if (!meta) {
+            return null;
+          }
+          return (
+            <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={meta.isRowSelected(row.original.id)}
+                onCheckedChange={() => meta.onToggleRow(row.original.id)}
+                aria-label={`Seleccionar ${row.original.name}`}
+                className="size-5"
+              />
+            </div>
+          );
+        },
+        enableSorting: false,
+        size: 44,
+      }
+    : null;
+
   return [
+    ...(selectionColumn ? [selectionColumn] : []),
     {
       id: 'image',
       header: () => <span className="sr-only">Imagen</span>,

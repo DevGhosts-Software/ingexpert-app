@@ -247,7 +247,17 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
     : null;
   const isLoading = !movement && (headerQuery.isFetching || detailsQuery.isFetching);
 
-  const config = movement ? TYPE_CONFIG[movement.type] : null;
+  const isExcelImport =
+    movement?.observations?.toLowerCase().includes('importación de stock desde excel') ?? false;
+  const config = movement
+    ? isExcelImport
+      ? {
+          ...TYPE_CONFIG.PURCHASE,
+          label: 'Importación desde Excel',
+          description: 'Ingreso importado desde archivo Excel',
+        }
+      : TYPE_CONFIG[movement.type]
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
