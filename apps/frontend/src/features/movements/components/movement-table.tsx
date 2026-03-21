@@ -286,9 +286,8 @@ export function MovementTable({
                   className="cursor-pointer"
                   style={{
                     boxShadow:
-                      MOVEMENT_ROW_ACCENT[
-                        row.original.type as keyof typeof MOVEMENT_ROW_ACCENT
-                      ] ?? undefined,
+                      MOVEMENT_ROW_ACCENT[row.original.type as keyof typeof MOVEMENT_ROW_ACCENT] ??
+                      undefined,
                   }}
                   onClick={() => setDetailId(row.original.id)}
                 >

@@ -198,10 +198,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
                     className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b px-2 py-1.5 text-xs last:border-b-0"
                   >
                     <span className="font-medium text-foreground">
-                      {formatMovementType(
-                        movement.movement_type,
-                        movement.movement_observations,
-                      )}
+                      {formatMovementType(movement.movement_type, movement.movement_observations)}
                     </span>
                     <span className="text-muted-foreground">
                       {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: es })}
