@@ -165,7 +165,6 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
         : exportDetails.filter((detail) => exportSourceIds.has(detail.movementId));
 
       const movementRows = exportSourceMovements.map((movement) => ({
-        ID: movement.id,
         FECHA: movement.date,
         TIPO: formatExportType(movement),
         REGISTRADO_POR: movement.creatorName ?? '',

@@ -55,6 +55,7 @@ export interface MovementTableProps {
   movements: MovementRow[];
   exportMovements: MovementRow[];
   exportDetails: MovementExportDetailRow[];
+  totalMovementsCount: number;
   isLoading: boolean;
   pageCount: number;
   pagination: PaginationState;

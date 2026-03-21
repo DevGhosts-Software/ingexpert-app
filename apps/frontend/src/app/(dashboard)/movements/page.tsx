@@ -424,6 +424,7 @@ export default function MovementsPage() {
         movements={tableData}
         exportMovements={exportMovements}
         exportDetails={exportDetails}
+        totalMovementsCount={allMovements.length}
         isLoading={movementsQuery.isFetching && allMovements.length === 0}
         pageCount={pageCount}
         pagination={pagination}
