@@ -304,7 +304,15 @@ export function MovementTable({
         </Table>
       </div>
 
-      <DataTablePagination table={table} />
+      <DataTablePagination
+        table={table}
+        pageIndex={pagination.pageIndex}
+        pageSize={pagination.pageSize}
+        pageCount={pageCount}
+        onPageSizeChange={(size) =>
+          onPaginationChange({ ...pagination, pageSize: size, pageIndex: 0 })
+        }
+      />
     </div>
   );
 }
