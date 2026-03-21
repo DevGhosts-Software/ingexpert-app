@@ -9,13 +9,23 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { MovementStats } from '@/features/movements/components/movement-stats';
 import { MovementTable } from '@/features/movements/components/movement-table';
-import type { ActiveTab, TypeCounts } from '@/features/movements/components/movement-table.types';
+import type {
+  ActiveTab,
+  MovementExportDetailRow,
+  TypeCounts,
+} from '@/features/movements/components/movement-table.types';
 
 const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0, writeoff: 0 };
 
 type LocalMovementRow = {
   id: string;
-  type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF';
+  type:
+    | 'PURCHASE'
+    | 'RETURN'
+    | 'EXIT'
+    | 'WRITEOFF'
+    | 'STOCK_ADJUSTMENT_IN'
+    | 'STOCK_ADJUSTMENT_OUT';
   created_by_id: string;
   destination: string | null;
   observations: string | null;
@@ -32,6 +42,16 @@ type LocalMovementRow = {
 
 type LocalProjectOption = { id: string; name: string };
 type LocalUserOption = { id: string; name: string | null; email: string };
+type LocalMovementExportDetailRow = {
+  movement_id: string;
+  movement_date: string;
+  movement_type: string;
+  movement_observations: string | null;
+  item_code: string;
+  item_name: string;
+  quantity: number | string | null;
+  unit: string;
+};
 
 export default function MovementsPage() {
   const isAdmin = useIsAdmin();
@@ -124,6 +144,33 @@ export default function MovementsPage() {
       ? 'SELECT id, name, email FROM users ORDER BY COALESCE(name, email) ASC'
       : 'SELECT id, name, email FROM users WHERE 1 = 0',
   );
+  const movementDetailsQuery = useQuery<LocalMovementExportDetailRow>(`
+    SELECT
+      m.id AS movement_id,
+      m.date AS movement_date,
+      m.type AS movement_type,
+      m.observations AS movement_observations,
+      i.code AS item_code,
+      i.name AS item_name,
+      md.quantity,
+      i.unit AS unit
+    FROM movements m
+    INNER JOIN movement_details md ON md.movement_id = m.id
+    INNER JOIN items i ON i.id = md.item_id
+    WHERE LOWER(TRIM(m.type)) IN (
+      'purchase',
+      'compra',
+      'return',
+      'devolucion',
+      'exit',
+      'salida',
+      'writeoff',
+      'baja',
+      'stock_adjustment_in',
+      'stock_adjustment_out'
+    )
+    ORDER BY m.date DESC, i.name ASC
+  `);
 
   const allMovements = useMemo(
     () =>
@@ -149,8 +196,11 @@ export default function MovementsPage() {
   const projects = projectsQuery.data ?? [];
   const users = usersQuery.data ?? [];
 
-  const { tableData, pageCount, typeCounts, stats } = useMemo(() => {
-    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
+  const { tableData, exportMovements, pageCount, typeCounts, stats } = useMemo(() => {
+    const typeMap: Record<
+      ActiveTab,
+      'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined
+    > = {
       all: undefined,
       purchase: 'PURCHASE',
       return: 'RETURN',
@@ -219,6 +269,7 @@ export default function MovementsPage() {
     }).length;
 
     return {
+      exportMovements: filtered,
       tableData: sorted.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
       pageCount: Math.max(1, Math.ceil(sorted.length / pageSize)),
       typeCounts: {
@@ -250,6 +301,29 @@ export default function MovementsPage() {
     sorting,
     typeFilter,
   ]);
+
+  const exportDetails = useMemo<MovementExportDetailRow[]>(() => {
+    const exportMovementIds = new Set(exportMovements.map((movement) => movement.id));
+    const allowedMovementIds = new Set(
+      (isAdmin
+        ? exportMovements
+        : exportMovements.filter((movement) => !currentUserId || movement.createdById === currentUserId)
+      ).map((movement) => movement.id),
+    );
+
+    return (movementDetailsQuery.data ?? [])
+      .filter((detail) => exportMovementIds.has(detail.movement_id) && allowedMovementIds.has(detail.movement_id))
+      .map((detail) => ({
+        movementId: detail.movement_id,
+        movementDate: detail.movement_date,
+        movementType: detail.movement_type,
+        movementObservations: detail.movement_observations,
+        itemCode: detail.item_code,
+        itemName: detail.item_name,
+        quantity: Number(detail.quantity ?? 0),
+        unit: detail.unit,
+      }));
+  }, [currentUserId, exportMovements, isAdmin, movementDetailsQuery.data]);
 
   const resetPage = useCallback(() => setPagination((p) => ({ ...p, pageIndex: 0 })), []);
 
@@ -325,6 +399,8 @@ export default function MovementsPage() {
       <MovementStats stats={stats} />
       <MovementTable
         movements={tableData}
+        exportMovements={exportMovements}
+        exportDetails={exportDetails}
         isLoading={movementsQuery.isFetching && allMovements.length === 0}
         pageCount={pageCount}
         pagination={pagination}

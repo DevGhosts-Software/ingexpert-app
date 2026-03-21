@@ -16,9 +16,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import type { MovementRow } from './movement-table.types';
+import type { MovementRow, MovementTableMeta } from './movement-table.types';
 
 // ─── Row accent colors by movement type ──────────────────────────────────────
 
@@ -230,6 +231,52 @@ function NotesCell({ observations }: { observations: string | null }) {
 
 export function getColumns(): ColumnDef<MovementRow>[] {
   return [
+    {
+      id: 'select',
+      meta: { center: true, width: 'w-[44px]' },
+      header: ({ table }) => {
+        const meta = table.options.meta as MovementTableMeta | undefined;
+        if (!meta) {
+          return null;
+        }
+
+        return (
+          <div className="flex justify-center">
+            <Checkbox
+              checked={
+                meta.selectionState.checked
+                  ? true
+                  : meta.selectionState.indeterminate
+                    ? 'indeterminate'
+                    : false
+              }
+              onCheckedChange={() => meta.onToggleScope()}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="Seleccionar movimientos filtrados"
+              className="size-5"
+            />
+          </div>
+        );
+      },
+      cell: ({ row, table }) => {
+        const meta = table.options.meta as MovementTableMeta | undefined;
+        if (!meta) {
+          return null;
+        }
+
+        return (
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              checked={meta.isRowSelected(row.original.id)}
+              onCheckedChange={() => meta.onToggleRow(row.original.id)}
+              aria-label={`Seleccionar movimiento ${row.original.id}`}
+              className="size-5"
+            />
+          </div>
+        );
+      },
+      enableSorting: false,
+    },
     {
       accessorKey: 'type',
       meta: { center: true, width: 'w-[130px]' },
