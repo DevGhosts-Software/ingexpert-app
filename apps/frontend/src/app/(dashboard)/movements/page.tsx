@@ -72,7 +72,14 @@ export default function MovementsPage() {
   const movementsQuery = useQuery<LocalMovementRow>(`
     SELECT
       m.id,
-      m.type,
+      CASE
+        WHEN LOWER(TRIM(m.type)) IN ('purchase', 'compra') THEN 'PURCHASE'
+        WHEN LOWER(TRIM(m.type)) IN ('return', 'devolucion') THEN 'RETURN'
+        WHEN LOWER(TRIM(m.type)) IN ('exit', 'salida') THEN 'EXIT'
+        WHEN LOWER(TRIM(m.type)) IN ('writeoff', 'baja') THEN 'WRITEOFF'
+        WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_in') THEN 'STOCK_ADJUSTMENT_IN'
+        WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_out') THEN 'STOCK_ADJUSTMENT_OUT'
+      END AS type,
       m.created_by_id,
       m.destination,
       m.observations,
@@ -91,7 +98,19 @@ export default function MovementsPage() {
     LEFT JOIN users creator ON creator.id = m.created_by_id
     LEFT JOIN users delivery ON delivery.id = m.responsible_delivery_id
     LEFT JOIN users receipt ON receipt.id = m.responsible_receipt_id
-    GROUP BY
+    WHERE LOWER(TRIM(m.type)) IN (
+      'purchase',
+      'compra',
+      'return',
+      'devolucion',
+      'exit',
+      'salida',
+      'writeoff',
+      'baja',
+      'stock_adjustment_in',
+      'stock_adjustment_out'
+    )
+     GROUP BY
       m.id, m.type, m.created_by_id, m.destination, m.observations,
       m.responsible_delivery_id, m.responsible_receipt_id, m.date, m.project_id,
       p.name, creator.name, delivery.name, receipt.name

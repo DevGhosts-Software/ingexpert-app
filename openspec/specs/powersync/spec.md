@@ -156,20 +156,6 @@ The PowerSync Supabase connector MUST iterate through `uploadQueue` entries and 
 - **THEN** `uploadData` MUST call `supabase.from('movement_details').insert(...)`
 - **THEN** the queue item MUST be marked as processed only after a successful Supabase response
 
-## Requirement: Connector MUST ignore movement-originated optimistic item stock updates
-
-The connector MUST discard or skip upload-queue `UPDATE` operations on `items` when those operations originate from movement optimistic stock adjustments, because server trigger reconciliation is authoritative.
-
-#### Scenario: Optimistic movement-side items update is skipped
-
-- **WHEN** `uploadQueue` contains an `UPDATE` on `items` tagged as movement-originated optimistic stock
-- **THEN** `uploadData` MUST ignore the entry and MUST NOT issue `supabase.from('items').update(...)`
-
-#### Scenario: Canonical admin item update is allowed
-
-- **WHEN** `uploadQueue` contains an `UPDATE` on `items` originating from the explicit admin item edit flow
-- **THEN** `uploadData` MUST upload the change using Supabase client calls
-
 ## Requirement: PowerSync debug panel SHALL expose actionable offline diagnostics
 
 The frontend PowerSync debug surface MUST report operational diagnostics needed to triage offline-first behavior, including connection/sync state, local table readiness, upload queue state, and latest error signals.

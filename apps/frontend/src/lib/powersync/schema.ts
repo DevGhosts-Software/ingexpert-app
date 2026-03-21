@@ -6,7 +6,6 @@ export const AppSchema = new Schema({
       code: column.text,
       name: column.text,
       location: column.text,
-      stock: column.real,
       unit: column.text,
       type: column.text,
       image_url: column.text,

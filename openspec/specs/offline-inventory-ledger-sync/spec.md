@@ -1,5 +1,16 @@
 # Offline Inventory Ledger Sync Spec — Ingexpert
 
+> **⚠️ OBSOLETE**
+>
+> This spec is now obsolete. Stock is no longer maintained as a persistent column
+> in the `items` table. Instead, stock is calculated on-the-fly from the
+> `movements` ledger via SQL queries. The trigger-based reconciliation approach
+> described below has been removed.
+>
+> See `remove-obsolete-stock-column` change for migration details.
+
+---
+
 ## Requirement: Movement detail trigger SHALL reconcile item stock on all row changes
 
 The system SHALL implement a PostgreSQL trigger function on `movement_details` that executes for `INSERT`, `UPDATE`, and `DELETE` and updates `items.stock` using the parent `movements.type` as the stock direction source.
@@ -30,3 +41,19 @@ The system MUST treat database trigger reconciliation as the source of truth for
 
 - **WHEN** local optimistic stock updates differ from trigger-reconciled stock
 - **THEN** replicated server state MUST overwrite local provisional values during sync convergence
+
+## Requirement: Item model SHALL include stock field for trigger reconciliation
+
+The Prisma `Item` model MUST include a `stock` field with `Decimal` type to align with the PostgreSQL `items.stock` column that is updated by the `movement_details` trigger.
+
+#### Scenario: Prisma schema includes stock field
+
+- **WHEN** the Prisma schema is generated or introspected
+- **THEN** the `Item` model MUST include `stock Decimal @default(0) @map("stock") @db.Decimal(10, 2)`
+- **THEN** Prisma Client MUST expose `stock` on Item type for read operations
+
+#### Scenario: Stock field allows trigger reconciliation writes
+
+- **WHEN** the `movement_details` trigger executes `UPDATE items SET stock = stock + delta`
+- **THEN** the operation MUST succeed without constraint violations
+- **THEN** the Prisma Client MUST reflect the updated stock value on subsequent reads

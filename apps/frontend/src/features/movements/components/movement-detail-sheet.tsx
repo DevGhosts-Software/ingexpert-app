@@ -70,6 +70,30 @@ const TYPE_CONFIG = {
       badge: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400',
     },
   },
+  STOCK_ADJUSTMENT_IN: {
+    icon: ArrowDownCircle,
+    label: 'Ajuste',
+    description: 'Ajuste de stock de inventario',
+    colors: {
+      bg: 'bg-purple-50 dark:bg-purple-950/30',
+      border: 'border-purple-200 dark:border-purple-800',
+      icon: 'text-purple-600 dark:text-purple-400',
+      badge:
+        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+    },
+  },
+  STOCK_ADJUSTMENT_OUT: {
+    icon: ArrowUpCircle,
+    label: 'Ajuste',
+    description: 'Ajuste de stock de inventario',
+    colors: {
+      bg: 'bg-purple-50 dark:bg-purple-950/30',
+      border: 'border-purple-200 dark:border-purple-800',
+      icon: 'text-purple-600 dark:text-purple-400',
+      badge:
+        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+    },
+  },
 } as const;
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
@@ -125,7 +149,6 @@ type LocalMovementDetailRow = {
   item_name: string;
   item_code: string;
   item_location: string;
-  item_stock: number | string | null;
   item_unit: string;
   item_type: string;
   item_image_url: string | null;
@@ -176,7 +199,6 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
         i.name AS item_name,
         i.code AS item_code,
         i.location AS item_location,
-        i.stock AS item_stock,
         i.unit AS item_unit,
         i.type AS item_type,
         i.image_url AS item_image_url
@@ -216,7 +238,6 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
             code: detail.item_code,
             name: detail.item_name,
             location: detail.item_location,
-            stock: Number(detail.item_stock ?? 0),
             unit: detail.item_unit,
             type: detail.item_type,
             imageUrl: detail.item_image_url ?? '',

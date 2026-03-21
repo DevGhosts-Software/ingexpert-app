@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   ArrowDown,
@@ -12,7 +13,10 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Warehouse,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -37,6 +42,14 @@ import {
 } from './inventory-table.types';
 
 const EM_DASH = '—';
+
+type MovementHistoryRow = {
+  movement_id: string;
+  movement_type: string;
+  movement_destination: string | null;
+  date: string;
+  quantity: number | string | null;
+};
 
 function ItemTypeBadge({ type }: { type: ItemType }) {
   const { label, icon: Icon } = TYPE_CONFIG[type];
@@ -81,8 +94,52 @@ function ColHeader({
 
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
+function formatMovementType(value: string): string {
+  const normalized = value.toLowerCase().trim();
+  if (normalized === 'stock_adjustment_in') return 'Ajuste de stock (entrada)';
+  if (normalized === 'stock_adjustment_out') return 'Ajuste de stock (salida)';
+  if (normalized === 'compra' || normalized === 'purchase') return 'Compra';
+  if (normalized === 'salida' || normalized === 'exit') return 'Salida';
+  if (normalized === 'devolucion' || normalized === 'return') return 'Devolución';
+  if (normalized === 'baja' || normalized === 'writeoff') return 'Baja';
+  if (normalized === 'ajuste_positivo') return 'Ajuste positivo';
+  if (normalized === 'ajuste_negativo') return 'Ajuste negativo';
+  return value;
+}
+
 function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }) {
   const [open, setOpen] = useState<ActionView>(null);
+  const historySql = useMemo(
+    () => `
+      SELECT
+        m.id AS movement_id,
+        LOWER(m.type) AS movement_type,
+        m.destination AS movement_destination,
+        m.date,
+        md.quantity
+      FROM movement_details md
+      INNER JOIN movements m ON m.id = md.movement_id
+      WHERE md.item_id = '${item.id.replaceAll("'", "''")}'
+        AND LOWER(TRIM(m.type)) IN (
+          'compra',
+          'salida',
+          'devolucion',
+          'baja',
+          'purchase',
+          'exit',
+          'return',
+          'writeoff',
+          'ajuste_positivo',
+          'ajuste_negativo',
+          'stock_adjustment_in',
+          'stock_adjustment_out'
+        )
+      ORDER BY m.date DESC
+      LIMIT 12
+    `,
+    [item.id],
+  );
+  const historyQuery = useQuery<MovementHistoryRow>(historySql);
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -93,7 +150,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
             <span className="sr-only">Abrir menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-96">
           <DropdownMenuItem onClick={() => setOpen('details')}>
             <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
             Ver detalles
@@ -114,6 +171,37 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
               </DropdownMenuItem>
             </>
           )}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+            Historial de movimientos
+          </DropdownMenuLabel>
+          <div className="px-2 pb-1">
+            {historyQuery.isFetching && (historyQuery.data?.length ?? 0) === 0 ? (
+              <p className="py-2 text-xs text-muted-foreground">Cargando historial...</p>
+            ) : (historyQuery.data?.length ?? 0) === 0 ? (
+              <p className="py-2 text-xs text-muted-foreground">
+                Sin movimientos visibles para este ítem.
+              </p>
+            ) : (
+              <div className="max-h-56 overflow-y-auto rounded-sm border">
+                {(historyQuery.data ?? []).map((movement) => (
+                  <div
+                    key={`${movement.movement_id}-${movement.date}`}
+                    className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b px-2 py-1.5 text-xs last:border-b-0"
+                  >
+                    <span className="font-medium text-foreground">
+                      {formatMovementType(movement.movement_type)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                    </span>
+                    <span className="font-mono tabular-nums">{Number(movement.quantity ?? 0)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -293,11 +381,11 @@ export function getColumns({
       },
     },
     {
-      accessorKey: 'stock',
+      accessorKey: 'warehouseInventory',
       header: ({ column }) => (
         <div className="flex justify-center">
           <ColHeader
-            label="Stock"
+            label="Almacén"
             sorted={column.getIsSorted()}
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           />
@@ -305,12 +393,43 @@ export function getColumns({
       ),
       cell: ({ row }) => (
         <span className="font-mono text-sm block text-center">
-          {row.original.type === 'KIT' ? (
-            <span className="text-muted-foreground/50">{EM_DASH}</span>
-          ) : (
-            row.getValue('stock')
-          )}
+          {row.getValue('warehouseInventory')}
         </span>
+      ),
+    },
+    {
+      accessorKey: 'onsiteInventory',
+      header: ({ column }) => (
+        <div className="flex justify-center">
+          <ColHeader
+            label="En obra"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono text-sm block text-center">
+          {row.getValue('onsiteInventory')}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'totalInventory',
+      header: ({ column }) => (
+        <div className="flex justify-center">
+          <ColHeader
+            label="Total"
+            sorted={column.getIsSorted()}
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center gap-1.5">
+          <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="font-mono text-sm">{row.getValue('totalInventory')}</span>
+        </div>
       ),
     },
     {

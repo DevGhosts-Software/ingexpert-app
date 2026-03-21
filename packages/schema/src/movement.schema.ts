@@ -4,6 +4,17 @@ import { ItemEntitySchema } from './item.schema';
 
 export { MovementType } from '@ingexpert/database';
 
+const USER_CREATABLE_MOVEMENT_TYPES = [
+  MovementType.EXIT,
+  MovementType.PURCHASE,
+  MovementType.RETURN,
+  MovementType.WRITEOFF,
+] as const;
+
+const UserCreatableMovementTypeSchema = z.enum(
+  USER_CREATABLE_MOVEMENT_TYPES.map((t) => t as string) as [string, ...string[]],
+);
+
 // ─── DTOs (Zod-validated tRPC inputs) ────────────────────────────────────────
 
 export const MovementDetailSchema = z.object({
@@ -13,14 +24,14 @@ export const MovementDetailSchema = z.object({
 
 export const MovementFiltersSchema = z.object({
   createdById: z.string().uuid().optional(),
-  dateFrom: z.string().optional(), // ISO date string
-  dateTo: z.string().optional(), // ISO date string
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
 });
 
 export type MovementFiltersDto = z.infer<typeof MovementFiltersSchema>;
 
 export const CreateMovementSchema = z.object({
-  type: z.nativeEnum(MovementType),
+  type: UserCreatableMovementTypeSchema,
   destination: z.string().optional(),
   observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),
@@ -32,7 +43,7 @@ export const CreateMovementSchema = z.object({
 export type CreateMovementDto = z.infer<typeof CreateMovementSchema>;
 
 export const UpdateMovementSchema = z.object({
-  type: z.nativeEnum(MovementType),
+  type: UserCreatableMovementTypeSchema,
   destination: z.string().optional(),
   observations: z.string().optional(),
   responsibleDeliveryId: z.string().uuid().optional(),

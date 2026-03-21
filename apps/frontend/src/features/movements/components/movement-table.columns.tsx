@@ -22,17 +22,34 @@ import type { MovementRow } from './movement-table.types';
 
 // ─── Row accent colors by movement type ──────────────────────────────────────
 
-export const MOVEMENT_ROW_ACCENT: Record<'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF', string> = {
+export const MOVEMENT_ROW_ACCENT: Record<
+  'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | 'STOCK_ADJUSTMENT_IN' | 'STOCK_ADJUSTMENT_OUT',
+  string
+> = {
   PURCHASE: 'inset 2px 0 0 #2563eb',
   RETURN: 'inset 2px 0 0 #16a34a',
   EXIT: 'inset 2px 0 0 #ea580c',
   WRITEOFF: 'inset 2px 0 0 #dc2626',
+  STOCK_ADJUSTMENT_IN: 'inset 2px 0 0 #9333ea',
+  STOCK_ADJUSTMENT_OUT: 'inset 2px 0 0 #9333ea',
 };
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
 
-export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' }) {
-  if (type === 'PURCHASE') {
+export function TypeBadge({
+  type,
+}: {
+  type:
+    | 'PURCHASE'
+    | 'RETURN'
+    | 'EXIT'
+    | 'WRITEOFF'
+    | 'STOCK_ADJUSTMENT_IN'
+    | 'STOCK_ADJUSTMENT_OUT';
+}) {
+  const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
+
+  if (normalizedType === 'PURCHASE') {
     return (
       <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
         <ArrowDownCircle className="h-3 w-3" />
@@ -40,7 +57,7 @@ export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WR
       </Badge>
     );
   }
-  if (type === 'RETURN') {
+  if (normalizedType === 'RETURN') {
     return (
       <Badge className="gap-1.5 bg-green-100 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
         <RotateCcw className="h-3 w-3" />
@@ -48,11 +65,27 @@ export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WR
       </Badge>
     );
   }
-  if (type === 'WRITEOFF') {
+  if (normalizedType === 'WRITEOFF') {
     return (
       <Badge className="gap-1.5 bg-red-100 text-red-800 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
         <Trash2 className="h-3 w-3" />
         Baja
+      </Badge>
+    );
+  }
+  if (normalizedType === 'STOCK_ADJUSTMENT_IN') {
+    return (
+      <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+        <ArrowDownCircle className="h-3 w-3" />
+        Ajuste
+      </Badge>
+    );
+  }
+  if (normalizedType === 'STOCK_ADJUSTMENT_OUT') {
+    return (
+      <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+        <ArrowUpCircle className="h-3 w-3" />
+        Ajuste
       </Badge>
     );
   }
@@ -69,88 +102,92 @@ export function TypeBadge({ type }: { type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WR
 
 function ContextCell({ row }: { row: MovementRow }) {
   const { type, projectName, destination, responsibleDeliveryName, responsibleReceiptName } = row;
+  const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
 
-  if (type === 'PURCHASE') {
-    return responsibleReceiptName ? (
-      <div className="flex items-center gap-1.5 text-sm">
-        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
-          {responsibleReceiptName}
-        </span>
-      </div>
-    ) : (
-      <span className="text-muted-foreground text-sm">—</span>
-    );
-  }
+  switch (normalizedType) {
+    case 'PURCHASE':
+    case 'STOCK_ADJUSTMENT_IN':
+      return responsibleReceiptName ? (
+        <div className="flex items-center gap-1.5 text-sm">
+          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+            {responsibleReceiptName}
+          </span>
+        </div>
+      ) : (
+        <span className="text-muted-foreground text-sm">—</span>
+      );
 
-  if (type === 'RETURN') {
-    return (
-      <div className="space-y-0.5">
-        {projectName ? (
-          <div className="flex items-center gap-1.5 text-sm">
-            <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="truncate max-w-[180px] font-medium" title={projectName}>
-              {projectName}
-            </span>
-          </div>
-        ) : null}
-        {responsibleReceiptName ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
-              Devuelve: {responsibleReceiptName}
-            </span>
-          </div>
-        ) : null}
-        {!projectName && !responsibleReceiptName && (
-          <span className="text-muted-foreground text-sm">—</span>
-        )}
-      </div>
-    );
-  }
-
-  if (type === 'EXIT') {
-    const primary = projectName ?? destination;
-    const isPrimProject = !!projectName;
-    return (
-      <div className="space-y-0.5">
-        {primary ? (
-          <div className="flex items-center gap-1.5 text-sm">
-            {isPrimProject ? (
+    case 'RETURN':
+      return (
+        <div className="space-y-0.5">
+          {projectName ? (
+            <div className="flex items-center gap-1.5 text-sm">
               <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            ) : (
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            )}
-            <span className="truncate max-w-[180px] font-medium" title={primary}>
-              {primary}
-            </span>
-          </div>
-        ) : null}
-        {projectName && destination ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={destination}>
-              {destination}
-            </span>
-          </div>
-        ) : null}
-        {responsibleDeliveryName ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[180px]" title={responsibleDeliveryName}>
-              Entrega: {responsibleDeliveryName}
-            </span>
-          </div>
-        ) : null}
-        {!primary && !responsibleDeliveryName && (
-          <span className="text-muted-foreground text-sm">—</span>
-        )}
-      </div>
-    );
-  }
+              <span className="truncate max-w-[180px] font-medium" title={projectName}>
+                {projectName}
+              </span>
+            </div>
+          ) : null}
+          {responsibleReceiptName ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={responsibleReceiptName}>
+                Devuelve: {responsibleReceiptName}
+              </span>
+            </div>
+          ) : null}
+          {!projectName && !responsibleReceiptName && (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+      );
 
-  // WRITEOFF — no project/destination/responsible, show nothing meaningful
-  return <span className="text-muted-foreground text-sm">—</span>;
+    case 'EXIT': {
+      const primary = projectName ?? destination;
+      const isPrimProject = !!projectName;
+      return (
+        <div className="space-y-0.5">
+          {primary ? (
+            <div className="flex items-center gap-1.5 text-sm">
+              {isPrimProject ? (
+                <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              ) : (
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              )}
+              <span className="truncate max-w-[180px] font-medium" title={primary}>
+                {primary}
+              </span>
+            </div>
+          ) : null}
+          {projectName && destination ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={destination}>
+                {destination}
+              </span>
+            </div>
+          ) : null}
+          {responsibleDeliveryName ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[180px]" title={responsibleDeliveryName}>
+                Entrega: {responsibleDeliveryName}
+              </span>
+            </div>
+          ) : null}
+          {!primary && !responsibleDeliveryName && (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+        </div>
+      );
+    }
+
+    case 'WRITEOFF':
+    case 'STOCK_ADJUSTMENT_OUT':
+    default:
+      return <span className="text-muted-foreground text-sm">—</span>;
+  }
 }
 
 // ─── NotesCell ────────────────────────────────────────────────────────────────

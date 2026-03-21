@@ -10,7 +10,6 @@ model Item {
   code     String   @map("code")
   name     String   @map("name")
   location String   @map("location")
-  stock    Decimal  @default(0) @map("stock") @db.Decimal(10, 2)
   unit     String   @map("unit")
   type     ItemType @map("type")
   imageUrl String   @map("image_url")
