@@ -15,8 +15,7 @@ import {
   Trash2,
   Warehouse,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatLocalDate } from '@/lib/dates';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -201,7 +200,7 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
                       {formatMovementType(movement.movement_type, movement.movement_observations)}
                     </span>
                     <span className="text-muted-foreground">
-                      {format(new Date(movement.date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                      {formatLocalDate(movement.date, 'dd/MM/yyyy HH:mm')}
                     </span>
                     <span className="font-mono tabular-nums">{Number(movement.quantity ?? 0)}</span>
                   </div>
