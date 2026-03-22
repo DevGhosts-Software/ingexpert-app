@@ -12,8 +12,7 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatLocalDate } from '@/lib/dates';
 import { useQuery } from '@powersync/react';
 
 import { Badge } from '@/components/ui/badge';
@@ -284,9 +283,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
               <div>
                 <SheetTitle className="text-base">{config.description}</SheetTitle>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {format(new Date(movement.date), "dd 'de' MMMM 'de' yyyy 'a las' HH:mm", {
-                    locale: es,
-                  })}
+                  {formatLocalDate(movement.date, "dd 'de' MMMM 'de' yyyy 'a las' HH:mm")}
                 </p>
               </div>
             </SheetHeader>
@@ -351,9 +348,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
                 <MetaRow
                   icon={CalendarIcon}
                   label="Fecha y hora"
-                  value={format(new Date(movement.date), "dd/MM/yyyy 'a las' HH:mm", {
-                    locale: es,
-                  })}
+                  value={formatLocalDate(movement.date, "dd/MM/yyyy 'a las' HH:mm")}
                 />
               </div>
 

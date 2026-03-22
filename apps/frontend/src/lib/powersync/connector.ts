@@ -4,10 +4,77 @@ import { supabase } from '@/lib/supabase';
 
 const MISSING_SESSION_ERROR = 'Cannot upload PowerSync CRUD without an active Supabase session';
 const POWERSYNC_PERMISSION_REMEDIATION =
-  'Permission remediation required: run packages/database/supabase/migrations/03_powersync-upload-permissions.sql in your Supabase SQL editor, then re-run the verification queries in that file.';
+  'Permiso denegado: verifica tus permisos o contacta al administrador.';
 
 type CrudPayload = Record<string, unknown>;
 type ConnectorDebugListener = () => void;
+export type PermissionErrorEvent = {
+  table: string;
+  recordId: string;
+  errorMessage: string;
+};
+type PermissionErrorListener = (event: PermissionErrorEvent) => void;
+
+const permissionErrorListeners = new Set<PermissionErrorListener>();
+
+export function subscribePermissionError(listener: PermissionErrorListener): () => void {
+  permissionErrorListeners.add(listener);
+  return () => permissionErrorListeners.delete(listener);
+}
+
+function emitPermissionError(table: string, recordId: string, errorMessage: string): void {
+  const event: PermissionErrorEvent = { table, recordId, errorMessage };
+  for (const listener of permissionErrorListeners) {
+    listener(event);
+  }
+}
+
+type SessionRevalidationListener = () => void;
+const sessionRevalidationListeners = new Set<SessionRevalidationListener>();
+
+export function subscribeSessionRevalidation(listener: SessionRevalidationListener): () => void {
+  sessionRevalidationListeners.add(listener);
+  return () => sessionRevalidationListeners.delete(listener);
+}
+
+async function revalidateSession(): Promise<boolean> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return true;
+    }
+
+    const { error: refreshError } = await supabase.auth.refreshSession();
+
+    if (refreshError) {
+      const isSessionNotFound =
+        refreshError.message?.toLowerCase().includes('session') ||
+        refreshError.message?.toLowerCase().includes('not found') ||
+        refreshError.message?.toLowerCase().includes('not signed in') ||
+        refreshError.message?.toLowerCase().includes('invalid') ||
+        refreshError.message?.toLowerCase().includes('expired') ||
+        refreshError.code === 'invalid_grant' ||
+        refreshError.code === 'session_not_found';
+
+      if (!isSessionNotFound) {
+        await supabase.auth.signOut();
+        for (const listener of sessionRevalidationListeners) {
+          listener();
+        }
+        return false;
+      }
+      return true;
+    }
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 export type SupabaseUploadError = {
   message: string;
   code?: string | null;
@@ -92,6 +159,7 @@ export function isPowerSyncPermissionDeniedError(error: SupabaseUploadError): bo
     error.code === '42501' ||
     normalizedMessage.includes('permission denied for schema') ||
     normalizedMessage.includes('permission denied for table') ||
+    normalizedMessage.includes('new row violates row-level security policy') ||
     normalizedDetails.includes('permission denied') ||
     normalizedHint.includes('permission denied')
   );
@@ -107,6 +175,27 @@ export function buildUploadFailureMessage(
     return baseMessage;
   }
   return `${baseMessage} ${POWERSYNC_PERMISSION_REMEDIATION}`;
+}
+
+function extractSupabaseError(error: unknown): SupabaseUploadError | null {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const e = error as Record<string, unknown>;
+    return {
+      message: String(e.message),
+      code: (e.code as string | null) ?? null,
+      details: (e.details as string | null) ?? null,
+      hint: (e.hint as string | null) ?? null,
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      code: null,
+      details: null,
+      hint: null,
+    };
+  }
+  return null;
 }
 
 function isDuplicateKeyError(error: SupabaseUploadError): boolean {
@@ -231,6 +320,11 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
       throw new Error(MISSING_SESSION_ERROR);
     }
 
+    const isSessionValid = await revalidateSession();
+    if (!isSessionValid) {
+      return;
+    }
+
     while (true) {
       const batch = await database.getCrudBatch(100);
       if (!batch) {
@@ -253,8 +347,25 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
             skippedCount += 1;
             continue;
           }
-          await this.uploadCrudEntry(entry);
-          uploadedCount += 1;
+          try {
+            await this.uploadCrudEntry(entry);
+            uploadedCount += 1;
+          } catch (error) {
+            const supabaseError = extractSupabaseError(error);
+            if (supabaseError && isPowerSyncPermissionDeniedError(supabaseError)) {
+              const errorMessage = error instanceof Error ? error.message : 'Permission denied';
+              try {
+                await database.execute('DELETE FROM ps_crud WHERE id = ?', [entry.id]);
+              } catch (deleteError) {
+                console.error('Failed to delete permission-denied record from queue:', deleteError);
+              }
+              await revalidateSession();
+              emitPermissionError(entry.table, entry.id, errorMessage);
+              skippedCount += 1;
+              continue;
+            }
+            throw error;
+          }
         }
 
         await batch.complete();

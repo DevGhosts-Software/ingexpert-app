@@ -92,6 +92,7 @@ export function PurchaseItemCreateDialog({
   const { uploadFile, deleteFile, isUploading } = useStorageUpload();
   const powerSyncDb = usePowerSyncDatabase();
   const [quantity, setQuantity] = useState<number>(1);
+  const [quantityDisplay, setQuantityDisplay] = useState<string>('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
@@ -132,6 +133,7 @@ export function PurchaseItemCreateDialog({
       imageUrl: undefined,
     });
     setQuantity(1);
+    setQuantityDisplay('1');
     originalImageUrl.current = undefined;
     imageFieldRef.current?.reset();
   }, [form]);
@@ -380,13 +382,21 @@ export function PurchaseItemCreateDialog({
               <div className="space-y-2">
                 <FormLabel>Cantidad inicial</FormLabel>
                 <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={quantity}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={quantityDisplay}
                   onChange={(e) => {
-                    const v = parseInt(e.target.value, 10);
-                    setQuantity(Number.isFinite(v) && v > 0 ? v : 1);
+                    const raw = e.target.value;
+                    setQuantityDisplay(raw);
+                    const n = Number(raw);
+                    if (raw !== '' && !isNaN(n) && n >= 0) setQuantity(n);
+                  }}
+                  onBlur={() => {
+                    const n = Number(quantityDisplay);
+                    const safe = isNaN(n) || n < 0 ? 0 : n;
+                    setQuantity(safe);
+                    setQuantityDisplay(String(safe));
                   }}
                   disabled={isPending}
                 />

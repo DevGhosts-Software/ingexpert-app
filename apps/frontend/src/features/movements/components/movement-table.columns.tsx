@@ -12,8 +12,7 @@ import {
   Trash2,
   User,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatLocalDate } from '@/lib/dates';
 
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -301,7 +300,7 @@ export function getColumns(): ColumnDef<MovementRow>[] {
       header: () => <span className="font-medium">Fecha</span>,
       cell: ({ row }) => (
         <span className="text-sm whitespace-nowrap tabular-nums block text-center">
-          {format(new Date(row.original.date), 'dd/MM/yyyy', { locale: es })}
+          {formatLocalDate(row.original.date, 'dd/MM/yyyy')}
         </span>
       ),
     },
