@@ -11,6 +11,7 @@ import { StorageImage } from '@/components/ui/storage-image';
 import { useLocalKitComponents } from '@/lib/api-migration-local-reads';
 
 import { type InventoryItem, TYPE_COLORS, TYPE_CONFIG } from './inventory-table.types';
+import { MovementHistoryList } from './movement-history-list';
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,14 @@ export function ItemDetailsSheet({ item, open, onClose }: ItemDetailsSheetProps)
                 />
               )}
             </div>
+
+            {/* Movement history — non-kit only */}
+            {!isKit && (
+              <>
+                <Separator />
+                <MovementHistoryList itemId={item.id} />
+              </>
+            )}
 
             {/* Kit components */}
             {isKit && (
