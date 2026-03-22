@@ -123,19 +123,14 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
       FROM movement_details md
       INNER JOIN movements m ON m.id = md.movement_id
       WHERE md.item_id = '${item.id.replaceAll("'", "''")}'
-        AND LOWER(TRIM(m.type)) IN (
-          'compra',
-          'salida',
-          'devolucion',
-          'baja',
-          'purchase',
-          'exit',
-          'return',
-          'writeoff',
-          'ajuste_positivo',
-          'ajuste_negativo',
-          'stock_adjustment_in',
-          'stock_adjustment_out'
+        AND m.type IN (
+          'PURCHASE',
+          'RETURN',
+          'EXIT',
+          'WRITEOFF',
+          'STOCK_ADJUSTMENT_IN',
+          'STOCK_ADJUSTMENT_OUT',
+          'EXCEL_IMPORT'
         )
       ORDER BY m.date DESC
       LIMIT 12
