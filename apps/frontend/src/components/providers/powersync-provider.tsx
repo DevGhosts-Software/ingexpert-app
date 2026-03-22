@@ -54,11 +54,11 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
 
         unsubscribeSession = subscribeSessionRevalidation(() => {
           toast.error('Sesión expirada', {
-            description: 'Tu sesión ha sido revocada. Serás redirigido al login.',
+            description: 'Tu sesión ha sido revocada.',
           });
           setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
+            window.location.replace('/login');
+          }, 1500);
         });
       }
     })().catch((error: unknown) => {

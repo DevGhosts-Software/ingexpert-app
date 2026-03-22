@@ -38,18 +38,28 @@ export function subscribeSessionRevalidation(listener: SessionRevalidationListen
 }
 
 async function revalidateSession(): Promise<boolean> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  if (error || !session) {
-    for (const listener of sessionRevalidationListeners) {
-      listener();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    clearTimeout(timeoutId);
+
+    if (userError || !user) {
+      await supabase.auth.signOut();
+      for (const listener of sessionRevalidationListeners) {
+        listener();
+      }
+      return false;
     }
-    return false;
+    return true;
+  } catch {
+    return true;
   }
-  return true;
 }
 
 export type SupabaseUploadError = {
