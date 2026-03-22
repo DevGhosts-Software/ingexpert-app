@@ -302,10 +302,10 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                 await tx.execute(
                   `
                     UPDATE items
-                    SET name = ?, location = ?, unit = ?, type = ?, image_url = ?
+                    SET name = ?, location = ?, unit = ?, type = ?
                     WHERE id = ?
                   `,
-                  [item.name, item.location, item.unit, item.type, item.imageUrl ?? '', itemId],
+                  [item.name, item.location, item.unit, item.type, itemId],
                 );
               } else {
                 await tx.execute(
@@ -433,10 +433,10 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                 await tx.execute(
                   `
                     UPDATE items
-                    SET name = ?, type = 'KIT', unit = ?, location = ?, image_url = ?
+                    SET name = ?, type = 'KIT', unit = ?, location = ?
                     WHERE id = ?
                   `,
-                  [kitEntry.kitName, 'kit', '-', '', kitId],
+                  [kitEntry.kitName, 'kit', '-', kitId],
                 );
               } else {
                 await tx.execute(
