@@ -32,7 +32,8 @@ const TYPE_CONFIG = {
       bg: 'bg-blue-50 dark:bg-blue-950/30',
       border: 'border-blue-200 dark:border-blue-800',
       icon: 'text-blue-600 dark:text-blue-400',
-      badge: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+      badge:
+        'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
     },
   },
   RETURN: {
@@ -44,7 +45,7 @@ const TYPE_CONFIG = {
       border: 'border-green-200 dark:border-green-800',
       icon: 'text-green-600 dark:text-green-400',
       badge:
-        'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
+        'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
     },
   },
   EXIT: {
@@ -56,7 +57,7 @@ const TYPE_CONFIG = {
       border: 'border-orange-200 dark:border-orange-800',
       icon: 'text-orange-600 dark:text-orange-400',
       badge:
-        'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400',
+        'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
     },
   },
   WRITEOFF: {
@@ -67,7 +68,8 @@ const TYPE_CONFIG = {
       bg: 'bg-red-50 dark:bg-red-950/30',
       border: 'border-red-200 dark:border-red-800',
       icon: 'text-red-600 dark:text-red-400',
-      badge: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400',
+      badge:
+        'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
     },
   },
   STOCK_ADJUSTMENT_IN: {
@@ -79,7 +81,7 @@ const TYPE_CONFIG = {
       border: 'border-purple-200 dark:border-purple-800',
       icon: 'text-purple-600 dark:text-purple-400',
       badge:
-        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800',
     },
   },
   STOCK_ADJUSTMENT_OUT: {
@@ -91,7 +93,7 @@ const TYPE_CONFIG = {
       border: 'border-purple-200 dark:border-purple-800',
       icon: 'text-purple-600 dark:text-purple-400',
       badge:
-        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+        'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800',
     },
   },
   EXCEL_IMPORT: {
