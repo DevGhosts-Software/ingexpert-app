@@ -54,6 +54,8 @@ type UserOption = { id: string; name: string | null; email: string };
 export interface MovementTableProps {
   movements: MovementRow[];
   exportMovements: MovementRow[];
+  allMovementIds: string[];
+  allMovements: MovementRow[];
   exportDetails: MovementExportDetailRow[];
   totalMovementsCount: number;
   isLoading: boolean;

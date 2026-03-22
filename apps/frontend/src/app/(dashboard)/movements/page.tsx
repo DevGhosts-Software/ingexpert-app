@@ -423,6 +423,8 @@ export default function MovementsPage() {
       <MovementTable
         movements={tableData}
         exportMovements={exportMovements}
+        allMovementIds={allMovements.map((m) => m.id)}
+        allMovements={allMovements}
         exportDetails={exportDetails}
         totalMovementsCount={allMovements.length}
         isLoading={movementsQuery.isFetching && allMovements.length === 0}

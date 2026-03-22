@@ -22,6 +22,8 @@ import type { MovementTableMeta, MovementTableProps } from './movement-table.typ
 export function MovementTable({
   movements,
   exportMovements,
+  allMovementIds,
+  allMovements,
   exportDetails,
   totalMovementsCount,
   isLoading,
@@ -135,15 +137,16 @@ export function MovementTable({
     });
   }, [currentScopeIds]);
 
-  const handleToggleGlobalSelection = useCallback(() => {
-    setSelectedIds((prev) => {
-      if (prev.size === exportMovements.length && exportMovements.length > 0) {
-        return new Set();
+  const handleToggleGlobalSelection = useCallback(
+    (checked: boolean | 'indeterminate') => {
+      if (checked === false) {
+        setSelectedIds(new Set());
+      } else {
+        setSelectedIds(new Set(allMovementIds));
       }
-
-      return new Set(exportMovements.map((movement) => movement.id));
-    });
-  }, [exportMovements]);
+    },
+    [allMovementIds],
+  );
 
   const isRowSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
@@ -194,10 +197,12 @@ export function MovementTable({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
         exportMovements={exportMovements}
+        allMovements={allMovements}
         exportDetails={exportDetails}
         selectedIds={selectedIds}
         selectedCount={selectedCount}
         hasSelection={selectedCount > 0}
+        totalMovementsCount={totalMovementsCount}
         globalSelectionChecked={globalSelectionState.checked}
         globalSelectionIndeterminate={globalSelectionState.indeterminate}
         onToggleGlobalSelection={handleToggleGlobalSelection}
