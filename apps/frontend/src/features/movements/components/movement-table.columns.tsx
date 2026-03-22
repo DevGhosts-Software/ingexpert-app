@@ -225,7 +225,7 @@ function NotesCell({ observations }: { observations: string | null }) {
             <span className="truncate text-muted-foreground">{preview}</span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="left" className="max-w-xs whitespace-pre-wrap">
+        <TooltipContent side="bottom" className="max-w-xs whitespace-pre-wrap">
           {observations}
         </TooltipContent>
       </Tooltip>

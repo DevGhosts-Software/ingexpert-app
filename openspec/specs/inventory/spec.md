@@ -40,6 +40,38 @@ When editing an item's stock from the inventory section, the system MUST create 
 - **THEN** the system MUST create a movement with type `STOCK_ADJUSTMENT_IN`
 - **THEN** the movement observations MUST indicate initial stock from item creation
 
+### Requirement: Item form submission SHALL be atomic and protected against double-submissions
+
+The item creation and edit forms MUST prevent multiple concurrent submissions. Once a submission is initiated, all subsequent submission triggers (e.g., clicks, 'Enter' key presses) MUST be ignored until the current operation completes or fails.
+
+#### Scenario: User attempts double-click on submit button
+
+- **WHEN** a user clicks the submit button while another submission is in progress
+- **THEN** the second click MUST be ignored
+- **THEN** the submit button MUST remain in a disabled or loading state
+
+#### Scenario: User presses Enter multiple times
+
+- **WHEN** a user presses the 'Enter' key while a submission is already being processed
+- **THEN** the additional 'Enter' key presses MUST be ignored by the form handler
+- **THEN** the form MUST NOT trigger the submission logic again
+
+### Requirement: Excel import SHALL perform partial updates on existing items
+
+The Excel import process MUST strictly perform a partial update when an item already exists in the database. It SHALL only update fields provided in the Excel file (name, code, location, unit, type) and MUST preserve any existing fields not present in the import, particularly `image_url`.
+
+#### Scenario: Importing an item that already has an image
+
+- **WHEN** a user imports an Excel row for an item that already exists in the database with an assigned `image_url`
+- **THEN** the system MUST update the item's metadata (name, location, etc.) and stock
+- **THEN** the item's existing `image_url` MUST remain unchanged in the database
+
+#### Scenario: Importing a kit that already has an image
+
+- **WHEN** a user imports a Kit from the Excel Kits sheet that already exists in the database with an assigned `image_url`
+- **THEN** the system MUST update the kit's metadata
+- **THEN** the kit's existing `image_url` MUST remain unchanged in the database
+
 ## MODIFIED Requirements
 
 ### Requirement: Item creation SHALL be accessible from purchase movement form
