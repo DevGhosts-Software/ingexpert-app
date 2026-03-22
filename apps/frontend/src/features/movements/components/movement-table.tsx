@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
@@ -17,12 +17,15 @@ import { getColumns, MOVEMENT_ROW_ACCENT } from './movement-table.columns';
 import { MovementDetailSheet } from './movement-detail-sheet';
 import { MovementFormSheet } from './movement-form-sheet';
 import { MovementTableToolbar } from './movement-table-toolbar';
-import type { MovementRow, MovementTableMeta, MovementTableProps } from './movement-table.types';
+import type { MovementTableMeta, MovementTableProps } from './movement-table.types';
 
 export function MovementTable({
   movements,
   exportMovements,
+  allMovementIds,
+  allMovements,
   exportDetails,
+  totalMovementsCount,
   isLoading,
   pageCount,
   pagination,
@@ -50,27 +53,28 @@ export function MovementTable({
   const [detailId, setDetailId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
-  useEffect(() => {
-    const validIds = new Set(exportMovements.map((movement) => movement.id));
-    setSelectedIds((prev) => {
-      let changed = false;
-      const next = new Set<string>();
+  const filteredExportItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-      for (const id of prev) {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      }
+    if (normalizedSearch === '') {
+      return exportMovements;
+    }
 
-      return changed ? next : prev;
+    return exportMovements.filter((movement) => {
+      return (
+        (movement.creatorName?.toLowerCase() ?? '').includes(normalizedSearch) ||
+        (movement.projectName?.toLowerCase() ?? '').includes(normalizedSearch) ||
+        (movement.destination?.toLowerCase() ?? '').includes(normalizedSearch) ||
+        (movement.observations?.toLowerCase() ?? '').includes(normalizedSearch) ||
+        (movement.responsibleDeliveryName?.toLowerCase() ?? '').includes(normalizedSearch) ||
+        (movement.responsibleReceiptName?.toLowerCase() ?? '').includes(normalizedSearch)
+      );
     });
-  }, [exportMovements]);
+  }, [exportMovements, search]);
 
   const currentScopeIds = useMemo(
-    () => exportMovements.map((movement) => movement.id),
-    [exportMovements],
+    () => filteredExportItems.map((movement) => movement.id),
+    [filteredExportItems],
   );
 
   const selectedCount = selectedIds.size;
@@ -96,10 +100,10 @@ export function MovementTable({
 
   const globalSelectionState = useMemo(
     () => ({
-      checked: exportMovements.length > 0 && selectedCount === exportMovements.length,
-      indeterminate: selectedCount > 0 && selectedCount < exportMovements.length,
+      checked: totalMovementsCount > 0 && selectedCount === totalMovementsCount,
+      indeterminate: selectedCount > 0 && selectedCount < totalMovementsCount,
     }),
-    [exportMovements.length, selectedCount],
+    [totalMovementsCount, selectedCount],
   );
 
   const handleToggleRow = useCallback((id: string) => {
@@ -133,15 +137,16 @@ export function MovementTable({
     });
   }, [currentScopeIds]);
 
-  const handleToggleGlobalSelection = useCallback(() => {
-    setSelectedIds((prev) => {
-      if (prev.size === exportMovements.length && exportMovements.length > 0) {
-        return new Set();
+  const handleToggleGlobalSelection = useCallback(
+    (checked: boolean | 'indeterminate') => {
+      if (checked === false) {
+        setSelectedIds(new Set());
+      } else {
+        setSelectedIds(new Set(allMovementIds));
       }
-
-      return new Set(exportMovements.map((movement) => movement.id));
-    });
-  }, [exportMovements]);
+    },
+    [allMovementIds],
+  );
 
   const isRowSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
@@ -192,10 +197,12 @@ export function MovementTable({
         dateTo={dateTo}
         onDateToChange={onDateToChange}
         exportMovements={exportMovements}
+        allMovements={allMovements}
         exportDetails={exportDetails}
         selectedIds={selectedIds}
         selectedCount={selectedCount}
         hasSelection={selectedCount > 0}
+        totalMovementsCount={totalMovementsCount}
         globalSelectionChecked={globalSelectionState.checked}
         globalSelectionIndeterminate={globalSelectionState.indeterminate}
         onToggleGlobalSelection={handleToggleGlobalSelection}

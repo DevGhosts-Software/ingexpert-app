@@ -82,7 +82,13 @@ function parseNumericCell(value: unknown): number {
 
 // Expected columns: CODIGO NOMBRE UBICACION UNIDAD [TIPO]
 // KIT rows are excluded — they are handled via the Kits sheet
-function parseInventoryRows(rows: RawExcelRow[]): ParsedInventoryImportRow[] {
+// isExportFormat: when true, the file has INVENTARIO_TOTAL column (from Export)
+// and we inject the total value entirely into warehouse inventory
+function parseInventoryRows(
+  rows: RawExcelRow[],
+  normalizedHeaders: Set<string>,
+): ParsedInventoryImportRow[] {
+  const isExportFormat = normalizedHeaders.has('INVENTARIO_TOTAL');
   return rows
     .map(normalizeRow)
     .filter((row) => row['NOMBRE'] || row['CODIGO'])
@@ -91,11 +97,20 @@ function parseInventoryRows(rows: RawExcelRow[]): ParsedInventoryImportRow[] {
       const name = String(row['NOMBRE'] ?? '').trim();
       const location = String(row['UBICACION'] ?? '').trim();
       const unit = String(row['UNIDAD'] ?? 'unidad').trim();
-      const warehouseInventory = Math.max(
-        parseNumericCell(row['INVENTARIO_ALMACEN'] ?? row['STOCK'] ?? row['STOCK_INICIAL']),
-        0,
-      );
-      const onsiteInventory = Math.max(parseNumericCell(row['INVENTARIO_OBRA']), 0);
+
+      let warehouseInventory: number;
+      let onsiteInventory: number;
+
+      if (isExportFormat) {
+        warehouseInventory = Math.max(parseNumericCell(row['INVENTARIO_TOTAL']), 0);
+        onsiteInventory = 0;
+      } else {
+        warehouseInventory = Math.max(
+          parseNumericCell(row['INVENTARIO_ALMACEN'] ?? row['STOCK'] ?? row['STOCK_INICIAL']),
+          0,
+        );
+        onsiteInventory = Math.max(parseNumericCell(row['INVENTARIO_OBRA']), 0);
+      }
 
       return {
         code: code || name.slice(0, 20),
@@ -200,7 +215,10 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
           workbook.SheetNames[0];
         const inventorySheet = workbook.Sheets[inventorySheetName];
         const inventoryRaw = xlsxUtils.sheet_to_json<RawExcelRow>(inventorySheet, { defval: '' });
-        const items = parseInventoryRows(inventoryRaw);
+        const normalizedHeaders = new Set(
+          inventoryRaw.length > 0 ? Object.keys(normalizeRow(inventoryRaw[0])) : [],
+        );
+        const items = parseInventoryRows(inventoryRaw, normalizedHeaders);
 
         // Sheet 2: Kits (optional)
         const kitsSheetName = workbook.SheetNames.find((n) => n.toLowerCase().startsWith('kit'));
@@ -243,8 +261,37 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         let done = 0;
         for (const chunk of chunks) {
           await powerSyncDb.writeTransaction(async (tx) => {
+            const nowIso = new Date().toISOString();
+            const excelImportMovementId = uuidv4();
+
+            await tx.execute(
+              `
+                INSERT INTO movements (
+                  id,
+                  type,
+                  created_by_id,
+                  destination,
+                  observations,
+                  responsible_delivery_id,
+                  responsible_receipt_id,
+                  date,
+                  project_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [
+                excelImportMovementId,
+                'EXCEL_IMPORT',
+                currentUserId,
+                null,
+                EXCEL_IMPORT_OBSERVATION,
+                null,
+                null,
+                nowIso,
+                null,
+              ],
+            );
+
             for (const item of chunk) {
-              const nowIso = new Date().toISOString();
               const existingItem = await tx.getOptional<ExistingItemRow>(
                 'SELECT id FROM items WHERE code = ? LIMIT 1',
                 [item.code],
@@ -278,51 +325,18 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                 );
               }
 
-              const totalImportedQuantity = Number(
-                (item.warehouseInventory + item.onsiteInventory).toFixed(2),
-              );
-
-              if (totalImportedQuantity > 0) {
-                const movementId = uuidv4();
-
-                await tx.execute(
-                  `
-                    INSERT INTO movements (
-                      id,
-                      type,
-                      created_by_id,
-                      destination,
-                      observations,
-                      responsible_delivery_id,
-                      responsible_receipt_id,
-                      date,
-                      project_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  `,
-                  [
-                    movementId,
-                    'PURCHASE',
-                    currentUserId,
-                    null,
-                    `${EXCEL_IMPORT_OBSERVATION}: ${item.code}`,
-                    null,
-                    null,
-                    nowIso,
-                    null,
-                  ],
-                );
-
+              if (item.warehouseInventory > 0) {
                 await tx.execute(
                   `
                     INSERT INTO movement_details (id, movement_id, item_id, quantity)
                     VALUES (?, ?, ?, ?)
                   `,
-                  [uuidv4(), movementId, itemId, totalImportedQuantity],
+                  [uuidv4(), excelImportMovementId, itemId, item.warehouseInventory],
                 );
               }
 
               if (item.onsiteInventory > 0) {
-                const movementId = uuidv4();
+                const exitMovementId = uuidv4();
 
                 await tx.execute(
                   `
@@ -339,7 +353,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                   `,
                   [
-                    movementId,
+                    exitMovementId,
                     'EXIT',
                     currentUserId,
                     'Importación desde Excel - Obra',
@@ -356,7 +370,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                     INSERT INTO movement_details (id, movement_id, item_id, quantity)
                     VALUES (?, ?, ?, ?)
                   `,
-                  [uuidv4(), movementId, itemId, item.onsiteInventory],
+                  [uuidv4(), exitMovementId, itemId, item.onsiteInventory],
                 );
               }
             }

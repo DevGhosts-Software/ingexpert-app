@@ -36,6 +36,9 @@ const TAB_ITEMS: Array<{ value: ActiveTab; label: string }> = [
   { value: 'return', label: 'Devoluciones' },
   { value: 'exit', label: 'Salidas' },
   { value: 'writeoff', label: 'Bajas' },
+  { value: 'stockAdjustmentIn', label: 'Ajuste Positivo' },
+  { value: 'stockAdjustmentOut', label: 'Ajuste Negativo' },
+  { value: 'excelImport', label: 'Excel' },
 ];
 
 type ProjectOption = { id: string; name: string };
@@ -59,23 +62,22 @@ interface MovementTableToolbarProps {
   dateTo: string;
   onDateToChange: (value: string) => void;
   exportMovements: MovementRow[];
+  allMovements: MovementRow[];
   exportDetails: MovementExportDetailRow[];
   selectedIds: Set<string>;
   selectedCount: number;
   hasSelection: boolean;
+  totalMovementsCount: number;
   globalSelectionChecked: boolean;
   globalSelectionIndeterminate: boolean;
-  onToggleGlobalSelection: () => void;
+  onToggleGlobalSelection: (checked: boolean | 'indeterminate') => void;
   onCreate: () => void;
 }
 
 function formatExportType(movement: MovementRow): string {
-  const normalizedObservations = movement.observations?.toLowerCase().trim() ?? '';
-  if (normalizedObservations.includes('importación de stock desde excel')) {
-    return 'Importación desde Excel';
-  }
-
   switch (movement.type) {
+    case 'EXCEL_IMPORT':
+      return 'Importación Excel';
     case 'PURCHASE':
       return 'Compra';
     case 'RETURN':
@@ -111,10 +113,12 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
   dateTo,
   onDateToChange,
   exportMovements,
+  allMovements,
   exportDetails,
   selectedIds,
   selectedCount,
   hasSelection,
+  totalMovementsCount,
   globalSelectionChecked,
   globalSelectionIndeterminate,
   onToggleGlobalSelection,
@@ -123,8 +127,8 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
   const [isExporting, setIsExporting] = useState(false);
 
   const selectedExportMovements = useMemo(
-    () => exportMovements.filter((movement) => selectedIds.has(movement.id)),
-    [exportMovements, selectedIds],
+    () => allMovements.filter((movement) => selectedIds.has(movement.id)),
+    [allMovements, selectedIds],
   );
 
   const selectedExportIds = useMemo(
@@ -163,7 +167,6 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
         : exportDetails.filter((detail) => exportSourceIds.has(detail.movementId));
 
       const movementRows = exportSourceMovements.map((movement) => ({
-        ID: movement.id,
         FECHA: movement.date,
         TIPO: formatExportType(movement),
         REGISTRADO_POR: movement.creatorName ?? '',
@@ -234,12 +237,7 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
     selectedExportMovements,
   ]);
 
-  const exportButtonLabel =
-    hasSelection && selectedCount === exportMovements.length && exportMovements.length > 0
-      ? 'Exportar (Todos)'
-      : hasSelection
-        ? `Exportar (${selectedCount})`
-        : 'Exportar';
+  const exportButtonLabel = hasSelection ? `Exportar (${selectedCount})` : 'Exportar';
 
   return (
     <div className="space-y-4">
@@ -395,7 +393,7 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
                       ? 'indeterminate'
                       : false
                 }
-                onCheckedChange={() => onToggleGlobalSelection()}
+                onCheckedChange={(checked) => onToggleGlobalSelection(checked)}
                 aria-label="Seleccionar todos los elementos existentes"
                 className="size-5"
               />

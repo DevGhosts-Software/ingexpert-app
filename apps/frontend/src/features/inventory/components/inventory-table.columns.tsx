@@ -95,12 +95,8 @@ function ColHeader({
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
 function formatMovementType(value: string, observations?: string | null): string {
-  const normalizedObservations = observations?.toLowerCase().trim() ?? '';
-  if (normalizedObservations.includes('importación de stock desde excel')) {
-    return 'Importación desde Excel';
-  }
-
   const normalized = value.toLowerCase().trim();
+  if (normalized === 'excel_import') return 'Importación Excel';
   if (normalized === 'stock_adjustment_in') return 'Ajuste de stock (entrada)';
   if (normalized === 'stock_adjustment_out') return 'Ajuste de stock (salida)';
   if (normalized === 'compra' || normalized === 'purchase') return 'Compra';
@@ -126,19 +122,14 @@ function RowActions({ item, isAdmin }: { item: InventoryItem; isAdmin: boolean }
       FROM movement_details md
       INNER JOIN movements m ON m.id = md.movement_id
       WHERE md.item_id = '${item.id.replaceAll("'", "''")}'
-        AND LOWER(TRIM(m.type)) IN (
-          'compra',
-          'salida',
-          'devolucion',
-          'baja',
-          'purchase',
-          'exit',
-          'return',
-          'writeoff',
-          'ajuste_positivo',
-          'ajuste_negativo',
-          'stock_adjustment_in',
-          'stock_adjustment_out'
+        AND m.type IN (
+          'PURCHASE',
+          'RETURN',
+          'EXIT',
+          'WRITEOFF',
+          'STOCK_ADJUSTMENT_IN',
+          'STOCK_ADJUSTMENT_OUT',
+          'EXCEL_IMPORT'
         )
       ORDER BY m.date DESC
       LIMIT 12

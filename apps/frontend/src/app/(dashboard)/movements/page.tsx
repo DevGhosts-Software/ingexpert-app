@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
+import type { MovementStats as MovementStatsType, MovementHeaderEntity } from '@ingexpert/schema';
 import { supabase } from '@/lib/supabase';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -15,7 +15,16 @@ import type {
   TypeCounts,
 } from '@/features/movements/components/movement-table.types';
 
-const DEFAULT_COUNTS: TypeCounts = { all: 0, purchase: 0, return: 0, exit: 0, writeoff: 0 };
+const DEFAULT_COUNTS: TypeCounts = {
+  all: 0,
+  purchase: 0,
+  return: 0,
+  exit: 0,
+  writeoff: 0,
+  stockAdjustmentIn: 0,
+  stockAdjustmentOut: 0,
+  excelImport: 0,
+};
 
 type LocalMovementRow = {
   id: string;
@@ -25,7 +34,8 @@ type LocalMovementRow = {
     | 'EXIT'
     | 'WRITEOFF'
     | 'STOCK_ADJUSTMENT_IN'
-    | 'STOCK_ADJUSTMENT_OUT';
+    | 'STOCK_ADJUSTMENT_OUT'
+    | 'EXCEL_IMPORT';
   created_by_id: string;
   destination: string | null;
   observations: string | null;
@@ -99,6 +109,7 @@ export default function MovementsPage() {
         WHEN LOWER(TRIM(m.type)) IN ('writeoff', 'baja') THEN 'WRITEOFF'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_in') THEN 'STOCK_ADJUSTMENT_IN'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_out') THEN 'STOCK_ADJUSTMENT_OUT'
+        WHEN m.type = 'EXCEL_IMPORT' THEN 'EXCEL_IMPORT'
       END AS type,
       m.created_by_id,
       m.destination,
@@ -118,17 +129,14 @@ export default function MovementsPage() {
     LEFT JOIN users creator ON creator.id = m.created_by_id
     LEFT JOIN users delivery ON delivery.id = m.responsible_delivery_id
     LEFT JOIN users receipt ON receipt.id = m.responsible_receipt_id
-    WHERE LOWER(TRIM(m.type)) IN (
-      'purchase',
-      'compra',
-      'return',
-      'devolucion',
-      'exit',
-      'salida',
-      'writeoff',
-      'baja',
-      'stock_adjustment_in',
-      'stock_adjustment_out'
+    WHERE m.type IN (
+      'PURCHASE',
+      'RETURN',
+      'EXIT',
+      'WRITEOFF',
+      'STOCK_ADJUSTMENT_IN',
+      'STOCK_ADJUSTMENT_OUT',
+      'EXCEL_IMPORT'
     )
      GROUP BY
       m.id, m.type, m.created_by_id, m.destination, m.observations,
@@ -157,17 +165,14 @@ export default function MovementsPage() {
     FROM movements m
     INNER JOIN movement_details md ON md.movement_id = m.id
     INNER JOIN items i ON i.id = md.item_id
-    WHERE LOWER(TRIM(m.type)) IN (
-      'purchase',
-      'compra',
-      'return',
-      'devolucion',
-      'exit',
-      'salida',
-      'writeoff',
-      'baja',
-      'stock_adjustment_in',
-      'stock_adjustment_out'
+    WHERE m.type IN (
+      'PURCHASE',
+      'RETURN',
+      'EXIT',
+      'WRITEOFF',
+      'STOCK_ADJUSTMENT_IN',
+      'STOCK_ADJUSTMENT_OUT',
+      'EXCEL_IMPORT'
     )
     ORDER BY m.date DESC, i.name ASC
   `);
@@ -197,12 +202,25 @@ export default function MovementsPage() {
   const users = usersQuery.data ?? [];
 
   const { tableData, exportMovements, pageCount, typeCounts, stats } = useMemo(() => {
-    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
+    const typeMap: Record<
+      ActiveTab,
+      | 'PURCHASE'
+      | 'RETURN'
+      | 'EXIT'
+      | 'WRITEOFF'
+      | 'STOCK_ADJUSTMENT_IN'
+      | 'STOCK_ADJUSTMENT_OUT'
+      | 'EXCEL_IMPORT'
+      | undefined
+    > = {
       all: undefined,
       purchase: 'PURCHASE',
       return: 'RETURN',
       exit: 'EXIT',
       writeoff: 'WRITEOFF',
+      stockAdjustmentIn: 'STOCK_ADJUSTMENT_IN',
+      stockAdjustmentOut: 'STOCK_ADJUSTMENT_OUT',
+      excelImport: 'EXCEL_IMPORT',
     };
 
     const preCreatedByFiltered = allMovements.filter((movement) => {
@@ -275,6 +293,9 @@ export default function MovementsPage() {
         return: preType.filter((m) => m.type === 'RETURN').length,
         exit: preType.filter((m) => m.type === 'EXIT').length,
         writeoff: preType.filter((m) => m.type === 'WRITEOFF').length,
+        stockAdjustmentIn: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_IN').length,
+        stockAdjustmentOut: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_OUT').length,
+        excelImport: preType.filter((m) => m.type === 'EXCEL_IMPORT').length,
       } satisfies TypeCounts,
       stats: {
         total: preDateFiltered.length,
@@ -402,7 +423,10 @@ export default function MovementsPage() {
       <MovementTable
         movements={tableData}
         exportMovements={exportMovements}
+        allMovementIds={allMovements.map((m) => m.id)}
+        allMovements={allMovements}
         exportDetails={exportDetails}
+        totalMovementsCount={allMovements.length}
         isLoading={movementsQuery.isFetching && allMovements.length === 0}
         pageCount={pageCount}
         pagination={pagination}

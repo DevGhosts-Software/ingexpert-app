@@ -23,7 +23,13 @@ import type { MovementRow, MovementTableMeta } from './movement-table.types';
 // ─── Row accent colors by movement type ──────────────────────────────────────
 
 export const MOVEMENT_ROW_ACCENT: Record<
-  'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | 'STOCK_ADJUSTMENT_IN' | 'STOCK_ADJUSTMENT_OUT',
+  | 'PURCHASE'
+  | 'RETURN'
+  | 'EXIT'
+  | 'WRITEOFF'
+  | 'STOCK_ADJUSTMENT_IN'
+  | 'STOCK_ADJUSTMENT_OUT'
+  | 'EXCEL_IMPORT',
   string
 > = {
   PURCHASE: 'inset 2px 0 0 #2563eb',
@@ -32,6 +38,7 @@ export const MOVEMENT_ROW_ACCENT: Record<
   WRITEOFF: 'inset 2px 0 0 #dc2626',
   STOCK_ADJUSTMENT_IN: 'inset 2px 0 0 #9333ea',
   STOCK_ADJUSTMENT_OUT: 'inset 2px 0 0 #9333ea',
+  EXCEL_IMPORT: 'inset 2px 0 0 #059669',
 };
 
 // ─── TypeBadge ────────────────────────────────────────────────────────────────
@@ -46,17 +53,17 @@ export function TypeBadge({
     | 'EXIT'
     | 'WRITEOFF'
     | 'STOCK_ADJUSTMENT_IN'
-    | 'STOCK_ADJUSTMENT_OUT';
+    | 'STOCK_ADJUSTMENT_OUT'
+    | 'EXCEL_IMPORT';
   observations?: string | null;
 }) {
   const normalizedType = typeof type === 'string' ? type.toUpperCase().trim() : '';
-  const normalizedObservations = observations?.toLowerCase().trim() ?? '';
 
-  if (normalizedObservations.includes('importación de stock desde excel')) {
+  if (normalizedType === 'EXCEL_IMPORT') {
     return (
       <Badge className="gap-1.5 bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
         <ArrowDownCircle className="h-3 w-3" />
-        Importación desde Excel
+        Importación Excel
       </Badge>
     );
   }
