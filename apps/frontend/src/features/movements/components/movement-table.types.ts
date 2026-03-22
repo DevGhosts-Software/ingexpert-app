@@ -11,7 +11,8 @@ export type ActiveTab =
   | 'exit'
   | 'writeoff'
   | 'stockAdjustmentIn'
-  | 'stockAdjustmentOut';
+  | 'stockAdjustmentOut'
+  | 'excelImport';
 
 export type TypeCounts = {
   all: number;
@@ -21,6 +22,7 @@ export type TypeCounts = {
   writeoff: number;
   stockAdjustmentIn: number;
   stockAdjustmentOut: number;
+  excelImport: number;
 };
 
 export type { MovementHeaderEntity };

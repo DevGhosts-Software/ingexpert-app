@@ -5,6 +5,7 @@ enum MovementType {
   WRITEOFF
   STOCK_ADJUSTMENT_IN
   STOCK_ADJUSTMENT_OUT
+  EXCEL_IMPORT
 }
 
 model Movement {

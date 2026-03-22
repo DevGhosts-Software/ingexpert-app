@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
+import type { MovementStats as MovementStatsType, MovementHeaderEntity } from '@ingexpert/schema';
 import { supabase } from '@/lib/supabase';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
@@ -23,6 +23,7 @@ const DEFAULT_COUNTS: TypeCounts = {
   writeoff: 0,
   stockAdjustmentIn: 0,
   stockAdjustmentOut: 0,
+  excelImport: 0,
 };
 
 type LocalMovementRow = {
@@ -33,7 +34,8 @@ type LocalMovementRow = {
     | 'EXIT'
     | 'WRITEOFF'
     | 'STOCK_ADJUSTMENT_IN'
-    | 'STOCK_ADJUSTMENT_OUT';
+    | 'STOCK_ADJUSTMENT_OUT'
+    | 'EXCEL_IMPORT';
   created_by_id: string;
   destination: string | null;
   observations: string | null;
@@ -107,6 +109,7 @@ export default function MovementsPage() {
         WHEN LOWER(TRIM(m.type)) IN ('writeoff', 'baja') THEN 'WRITEOFF'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_in') THEN 'STOCK_ADJUSTMENT_IN'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_out') THEN 'STOCK_ADJUSTMENT_OUT'
+        WHEN LOWER(TRIM(m.type)) IN ('excel_import') THEN 'EXCEL_IMPORT'
       END AS type,
       m.created_by_id,
       m.destination,
@@ -136,7 +139,8 @@ export default function MovementsPage() {
       'writeoff',
       'baja',
       'stock_adjustment_in',
-      'stock_adjustment_out'
+      'stock_adjustment_out',
+      'excel_import'
     )
      GROUP BY
       m.id, m.type, m.created_by_id, m.destination, m.observations,
@@ -175,7 +179,8 @@ export default function MovementsPage() {
       'writeoff',
       'baja',
       'stock_adjustment_in',
-      'stock_adjustment_out'
+      'stock_adjustment_out',
+      'excel_import'
     )
     ORDER BY m.date DESC, i.name ASC
   `);
@@ -213,6 +218,7 @@ export default function MovementsPage() {
       | 'WRITEOFF'
       | 'STOCK_ADJUSTMENT_IN'
       | 'STOCK_ADJUSTMENT_OUT'
+      | 'EXCEL_IMPORT'
       | undefined
     > = {
       all: undefined,
@@ -222,6 +228,7 @@ export default function MovementsPage() {
       writeoff: 'WRITEOFF',
       stockAdjustmentIn: 'STOCK_ADJUSTMENT_IN',
       stockAdjustmentOut: 'STOCK_ADJUSTMENT_OUT',
+      excelImport: 'EXCEL_IMPORT',
     };
 
     const preCreatedByFiltered = allMovements.filter((movement) => {
@@ -296,6 +303,7 @@ export default function MovementsPage() {
         writeoff: preType.filter((m) => m.type === 'WRITEOFF').length,
         stockAdjustmentIn: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_IN').length,
         stockAdjustmentOut: preType.filter((m) => m.type === 'STOCK_ADJUSTMENT_OUT').length,
+        excelImport: preType.filter((m) => m.type === 'EXCEL_IMPORT').length,
       } satisfies TypeCounts,
       stats: {
         total: preDateFiltered.length,

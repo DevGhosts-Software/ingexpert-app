@@ -261,8 +261,37 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
         let done = 0;
         for (const chunk of chunks) {
           await powerSyncDb.writeTransaction(async (tx) => {
+            const nowIso = new Date().toISOString();
+            const excelImportMovementId = uuidv4();
+
+            await tx.execute(
+              `
+                INSERT INTO movements (
+                  id,
+                  type,
+                  created_by_id,
+                  destination,
+                  observations,
+                  responsible_delivery_id,
+                  responsible_receipt_id,
+                  date,
+                  project_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [
+                excelImportMovementId,
+                'EXCEL_IMPORT',
+                currentUserId,
+                null,
+                EXCEL_IMPORT_OBSERVATION,
+                null,
+                null,
+                nowIso,
+                null,
+              ],
+            );
+
             for (const item of chunk) {
-              const nowIso = new Date().toISOString();
               const existingItem = await tx.getOptional<ExistingItemRow>(
                 'SELECT id FROM items WHERE code = ? LIMIT 1',
                 [item.code],
@@ -296,51 +325,18 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                 );
               }
 
-              const totalImportedQuantity = Number(
-                (item.warehouseInventory + item.onsiteInventory).toFixed(2),
-              );
-
-              if (totalImportedQuantity > 0) {
-                const movementId = uuidv4();
-
-                await tx.execute(
-                  `
-                    INSERT INTO movements (
-                      id,
-                      type,
-                      created_by_id,
-                      destination,
-                      observations,
-                      responsible_delivery_id,
-                      responsible_receipt_id,
-                      date,
-                      project_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                  `,
-                  [
-                    movementId,
-                    'PURCHASE',
-                    currentUserId,
-                    null,
-                    `${EXCEL_IMPORT_OBSERVATION}: ${item.code}`,
-                    null,
-                    null,
-                    nowIso,
-                    null,
-                  ],
-                );
-
+              if (item.warehouseInventory > 0) {
                 await tx.execute(
                   `
                     INSERT INTO movement_details (id, movement_id, item_id, quantity)
                     VALUES (?, ?, ?, ?)
                   `,
-                  [uuidv4(), movementId, itemId, totalImportedQuantity],
+                  [uuidv4(), excelImportMovementId, itemId, item.warehouseInventory],
                 );
               }
 
               if (item.onsiteInventory > 0) {
-                const movementId = uuidv4();
+                const exitMovementId = uuidv4();
 
                 await tx.execute(
                   `
@@ -357,7 +353,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                   `,
                   [
-                    movementId,
+                    exitMovementId,
                     'EXIT',
                     currentUserId,
                     'Importación desde Excel - Obra',
@@ -374,7 +370,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                     INSERT INTO movement_details (id, movement_id, item_id, quantity)
                     VALUES (?, ?, ?, ?)
                   `,
-                  [uuidv4(), movementId, itemId, item.onsiteInventory],
+                  [uuidv4(), exitMovementId, itemId, item.onsiteInventory],
                 );
               }
             }
