@@ -130,7 +130,6 @@ type LocalKitDetailRow = {
   name: string;
   code: string;
   unit: string;
-  stock: number | string | null;
   type: string;
 };
 type LocalItemStockRow = {
@@ -211,7 +210,6 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
       component.name,
       component.code,
       component.unit,
-      component.stock,
       component.type
     FROM kit_details kd
     INNER JOIN items component ON component.id = kd.item_id
@@ -230,7 +228,7 @@ export function MovementFormSheet({ open, onClose }: MovementFormSheetProps) {
         name: row.name,
         code: row.code,
         unit: row.unit,
-        totalInventory: Number(row.stock ?? 0),
+        totalInventory: 0,
         quantity: Number(row.quantity ?? 0),
         type: row.type as MovementItem['type'],
       });
