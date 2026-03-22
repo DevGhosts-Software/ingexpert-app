@@ -96,12 +96,8 @@ function ColHeader({
 type ActionView = 'details' | 'edit' | 'delete' | null;
 
 function formatMovementType(value: string, observations?: string | null): string {
-  const normalizedObservations = observations?.toLowerCase().trim() ?? '';
-  if (normalizedObservations.includes('importación de stock desde excel')) {
-    return 'Importación desde Excel';
-  }
-
   const normalized = value.toLowerCase().trim();
+  if (normalized === 'excel_import') return 'Importación Excel';
   if (normalized === 'stock_adjustment_in') return 'Ajuste de stock (entrada)';
   if (normalized === 'stock_adjustment_out') return 'Ajuste de stock (salida)';
   if (normalized === 'compra' || normalized === 'purchase') return 'Compra';

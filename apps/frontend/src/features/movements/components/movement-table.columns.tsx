@@ -64,7 +64,7 @@ export function TypeBadge({
     return (
       <Badge className="gap-1.5 bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
         <ArrowDownCircle className="h-3 w-3" />
-        Importación desde Excel
+        Importación Excel
       </Badge>
     );
   }

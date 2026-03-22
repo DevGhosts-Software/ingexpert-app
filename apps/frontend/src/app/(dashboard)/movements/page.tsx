@@ -109,7 +109,7 @@ export default function MovementsPage() {
         WHEN LOWER(TRIM(m.type)) IN ('writeoff', 'baja') THEN 'WRITEOFF'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_in') THEN 'STOCK_ADJUSTMENT_IN'
         WHEN LOWER(TRIM(m.type)) IN ('stock_adjustment_out') THEN 'STOCK_ADJUSTMENT_OUT'
-        WHEN LOWER(TRIM(m.type)) IN ('excel_import') THEN 'EXCEL_IMPORT'
+        WHEN m.type = 'EXCEL_IMPORT' THEN 'EXCEL_IMPORT'
       END AS type,
       m.created_by_id,
       m.destination,
@@ -129,18 +129,14 @@ export default function MovementsPage() {
     LEFT JOIN users creator ON creator.id = m.created_by_id
     LEFT JOIN users delivery ON delivery.id = m.responsible_delivery_id
     LEFT JOIN users receipt ON receipt.id = m.responsible_receipt_id
-    WHERE LOWER(TRIM(m.type)) IN (
-      'purchase',
-      'compra',
-      'return',
-      'devolucion',
-      'exit',
-      'salida',
-      'writeoff',
-      'baja',
-      'stock_adjustment_in',
-      'stock_adjustment_out',
-      'excel_import'
+    WHERE m.type IN (
+      'PURCHASE',
+      'RETURN',
+      'EXIT',
+      'WRITEOFF',
+      'STOCK_ADJUSTMENT_IN',
+      'STOCK_ADJUSTMENT_OUT',
+      'EXCEL_IMPORT'
     )
      GROUP BY
       m.id, m.type, m.created_by_id, m.destination, m.observations,
@@ -169,18 +165,14 @@ export default function MovementsPage() {
     FROM movements m
     INNER JOIN movement_details md ON md.movement_id = m.id
     INNER JOIN items i ON i.id = md.item_id
-    WHERE LOWER(TRIM(m.type)) IN (
-      'purchase',
-      'compra',
-      'return',
-      'devolucion',
-      'exit',
-      'salida',
-      'writeoff',
-      'baja',
-      'stock_adjustment_in',
-      'stock_adjustment_out',
-      'excel_import'
+    WHERE m.type IN (
+      'PURCHASE',
+      'RETURN',
+      'EXIT',
+      'WRITEOFF',
+      'STOCK_ADJUSTMENT_IN',
+      'STOCK_ADJUSTMENT_OUT',
+      'EXCEL_IMPORT'
     )
     ORDER BY m.date DESC, i.name ASC
   `);

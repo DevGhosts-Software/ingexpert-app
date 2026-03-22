@@ -98,7 +98,7 @@ const TYPE_CONFIG = {
   },
   EXCEL_IMPORT: {
     icon: ArrowDownCircle,
-    label: 'Importación desde Excel',
+    label: 'Importación Excel',
     description: 'Ingreso importado desde archivo Excel',
     colors: {
       bg: 'bg-emerald-50 dark:bg-emerald-950/30',

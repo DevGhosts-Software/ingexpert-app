@@ -75,12 +75,9 @@ interface MovementTableToolbarProps {
 }
 
 function formatExportType(movement: MovementRow): string {
-  const normalizedObservations = movement.observations?.toLowerCase().trim() ?? '';
-  if (normalizedObservations.includes('importación de stock desde excel')) {
-    return 'Importación desde Excel';
-  }
-
   switch (movement.type) {
+    case 'EXCEL_IMPORT':
+      return 'Importación Excel';
     case 'PURCHASE':
       return 'Compra';
     case 'RETURN':
