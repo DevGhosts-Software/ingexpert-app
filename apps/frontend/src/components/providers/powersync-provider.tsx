@@ -3,7 +3,12 @@
 import { PowerSyncContext } from '@powersync/react';
 import { AbstractPowerSyncDatabase, createBaseLogger, LogLevel } from '@powersync/web';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { IngexpertPowerSyncBackendConnector } from '@/lib/powersync/connector';
+import { toast } from 'sonner';
+import {
+  IngexpertPowerSyncBackendConnector,
+  subscribePermissionError,
+  subscribeSessionRevalidation,
+} from '@/lib/powersync/connector';
 import { getPowerSyncDatabase } from '@/lib/powersync/db';
 
 const PowerSyncDatabaseContext = createContext<AbstractPowerSyncDatabase | null>(null);
@@ -24,9 +29,11 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isCancelled = false;
     let database: AbstractPowerSyncDatabase | null = null;
+    let unsubscribePermission: (() => void) | null = null;
+    let unsubscribeSession: (() => void) | null = null;
+
     void (async () => {
       database = getPowerSyncDatabase();
-      // Pon esto justo antes de inicializar tu instancia de PowerSyncDatabase (antes del db.init())
       const logger = createBaseLogger();
       logger.useDefaults();
       logger.setLevel(LogLevel.DEBUG);
@@ -38,6 +45,23 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
 
       if (!isCancelled) {
         setPowerSyncDatabase(database);
+
+        unsubscribePermission = subscribePermissionError(() => {
+          toast.error('No tienes permisos para esa operación', {
+            description: 'Contacta al administrador si crees que esto es un error.',
+          });
+        });
+
+        unsubscribeSession = subscribeSessionRevalidation(() => {
+          toast.error('Sesión expirada', {
+            description: 'Tu sesión ha sido revocada.',
+          });
+          if (window.location.pathname !== '/login') {
+            setTimeout(() => {
+              window.location.replace('/login');
+            }, 1500);
+          }
+        });
       }
     })().catch((error: unknown) => {
       const normalizedError =
@@ -50,6 +74,12 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isCancelled = true;
+      if (unsubscribePermission) {
+        unsubscribePermission();
+      }
+      if (unsubscribeSession) {
+        unsubscribeSession();
+      }
       if (!database) {
         return;
       }

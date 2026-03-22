@@ -258,14 +258,7 @@ export function ImportExcelDialog({ open, onClose }: ImportExcelDialogProps) {
                     SET name = ?, location = ?, unit = ?, type = ?, image_url = ?
                     WHERE id = ?
                   `,
-                  [
-                    item.name,
-                    item.location,
-                    item.unit,
-                    item.type,
-                    item.imageUrl ?? '',
-                    itemId,
-                  ],
+                  [item.name, item.location, item.unit, item.type, item.imageUrl ?? '', itemId],
                 );
               } else {
                 await tx.execute(
