@@ -51,10 +51,13 @@ async function revalidateSession(): Promise<boolean> {
 
     if (refreshError) {
       const isSessionNotFound =
-        refreshError.message?.includes('session') ||
-        refreshError.message?.includes('not found') ||
-        refreshError.message?.includes('invalid') ||
-        refreshError.code === 'invalid_grant';
+        refreshError.message?.toLowerCase().includes('session') ||
+        refreshError.message?.toLowerCase().includes('not found') ||
+        refreshError.message?.toLowerCase().includes('not signed in') ||
+        refreshError.message?.toLowerCase().includes('invalid') ||
+        refreshError.message?.toLowerCase().includes('expired') ||
+        refreshError.code === 'invalid_grant' ||
+        refreshError.code === 'session_not_found';
 
       if (!isSessionNotFound) {
         await supabase.auth.signOut();
