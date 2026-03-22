@@ -38,6 +38,7 @@ const TAB_ITEMS: Array<{ value: ActiveTab; label: string }> = [
   { value: 'writeoff', label: 'Bajas' },
   { value: 'stockAdjustmentIn', label: 'Ajuste Positivo' },
   { value: 'stockAdjustmentOut', label: 'Ajuste Negativo' },
+  { value: 'excelImport', label: 'Excel' },
 ];
 
 type ProjectOption = { id: string; name: string };

@@ -94,6 +94,18 @@ const TYPE_CONFIG = {
         'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
     },
   },
+  EXCEL_IMPORT: {
+    icon: ArrowDownCircle,
+    label: 'Importación desde Excel',
+    description: 'Ingreso importado desde archivo Excel',
+    colors: {
+      bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+      border: 'border-emerald-200 dark:border-emerald-800',
+      icon: 'text-emerald-600 dark:text-emerald-400',
+      badge:
+        'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+    },
+  },
 } as const;
 
 // ─── MetaRow ──────────────────────────────────────────────────────────────────
@@ -126,7 +138,7 @@ interface MovementDetailSheetProps {
 
 type LocalMovementHeaderRow = {
   id: string;
-  type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF';
+  type: 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | 'EXCEL_IMPORT';
   created_by_id: string;
   destination: string | null;
   observations: string | null;
@@ -247,17 +259,7 @@ export function MovementDetailSheet({ movementId, open, onClose }: MovementDetai
     : null;
   const isLoading = !movement && (headerQuery.isFetching || detailsQuery.isFetching);
 
-  const isExcelImport =
-    movement?.observations?.toLowerCase().includes('importación de stock desde excel') ?? false;
-  const config = movement
-    ? isExcelImport
-      ? {
-          ...TYPE_CONFIG.PURCHASE,
-          label: 'Importación desde Excel',
-          description: 'Ingreso importado desde archivo Excel',
-        }
-      : TYPE_CONFIG[movement.type]
-    : null;
+  const config = movement ? TYPE_CONFIG[movement.type] : null;
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
