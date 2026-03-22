@@ -39,23 +39,33 @@ export function subscribeSessionRevalidation(listener: SessionRevalidationListen
 
 async function revalidateSession(): Promise<boolean> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    clearTimeout(timeoutId);
-
-    if (userError || !user) {
-      await supabase.auth.signOut();
-      for (const listener of sessionRevalidationListeners) {
-        listener();
-      }
-      return false;
+    if (!session) {
+      return true;
     }
+
+    const { error: refreshError } = await supabase.auth.refreshSession();
+
+    if (refreshError) {
+      const isSessionNotFound =
+        refreshError.message?.includes('session') ||
+        refreshError.message?.includes('not found') ||
+        refreshError.message?.includes('invalid') ||
+        refreshError.code === 'invalid_grant';
+
+      if (!isSessionNotFound) {
+        await supabase.auth.signOut();
+        for (const listener of sessionRevalidationListeners) {
+          listener();
+        }
+        return false;
+      }
+      return true;
+    }
+
     return true;
   } catch {
     return true;
@@ -305,6 +315,11 @@ export class IngexpertPowerSyncBackendConnector implements PowerSyncBackendConne
         lastUploadError: MISSING_SESSION_ERROR,
       });
       throw new Error(MISSING_SESSION_ERROR);
+    }
+
+    const isSessionValid = await revalidateSession();
+    if (!isSessionValid) {
+      return;
     }
 
     while (true) {

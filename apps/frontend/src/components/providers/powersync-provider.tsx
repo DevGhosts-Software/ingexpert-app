@@ -56,9 +56,11 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
           toast.error('Sesión expirada', {
             description: 'Tu sesión ha sido revocada.',
           });
-          setTimeout(() => {
-            window.location.replace('/login');
-          }, 1500);
+          if (window.location.pathname !== '/login') {
+            setTimeout(() => {
+              window.location.replace('/login');
+            }, 1500);
+          }
         });
       }
     })().catch((error: unknown) => {
