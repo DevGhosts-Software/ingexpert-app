@@ -197,10 +197,7 @@ export default function MovementsPage() {
   const users = usersQuery.data ?? [];
 
   const { tableData, exportMovements, pageCount, typeCounts, stats } = useMemo(() => {
-    const typeMap: Record<
-      ActiveTab,
-      'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined
-    > = {
+    const typeMap: Record<ActiveTab, 'PURCHASE' | 'RETURN' | 'EXIT' | 'WRITEOFF' | undefined> = {
       all: undefined,
       purchase: 'PURCHASE',
       return: 'RETURN',
@@ -307,12 +304,17 @@ export default function MovementsPage() {
     const allowedMovementIds = new Set(
       (isAdmin
         ? exportMovements
-        : exportMovements.filter((movement) => !currentUserId || movement.createdById === currentUserId)
+        : exportMovements.filter(
+            (movement) => !currentUserId || movement.createdById === currentUserId,
+          )
       ).map((movement) => movement.id),
     );
 
     return (movementDetailsQuery.data ?? [])
-      .filter((detail) => exportMovementIds.has(detail.movement_id) && allowedMovementIds.has(detail.movement_id))
+      .filter(
+        (detail) =>
+          exportMovementIds.has(detail.movement_id) && allowedMovementIds.has(detail.movement_id),
+      )
       .map((detail) => ({
         movementId: detail.movement_id,
         movementDate: detail.movement_date,

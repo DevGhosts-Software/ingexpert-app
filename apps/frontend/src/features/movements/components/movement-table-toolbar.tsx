@@ -2,15 +2,7 @@
 
 import { memo, useCallback, useMemo, useState } from 'react';
 import { utils as xlsxUtils, write as xlsxWrite, writeFile as xlsxWriteFile } from 'xlsx';
-import {
-  CalendarIcon,
-  ChevronDown,
-  Download,
-  Filter,
-  Plus,
-  Search,
-  X,
-} from 'lucide-react';
+import { CalendarIcon, ChevronDown, Download, Filter, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -159,13 +151,7 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
     }
     onDateFromChange('');
     onDateToChange('');
-  }, [
-    isAdmin,
-    onCreatorFilterChange,
-    onDateFromChange,
-    onDateToChange,
-    onProjectFilterChange,
-  ]);
+  }, [isAdmin, onCreatorFilterChange, onDateFromChange, onDateToChange, onProjectFilterChange]);
 
   const handleExport = useCallback(async () => {
     setIsExporting(true);
@@ -201,16 +187,8 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
       }));
 
       const workbook = xlsxUtils.book_new();
-      xlsxUtils.book_append_sheet(
-        workbook,
-        xlsxUtils.json_to_sheet(movementRows),
-        'Movimientos',
-      );
-      xlsxUtils.book_append_sheet(
-        workbook,
-        xlsxUtils.json_to_sheet(detailRows),
-        'Detalles',
-      );
+      xlsxUtils.book_append_sheet(workbook, xlsxUtils.json_to_sheet(movementRows), 'Movimientos');
+      xlsxUtils.book_append_sheet(workbook, xlsxUtils.json_to_sheet(detailRows), 'Detalles');
 
       const date = new Date().toISOString().slice(0, 10);
       const fileName = `movimientos_${date}.xlsx`;
