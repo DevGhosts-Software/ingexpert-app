@@ -43,6 +43,17 @@ The system MUST enforce immutable behavior for `movements` and `movement_details
 
 The `MovementType` enum MUST include `STOCK_ADJUSTMENT_IN` and `STOCK_ADJUSTMENT_OUT` as valid movement types for inventory stock corrections.
 
+### Requirement: Movement type enum SHALL include Excel import type
+
+The `MovementType` enum MUST include `EXCEL_IMPORT` as a valid movement type for movements created via Excel stock import.
+
+#### Scenario: Excel import movements are detected by type enum
+
+- **WHEN** a movement is created via Excel stock import
+- **THEN** the movement type MUST be set to `EXCEL_IMPORT`
+- **THEN** the movement detail sheet MUST detect Excel imports by checking `movement.type === 'EXCEL_IMPORT'`
+- **THEN** the movement toolbar filter tabs MUST include an `excelImport` option to filter by this type
+
 #### Scenario: Creating stock adjustment movement from inventory edit
 
 - **WHEN** a user modifies an item's stock quantity from the inventory section
