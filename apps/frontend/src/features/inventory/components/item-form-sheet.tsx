@@ -400,7 +400,7 @@ export function ItemFormSheet({ mode, item, open, onClose }: ItemFormSheetProps)
     [currentUserId, deleteFile, isEdit, item, kitComponents, onClose, powerSyncDb, uploadFile],
   );
 
-  const isPending = isUploading;
+  const isPending = form.formState.isSubmitting || isUploading;
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
