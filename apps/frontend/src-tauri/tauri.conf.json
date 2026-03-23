@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "IngExpert App",
+        "title": "IngExpert - Gestión de Stock",
         "width": 800,
         "height": 600,
         "resizable": true,
@@ -26,12 +26,46 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "IngExpert",
+    "category": "Business",
+    "copyright": "Copyright © 2024 IngExpert",
+    "shortDescription": "Sistema de Gestión de Stock Corporativo",
+    "longDescription": "IngExpert es un sistema de gestión de stock corporativo centrado en el escritorio, diseñado para el seguimiento de inventario, gestión de kits y registro de movimientos. Diseñado para operaciones exclusivas de administrador con capacidades sin conexión.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["English", "Spanish"],
+        "displayLanguageSelector": true
+      }
+    },
+    "macOS": {
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        }
+      }
+    },
+    "linux": {
+      "appimage": {
+        "files": {
+          "/usr/share/README.md": "../README.md",
+          "/usr/assets": "../public/"
+        }
+      },
+      "deb": {
+        "section": "admin",
+        "priority": "standard",
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      }
+    }
   }
 }
