@@ -5,6 +5,7 @@ import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
 import type { MovementStats as MovementStatsType, MovementHeaderEntity } from '@ingexpert/schema';
 import { supabase } from '@/lib/supabase';
+import { toUTCEnd, toUTCStart } from '@/lib/dates';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { MovementStats } from '@/features/movements/components/movement-stats';
@@ -237,11 +238,11 @@ export default function MovementsPage() {
       if (!dateFrom && !dateTo) {
         return true;
       }
-      const movementDateStr = new Date(movement.date).toLocaleDateString('en-CA');
-      if (dateFrom && movementDateStr < dateFrom) {
+      const movementDate = movement.date;
+      if (dateFrom && movementDate < toUTCStart(dateFrom)) {
         return false;
       }
-      if (dateTo && movementDateStr > dateTo) {
+      if (dateTo && movementDate > toUTCEnd(dateTo)) {
         return false;
       }
       return true;

@@ -395,7 +395,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => {
         if (row.original.type === 'KIT') {
-          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+          return <span className="text-muted-foreground/50 block text-center">{EM_DASH}</span>;
         }
         return (
           <span className="font-mono text-sm block text-center">
@@ -417,7 +417,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => {
         if (row.original.type === 'KIT') {
-          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+          return <span className="text-muted-foreground/50 block text-center">{EM_DASH}</span>;
         }
         return (
           <span className="font-mono text-sm block text-center">
@@ -439,7 +439,7 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
       ),
       cell: ({ row }) => {
         if (row.original.type === 'KIT') {
-          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+          return <span className="text-muted-foreground/50 block text-center">{EM_DASH}</span>;
         }
         return (
           <div className="flex items-center justify-center gap-1.5">
