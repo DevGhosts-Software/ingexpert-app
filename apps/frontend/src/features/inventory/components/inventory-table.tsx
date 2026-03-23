@@ -41,7 +41,6 @@ export function InventoryTable({
   onSortingChange,
   onRowClick,
 }: InventoryTableProps) {
-  const [imageFilter, setImageFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
@@ -62,12 +61,7 @@ export function InventoryTable({
     });
   }, [exportItems]);
 
-  const filteredItems = useMemo(() => {
-    let result = [...items];
-    if (imageFilter === 'has') result = result.filter((i) => !!i.imageUrl);
-    if (imageFilter === 'missing') result = result.filter((i) => !i.imageUrl);
-    return result;
-  }, [items, imageFilter]);
+  const filteredItems = items;
 
   const filteredExportItems = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -78,10 +72,8 @@ export function InventoryTable({
         item.code.toLowerCase().includes(normalizedSearch) ||
         item.location.toLowerCase().includes(normalizedSearch);
       const matchesLocation = locationFilter === 'all' || item.location === locationFilter;
-      const matchesImage =
-        imageFilter === 'all' || (imageFilter === 'has' ? Boolean(item.imageUrl) : !item.imageUrl);
 
-      return matchesSearch && matchesLocation && matchesImage;
+      return matchesSearch && matchesLocation;
     });
 
     if (typeFilter === 'ALL') {
@@ -89,7 +81,7 @@ export function InventoryTable({
     }
 
     return baseItems.filter((item) => item.type === typeFilter);
-  }, [exportItems, imageFilter, locationFilter, search, typeFilter]);
+  }, [exportItems, locationFilter, search, typeFilter]);
 
   const selectedCount = selectedIds.size;
   const currentScopeIds = useMemo(
@@ -220,8 +212,6 @@ export function InventoryTable({
         locationFilter={locationFilter}
         onLocationFilterChange={onLocationFilterChange}
         locationOptions={locationOptions}
-        imageFilter={imageFilter}
-        onImageFilterChange={setImageFilter}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         typeCounts={typeCounts}

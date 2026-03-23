@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo, useState } from 'react';
-import { ChevronDown, Download, Filter, ImageOff, Plus, Search, Upload } from 'lucide-react';
+import { ChevronDown, Download, Filter, Plus, Search, Upload } from 'lucide-react';
 import { utils as xlsxUtils, write as xlsxWrite, writeFile as xlsxWriteFile } from 'xlsx';
 import { toast } from 'sonner';
 
@@ -34,8 +34,6 @@ interface InventoryTableToolbarProps {
   locationFilter: string;
   onLocationFilterChange: (value: string) => void;
   locationOptions: string[];
-  imageFilter: string;
-  onImageFilterChange: (value: string) => void;
   activeTab: string;
   onTabChange: (value: string) => void;
   typeCounts: ItemCounts;
@@ -73,8 +71,6 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
   locationFilter,
   onLocationFilterChange,
   locationOptions,
-  imageFilter,
-  onImageFilterChange,
   activeTab,
   onTabChange,
   typeCounts,
@@ -226,34 +222,13 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Imagen
-                  </p>
-                  <Select value={imageFilter} onValueChange={onImageFilterChange}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="has">Con imagen</SelectItem>
-                      <SelectItem value="missing">
-                        <span className="flex items-center gap-1.5">
-                          <ImageOff className="h-3.5 w-3.5 text-muted-foreground" />
-                          Sin imagen
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(locationFilter !== 'all' || imageFilter !== 'all') && (
+                {locationFilter !== 'all' && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={() => {
                       onLocationFilterChange('all');
-                      onImageFilterChange('all');
                     }}
                   >
                     Limpiar filtros
