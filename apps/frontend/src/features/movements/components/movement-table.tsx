@@ -160,7 +160,7 @@ export function MovementTable({
     [handleToggleCurrentScope, handleToggleRow, headerSelectionState, isRowSelected],
   );
 
-  const columns = useMemo(() => getColumns(), []);
+  const columns = useMemo(() => getColumns(isAdmin), [isAdmin]);
 
   const table = useReactTable({
     data: movements,

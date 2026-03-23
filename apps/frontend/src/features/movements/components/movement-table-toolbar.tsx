@@ -167,6 +167,7 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
         : exportDetails.filter((detail) => exportSourceIds.has(detail.movementId));
 
       const movementRows = exportSourceMovements.map((movement) => ({
+        MOVIMIENTO_ID: movement.id,
         FECHA: movement.date,
         TIPO: formatExportType(movement),
         REGISTRADO_POR: movement.creatorName ?? '',
@@ -353,16 +354,18 @@ export const MovementTableToolbar = memo(function MovementTableToolbar({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => void handleExport()}
-            disabled={isExporting}
-          >
-            <Download className="h-4 w-4" />
-            {isExporting ? 'Exportando...' : exportButtonLabel}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void handleExport()}
+              disabled={isExporting}
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? 'Exportando...' : exportButtonLabel}
+            </Button>
+          )}
           <Button size="sm" className="gap-1.5" onClick={onCreate}>
             <Plus className="h-4 w-4" />
             Registrar movimiento

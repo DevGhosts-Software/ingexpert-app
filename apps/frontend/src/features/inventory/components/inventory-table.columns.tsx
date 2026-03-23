@@ -393,11 +393,16 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           />
         </div>
       ),
-      cell: ({ row }) => (
-        <span className="font-mono text-sm block text-center">
-          {row.getValue('warehouseInventory')}
-        </span>
-      ),
+      cell: ({ row }) => {
+        if (row.original.type === 'KIT') {
+          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+        }
+        return (
+          <span className="font-mono text-sm block text-center">
+            {row.getValue('warehouseInventory')}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'onsiteInventory',
@@ -410,11 +415,16 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           />
         </div>
       ),
-      cell: ({ row }) => (
-        <span className="font-mono text-sm block text-center">
-          {row.getValue('onsiteInventory')}
-        </span>
-      ),
+      cell: ({ row }) => {
+        if (row.original.type === 'KIT') {
+          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+        }
+        return (
+          <span className="font-mono text-sm block text-center">
+            {row.getValue('onsiteInventory')}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'totalInventory',
@@ -427,12 +437,17 @@ export function getColumns(isAdmin: boolean): ColumnDef<InventoryItem>[] {
           />
         </div>
       ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-1.5">
-          <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="font-mono text-sm">{row.getValue('totalInventory')}</span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        if (row.original.type === 'KIT') {
+          return <span className="text-muted-foreground/50">{EM_DASH}</span>;
+        }
+        return (
+          <div className="flex items-center justify-center gap-1.5">
+            <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-mono text-sm">{row.getValue('totalInventory')}</span>
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'unit',

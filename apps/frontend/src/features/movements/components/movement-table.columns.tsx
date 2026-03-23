@@ -235,54 +235,58 @@ function NotesCell({ observations }: { observations: string | null }) {
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 
-export function getColumns(): ColumnDef<MovementRow>[] {
+export function getColumns(isAdmin: boolean): ColumnDef<MovementRow>[] {
+  const selectionColumn: ColumnDef<MovementRow> | null = isAdmin
+    ? {
+        id: 'select',
+        meta: { center: true, width: 'w-[44px]' },
+        header: ({ table }) => {
+          const meta = table.options.meta as MovementTableMeta | undefined;
+          if (!meta) {
+            return null;
+          }
+
+          return (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={
+                  meta.selectionState.checked
+                    ? true
+                    : meta.selectionState.indeterminate
+                      ? 'indeterminate'
+                      : false
+                }
+                onCheckedChange={() => meta.onToggleScope()}
+                onClick={(event) => event.stopPropagation()}
+                aria-label="Seleccionar movimientos filtrados"
+                className="size-5"
+              />
+            </div>
+          );
+        },
+        cell: ({ row, table }) => {
+          const meta = table.options.meta as MovementTableMeta | undefined;
+          if (!meta) {
+            return null;
+          }
+
+          return (
+            <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={meta.isRowSelected(row.original.id)}
+                onCheckedChange={() => meta.onToggleRow(row.original.id)}
+                aria-label={`Seleccionar movimiento ${row.original.id}`}
+                className="size-5"
+              />
+            </div>
+          );
+        },
+        enableSorting: false,
+      }
+    : null;
+
   return [
-    {
-      id: 'select',
-      meta: { center: true, width: 'w-[44px]' },
-      header: ({ table }) => {
-        const meta = table.options.meta as MovementTableMeta | undefined;
-        if (!meta) {
-          return null;
-        }
-
-        return (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={
-                meta.selectionState.checked
-                  ? true
-                  : meta.selectionState.indeterminate
-                    ? 'indeterminate'
-                    : false
-              }
-              onCheckedChange={() => meta.onToggleScope()}
-              onClick={(event) => event.stopPropagation()}
-              aria-label="Seleccionar movimientos filtrados"
-              className="size-5"
-            />
-          </div>
-        );
-      },
-      cell: ({ row, table }) => {
-        const meta = table.options.meta as MovementTableMeta | undefined;
-        if (!meta) {
-          return null;
-        }
-
-        return (
-          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
-            <Checkbox
-              checked={meta.isRowSelected(row.original.id)}
-              onCheckedChange={() => meta.onToggleRow(row.original.id)}
-              aria-label={`Seleccionar movimiento ${row.original.id}`}
-              className="size-5"
-            />
-          </div>
-        );
-      },
-      enableSorting: false,
-    },
+    ...(selectionColumn ? [selectionColumn] : []),
     {
       accessorKey: 'type',
       meta: { center: true, width: 'w-[130px]' },

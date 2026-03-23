@@ -237,11 +237,11 @@ export default function MovementsPage() {
       if (!dateFrom && !dateTo) {
         return true;
       }
-      const movementDate = new Date(movement.date);
-      if (dateFrom && movementDate < new Date(`${dateFrom}T00:00:00`)) {
+      const movementDateStr = new Date(movement.date).toLocaleDateString('en-CA');
+      if (dateFrom && movementDateStr < dateFrom) {
         return false;
       }
-      if (dateTo && movementDate > new Date(`${dateTo}T23:59:59`)) {
+      if (dateTo && movementDateStr > dateTo) {
         return false;
       }
       return true;
