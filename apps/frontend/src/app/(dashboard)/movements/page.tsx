@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import type { OnChangeFn, PaginationState, SortingState } from '@tanstack/react-table';
-import type { MovementStats as MovementStatsType, MovementHeaderEntity } from '@ingexpert/schema';
+import type { MovementStats as MovementStatsType } from '@ingexpert/schema';
 import { supabase } from '@/lib/supabase';
 import { toUTCEnd, toUTCStart } from '@/lib/dates';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -238,13 +238,32 @@ export default function MovementsPage() {
       if (!dateFrom && !dateTo) {
         return true;
       }
-      const movementDate = movement.date;
-      if (dateFrom && movementDate < toUTCStart(dateFrom)) {
-        return false;
+
+      // 1. Normalize the Supabase date string
+      // It arrives as "2026-03-24 00:41:07.616" (UTC).
+      // We add 'T' and 'Z' to force JS to parse it as strict UTC, avoiding local timezone drift.
+      let safeDateString = movement.date;
+      if (!safeDateString.includes('T')) safeDateString = safeDateString.replace(' ', 'T');
+      if (!safeDateString.endsWith('Z')) safeDateString += 'Z';
+
+      // 2. Convert to Unix timestamp (milliseconds) for flawless numerical comparison
+      const movementTime = new Date(safeDateString).getTime();
+
+      if (dateFrom) {
+        // toUTCStart already returns a valid ISO string, so we just grab the time
+        const startTime = new Date(toUTCStart(dateFrom)).getTime();
+        if (movementTime < startTime) {
+          return false;
+        }
       }
-      if (dateTo && movementDate > toUTCEnd(dateTo)) {
-        return false;
+
+      if (dateTo) {
+        const endTime = new Date(toUTCEnd(dateTo)).getTime();
+        if (movementTime > endTime) {
+          return false;
+        }
       }
+
       return true;
     });
 
