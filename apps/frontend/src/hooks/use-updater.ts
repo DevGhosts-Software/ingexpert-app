@@ -3,6 +3,7 @@
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export function useUpdater() {
   const hasRun = useRef(false);
@@ -15,7 +16,14 @@ export function useUpdater() {
       console.log('Checking for updates...');
 
       try {
-        const update = await check();
+        // Get current session for authenticated requests
+        const { data: { session } } = await supabase.auth.getSession();
+
+        const update = await check({
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
+        });
 
         if (update) {
           console.log(`Found update ${update.version} from ${update.date}`);

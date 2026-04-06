@@ -71,3 +71,101 @@ jobs:
           releaseBody: "Automated release triggered from main branch."
           releaseDraft: false
           prerelease: false
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Upload to Supabase Storage
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          PLATFORM=${{ matrix.platform }}
+
+          # Determine OS identifier
+          if [ "$PLATFORM" == "ubuntu-24.04" ]; then
+            OS_ARCH="linux-x64"
+          else
+            OS_ARCH="windows-x64"
+          fi
+
+          echo "Uploading v${VERSION} for ${OS_ARCH} to Supabase Storage"
+
+          # Login to Supabase
+          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+          # Link project
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+          # Upload artifacts from the bundle directory
+          BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
+
+          # Find and upload AppImage
+          if [ -d "${BUNDLE_DIR}/appimage" ]; then
+            for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do
+              if [ -f "$f" ]; then
+                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+                echo "Uploaded $(basename $f)"
+              fi
+            done
+          fi
+
+          # Find and upload deb
+          if [ -d "${BUNDLE_DIR}/deb" ]; then
+            for f in "${BUNDLE_DIR}/deb"/*.deb; do
+              if [ -f "$f" ]; then
+                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+                echo "Uploaded $(basename $f)"
+              fi
+            done
+          fi
+
+          # Find and upload msi
+          if [ -d "${BUNDLE_DIR}/msi" ]; then
+            for f in "${BUNDLE_DIR}/msi"/*.msi; do
+              if [ -f "$f" ]; then
+                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+                echo "Uploaded $(basename $f)"
+              fi
+            done
+          fi
+
+          # Find and upload nsis
+          if [ -d "${BUNDLE_DIR}/nsis" ]; then
+            for f in "${BUNDLE_DIR}/nsis"/*.exe; do
+              if [ -f "$f" ]; then
+                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+                echo "Uploaded $(basename $f)"
+              fi
+            done
+          fi
+
+      - name: Generate and upload latest.json
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          DATE=$(date -u +%Y-%m-%d)
+
+          # Login to Supabase (only needed once, but re-linking is fast)
+          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+          # Download existing latest.json if it exists to get file info
+          # Then create a new manifest that references this version
+          cat > latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "date": "${DATE}",
+            "files": {
+              "linux-x64": {
+                "appimage": "IngExpert.AppImage",
+                "deb": "ingexpert_${VERSION}_amd64.deb"
+              },
+              "windows-x64": {
+                "msi": "IngExpert_${VERSION}_x64.msi",
+                "nsis": "IngExpert_${VERSION}_x64-setup.exe"
+              }
+            }
+          }
+          EOF
+
+          supabase storage upload "releases/latest.json" latest.json
+          echo "Uploaded latest.json"

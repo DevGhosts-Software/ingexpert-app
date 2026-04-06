@@ -1,83 +1,126 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'npm:@supabase/supabase-js@2.57.4'
 
-const GITHUB_REPO = 'DevGhosts-Software/ingexpert-app'
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+const getBearerToken = (req: Request): string | null => {
+  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization')
+  if (!authHeader) {
+    return null
+  }
+  return authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+}
 
 serve(async (req) => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  }
-
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const token = Deno.env.get('GITHUB_TOKEN')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-      'User-Agent': 'IngExpert-Updater/1.0',
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error('Missing Supabase environment variables')
     }
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    // Verify JWT from Authorization header - reject unauthenticated users
+    const token = getBearerToken(req)
+    if (!token) {
+      return Response.json(
+        { error: 'Authentication required' },
+        { status: 401, headers: corsHeaders }
+      )
     }
 
-    const response = await fetch(GITHUB_API_URL, { headers })
-
-    if (!response.ok) {
-      throw new Error(`GitHub API returned ${response.status}`)
+    const { data: userData, error: userError } = await adminClient.auth.getUser(token)
+    if (userError || !userData.user?.id) {
+      return Response.json(
+        { error: 'Invalid or expired token' },
+        { status: 401, headers: corsHeaders }
+      )
     }
-
-    const release = await response.json()
 
     // Determine target platform from request header or default to current Deno runtime
     const clientOs = req.headers.get('x-os') ?? Deno.build.os
     const isWindows = clientOs === 'windows' || clientOs === 'win'
 
-    // Find the appropriate asset based on platform
-    let targetAsset = release.assets?.find((asset: any) => {
-      if (isWindows) {
-        return asset.name.endsWith('.msi') || asset.name.endsWith('.exe')
-      }
-      return asset.name.endsWith('.AppImage') || asset.name.endsWith('.deb')
-    })
+    // Read latest.json from storage
+    const { data: manifestData, error: manifestError } = await adminClient.storage
+      .from('releases')
+      .download('latest.json')
 
-    // Fallback: just find any asset
-    if (!targetAsset) {
-      targetAsset = release.assets?.find((asset: any) =>
-        asset.name.endsWith('.AppImage') ||
-        asset.name.endsWith('.msi') ||
-        asset.name.endsWith('.exe') ||
-        asset.name.endsWith('.deb')
-      )
-    }
-
-    if (!targetAsset) {
+    if (manifestError || !manifestData) {
       return Response.json(
-        { error: 'No compatible asset found in latest release' },
+        { error: 'Failed to fetch release manifest' },
         { status: 404, headers: corsHeaders }
       )
     }
 
-    const version = release.tag_name?.startsWith('v')
-      ? release.tag_name.slice(1)
-      : release.tag_name
+    const manifest = await manifestData.json()
+    const version = manifest.version
+    const date = manifest.date
 
+    // Determine OS architecture key
+    const osArch = isWindows ? 'windows-x64' : 'linux-x64'
+    const platformFiles = manifest.files?.[osArch]
+
+    if (!platformFiles) {
+      return Response.json(
+        { error: `No assets found for platform: ${osArch}` },
+        { status: 404, headers: corsHeaders }
+      )
+    }
+
+    // Pick the preferred file for this platform (prefer AppImage/deb for linux, msi for windows)
+    let targetFileName: string | null = null
+    if (isWindows) {
+      targetFileName = platformFiles.msi || platformFiles.nsis || Object.values(platformFiles)[0] as string
+    } else {
+      targetFileName = platformFiles.appimage || platformFiles.deb || Object.values(platformFiles)[0] as string
+    }
+
+    if (!targetFileName) {
+      return Response.json(
+        { error: 'No compatible asset found in release' },
+        { status: 404, headers: corsHeaders }
+      )
+    }
+
+    // Generate signed URL for the binary (valid for 1 hour)
+    const path = `${version}/${osArch}/${targetFileName}`
+    const { data: signedUrlData, error: signedError } = await adminClient.storage
+      .from('releases')
+      .createSignedUrl(path, 3600) // 1 hour expiry
+
+    if (signedError || !signedUrlData) {
+      console.error('Signed URL error:', signedError)
+      return Response.json(
+        { error: 'Failed to generate download URL' },
+        { status: 500, headers: corsHeaders }
+      )
+    }
+
+    // Return Tauri-compatible format
     const body = {
       version,
-      date: release.published_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-      path: targetAsset.name,
-      urls: [targetAsset.browser_download_url],
+      date,
+      path: targetFileName,
+      urls: [signedUrlData.signedUrl],
     }
 
     return Response.json(body, { headers: corsHeaders })
   } catch (error) {
     console.error('Updater error:', error)
     return Response.json(
-      { error: 'Failed to fetch release info' },
+      { error: 'Failed to process update request' },
       { status: 500, headers: corsHeaders }
     )
   }
