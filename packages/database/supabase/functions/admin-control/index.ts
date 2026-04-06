@@ -13,7 +13,7 @@ const ActionSchema = z.discriminatedUnion('action', [
     action: z.literal('create'),
     input: z.object({
       email: z.string().email(),
-      role: z.enum(['USER', 'ADMIN']).optional(),
+      role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
       name: z.string().max(100).optional().nullable(),
       avatar: z.string().url().max(500).optional().nullable(),
       password: z.string().min(8),
@@ -24,7 +24,7 @@ const ActionSchema = z.discriminatedUnion('action', [
     action: z.literal('createWithoutAuth'),
     input: z.object({
       email: z.string().email(),
-      role: z.enum(['USER', 'ADMIN']).optional(),
+      role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
       name: z.string().max(100).optional().nullable(),
       avatar: z.string().url().max(500).optional().nullable(),
       workArea: z.string().max(100).optional().nullable(),
@@ -45,7 +45,7 @@ const ActionSchema = z.discriminatedUnion('action', [
       name: z.string().max(100).optional().nullable(),
       avatar: z.string().url().max(500).optional().nullable(),
       workArea: z.string().max(100).optional().nullable(),
-      role: z.enum(['USER', 'ADMIN']).optional(),
+      role: z.enum(['USER', 'ADMIN', 'SUPERADMIN']).optional(),
     }),
   }),
   z.object({ action: z.literal('remove'), id: z.string().uuid() }),
@@ -61,7 +61,7 @@ type ActionPayload = z.infer<typeof ActionSchema>;
 type UserRow = {
   id: string;
   email: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN';
   name: string | null;
   avatar: string | null;
   has_auth?: boolean | null;
@@ -78,6 +78,12 @@ const mapUserEntity = (row: UserRow) => {
     has_auth: row.has_auth === true,
     workArea: row.staff?.[0]?.work_area?.name ?? null,
   };
+};
+
+const roleHierarchy: Record<string, number> = {
+  USER: 0,
+  ADMIN: 1,
+  SUPERADMIN: 2,
 };
 
 const json = (status: number, body: unknown): Response =>
@@ -149,6 +155,25 @@ const resolveCallerIdentity = async (
 const isAuthUserNotFoundError = (error: { message?: string } | null | undefined): boolean =>
   /user not found/i.test(error?.message ?? '');
 
+const isTargetSuperadmin = async (
+  adminClient: ReturnType<typeof createClient>,
+  id: string,
+): Promise<boolean> => {
+  const { data } = await adminClient.from('users').select('role').eq('id', id).maybeSingle();
+  return data?.role === 'SUPERADMIN';
+};
+
+const mapAdminControlAuthError = (error: { message?: string } | null | undefined): string => {
+  const msg = error?.message ?? '';
+  if (msg.includes('SUPERADMIN_PROTECTED')) {
+    return 'No se puede modificar a un SuperAdministrador.';
+  }
+  if (msg.includes('ROLE_NOT_ALLOWED')) {
+    return 'No tienes permiso para asignar este rol.';
+  }
+  return msg;
+};
+
 const ensureWorkArea = async (adminClient: ReturnType<typeof createClient>, workArea: string) => {
   const { data: existing, error: existingError } = await adminClient
     .from('work_areas')
@@ -205,7 +230,8 @@ Deno.serve(async (req) => {
   if (callerUserError) {
     return json(403, { code: 'ADMIN_LOOKUP_FAILED', error: callerUserError.message });
   }
-  if (callerUser?.role !== 'ADMIN') {
+  const callerRole = callerUser?.role;
+  if (!callerRole || roleHierarchy[callerRole] < 1) {
     return json(403, { code: 'ADMIN_ROLE_REQUIRED', error: 'Admin role required' });
   }
 
@@ -260,6 +286,12 @@ Deno.serve(async (req) => {
       });
       if (userError) throw new Error(userError.message);
 
+      const allowedRoles =
+        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
+      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
+      }
+
       if (payload.input.workArea) {
         const workAreaId = await ensureWorkArea(adminClient, payload.input.workArea);
         const { error: staffError } = await adminClient
@@ -289,6 +321,12 @@ Deno.serve(async (req) => {
       });
       if (userError) throw new Error(userError.message);
 
+      const allowedRoles =
+        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
+      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
+      }
+
       if (payload.input.workArea) {
         const workAreaId = await ensureWorkArea(adminClient, payload.input.workArea);
         const { error: staffError } = await adminClient.from('staff').insert({
@@ -314,6 +352,12 @@ Deno.serve(async (req) => {
         .eq('id', payload.input.id)
         .single();
       if (userError) throw new Error(userError.message);
+      if (callerRole !== 'SUPERADMIN' && userData.role !== 'USER') {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot grant auth to this role' });
+      }
+      if (userData.role === 'SUPERADMIN') {
+        return json(403, { code: 'SUPERADMIN_PROTECTED', error: 'Cannot modify a SuperAdmin' });
+      }
       if (userData.has_auth) throw new Error('User already has auth access');
 
       const { error: authError } = await adminClient.auth.admin.createUser({
@@ -343,11 +387,17 @@ Deno.serve(async (req) => {
     if (payload.action === 'revokeAuth') {
       const { data: existingUser, error: existingUserError } = await adminClient
         .from('users')
-        .select('id,has_auth')
+        .select('id,has_auth,role')
         .eq('id', payload.id)
         .maybeSingle();
       if (existingUserError) throw new Error(existingUserError.message);
       if (!existingUser) throw new Error('User not found');
+      if (existingUser?.role === 'SUPERADMIN') {
+        return json(403, { code: 'SUPERADMIN_PROTECTED', error: 'Cannot modify a SuperAdmin' });
+      }
+      if (callerRole !== 'SUPERADMIN' && existingUser?.role === 'ADMIN') {
+        return json(403, { code: 'ADMIN_ROLE_REQUIRED', error: 'Cannot revoke auth of an admin' });
+      }
 
       const { error: authError } = await adminClient.auth.admin.deleteUser(payload.id);
       if (authError && !isAuthUserNotFoundError(authError)) {
@@ -368,6 +418,20 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === 'update') {
+      const { data: targetUser } = await adminClient
+        .from('users')
+        .select('role')
+        .eq('id', payload.id)
+        .single();
+
+      if (targetUser?.role === 'SUPERADMIN') {
+        return json(403, { code: 'SUPERADMIN_PROTECTED', error: 'Cannot modify a SuperAdmin' });
+      }
+
+      if (payload.data.role !== undefined && callerRole !== 'SUPERADMIN') {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Only SuperAdmin can change roles' });
+      }
+
       const updatePatch: Record<string, unknown> = {};
       if (payload.data.name !== undefined) updatePatch.name = payload.data.name;
       if (payload.data.avatar !== undefined) updatePatch.avatar = payload.data.avatar;
@@ -397,7 +461,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (payload.data.name !== undefined) {
+      if (payload.data.name !== undefined && targetUser?.role !== 'SUPERADMIN') {
         const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(payload.id, {
           user_metadata: { nombre: payload.data.name ?? '' },
         });
@@ -416,10 +480,16 @@ Deno.serve(async (req) => {
     if (payload.action === 'remove') {
       const { data: existing, error: existingError } = await adminClient
         .from('users')
-        .select('id,avatar,has_auth')
+        .select('id,avatar,has_auth,role')
         .eq('id', payload.id)
         .maybeSingle();
       if (existingError) throw new Error(existingError.message);
+      if (existing?.role === 'SUPERADMIN') {
+        return json(403, { code: 'SUPERADMIN_PROTECTED', error: 'Cannot delete a SuperAdmin' });
+      }
+      if (callerRole !== 'SUPERADMIN' && existing?.role === 'ADMIN') {
+        return json(403, { code: 'ADMIN_ROLE_REQUIRED', error: 'Cannot delete an admin' });
+      }
 
       if (existing?.has_auth) {
         const { error: authError } = await adminClient.auth.admin.deleteUser(payload.id);
@@ -444,14 +514,30 @@ Deno.serve(async (req) => {
       return json(200, { action: payload.action, data: { success: true } });
     }
 
-    const { error } = await adminClient.auth.admin.updateUserById(payload.id, {
-      password: payload.password,
-    });
-    if (error) throw new Error(error.message);
-    return json(200, { action: payload.action, data: { success: true } });
+    if (payload.action === 'updatePassword') {
+      const { data: passwordTarget } = await adminClient
+        .from('users')
+        .select('role')
+        .eq('id', payload.id)
+        .single();
+
+      if (passwordTarget?.role === 'SUPERADMIN') {
+        return json(403, { code: 'SUPERADMIN_PROTECTED', error: 'Cannot modify a SuperAdmin' });
+      }
+      if (callerRole !== 'SUPERADMIN' && passwordTarget?.role === 'ADMIN') {
+        return json(403, { code: 'ADMIN_ROLE_REQUIRED', error: 'Cannot reset password of an admin' });
+      }
+
+      const { error } = await adminClient.auth.admin.updateUserById(payload.id, {
+        password: payload.password,
+      });
+      if (error) throw new Error(error.message);
+      return json(200, { action: payload.action, data: { success: true } });
+    }
   } catch (error) {
     return json(400, {
-      error: error instanceof Error ? error.message : 'Unexpected admin-control failure',
+      error:
+        error instanceof Error ? mapAdminControlAuthError(error) : 'Unexpected admin-control failure',
     });
   }
 });
