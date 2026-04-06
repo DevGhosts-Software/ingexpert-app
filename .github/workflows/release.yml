@@ -72,13 +72,12 @@ jobs:
           releaseDraft: false
           prerelease: false
 
-      - name: Install Supabase CLI
-        run: npm install -g supabase
-
       - name: Upload to Supabase Storage
         run: |
           VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
           PLATFORM=${{ matrix.platform }}
+          PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
+          SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
 
           # Determine OS identifier
           if [ "$PLATFORM" == "ubuntu-24.04" ]; then
@@ -88,68 +87,53 @@ jobs:
           fi
 
           echo "Uploading v${VERSION} for ${OS_ARCH} to Supabase Storage"
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
 
-          # Login to Supabase
-          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-          # Link project
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          upload_file() {
+            local path="$1"
+            local file="$2"
+            if [ -f "$file" ]; then
+              echo "Uploading $file to releases/${path}"
+              curl -s -X POST "${STORAGE_URL}/releases/${path}" \
+                -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$file" > /dev/null
+              echo "Uploaded $(basename $file)"
+            fi
+          }
 
           # Upload artifacts from the bundle directory
           BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
 
           # Find and upload AppImage
-          if [ -d "${BUNDLE_DIR}/appimage" ]; then
-            for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do
-              if [ -f "$f" ]; then
-                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
-                echo "Uploaded $(basename $f)"
-              fi
-            done
-          fi
+          for f in "${BUNDLE_DIR}/appimage"/*.AppImage 2>/dev/null; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          done
 
           # Find and upload deb
-          if [ -d "${BUNDLE_DIR}/deb" ]; then
-            for f in "${BUNDLE_DIR}/deb"/*.deb; do
-              if [ -f "$f" ]; then
-                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
-                echo "Uploaded $(basename $f)"
-              fi
-            done
-          fi
+          for f in "${BUNDLE_DIR}/deb"/*.deb 2>/dev/null; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          done
 
           # Find and upload msi
-          if [ -d "${BUNDLE_DIR}/msi" ]; then
-            for f in "${BUNDLE_DIR}/msi"/*.msi; do
-              if [ -f "$f" ]; then
-                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
-                echo "Uploaded $(basename $f)"
-              fi
-            done
-          fi
+          for f in "${BUNDLE_DIR}/msi"/*.msi 2>/dev/null; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          done
 
           # Find and upload nsis
-          if [ -d "${BUNDLE_DIR}/nsis" ]; then
-            for f in "${BUNDLE_DIR}/nsis"/*.exe; do
-              if [ -f "$f" ]; then
-                supabase storage upload "releases/v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
-                echo "Uploaded $(basename $f)"
-              fi
-            done
-          fi
+          for f in "${BUNDLE_DIR}/nsis"/*.exe 2>/dev/null; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          done
 
       - name: Generate and upload latest.json
         if: matrix.platform == 'ubuntu-24.04'
         run: |
           VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
           DATE=$(date -u +%Y-%m-%d)
+          PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
+          SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
 
-          # Login to Supabase (only needed once, but re-linking is fast)
-          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-
-          # Download existing latest.json if it exists to get file info
-          # Then create a new manifest that references this version
           cat > latest.json << EOF
           {
             "version": "${VERSION}",
@@ -167,5 +151,9 @@ jobs:
           }
           EOF
 
-          supabase storage upload "releases/latest.json" latest.json
+          echo "Uploading latest.json"
+          curl -s -X POST "${STORAGE_URL}/releases/latest.json" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            --data-binary @latest.json > /dev/null
           echo "Uploaded latest.json"
