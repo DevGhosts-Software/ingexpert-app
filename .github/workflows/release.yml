@@ -47,6 +47,12 @@ jobs:
           echo "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" > packages/database/.env
           echo "DIRECT_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" >> packages/database/.env
 
+      - name: Setup Frontend Environment
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" > apps/frontend/.env
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> apps/frontend/.env
+          echo "NEXT_PUBLIC_SUPABASE_ADMIN_CONTROL_FUNCTION=admin-control" >> apps/frontend/.env
+
       - name: Build workspace packages
         run: pnpm turbo run build --filter=@ingexpert/schema --filter=@ingexpert/database --filter=@ingexpert/config
 
