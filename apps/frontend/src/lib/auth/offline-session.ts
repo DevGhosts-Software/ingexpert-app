@@ -5,7 +5,7 @@ const OFFLINE_USER_CACHE_KEY = 'ingexpert.offlineValidatedUser';
 export type OfflineValidatedUser = {
   id: string;
   email: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN';
   name: string | null;
   avatar: string | null;
   has_auth: boolean;
@@ -38,7 +38,7 @@ export function readOfflineValidatedUser(): OfflineValidatedUser | null {
       !candidate.id ||
       !candidate.email ||
       !candidate.role ||
-      (candidate.role !== 'ADMIN' && candidate.role !== 'USER')
+      (candidate.role !== 'ADMIN' && candidate.role !== 'USER' && candidate.role !== 'SUPERADMIN')
     ) {
       return null;
     }
