@@ -1,6 +1,6 @@
 {
   "name": "@ingexpert/schema",
-  "version": "0.1.9",
+  "version": "0.1.90",
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

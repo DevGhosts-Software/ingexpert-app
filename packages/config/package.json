@@ -1,6 +1,6 @@
 {
   "name": "@ingexpert/config",
-  "version": "0.1.9",
+  "version": "0.1.90",
   "private": true,
   "type": "module",
   "exports": {
