@@ -182,27 +182,20 @@ jobs:
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
           STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
 
-          # Collect actual filenames dynamically
-          BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
-          shopt -s nullglob
-
-          APPIMAGE=$(basename "${BUNDLE_DIR}/appimage"/IngExpert*.AppImage 2>/dev/null | head -1)
-          DEB=$(basename "${BUNDLE_DIR}/deb"/IngExpert*.deb 2>/dev/null | grep -v '.sig$' | head -1)
-          MSI=$(basename "${BUNDLE_DIR}/msi"/*.msi 2>/dev/null | head -1)
-          NSIS=$(basename "${BUNDLE_DIR}/nsis"/*.exe 2>/dev/null | head -1)
-
+          # Use predictable Tauri output filenames
+          # Tauri outputs: IngExpert App_VERSION_ARCH.EXT
           cat > latest.json << EOF
           {
             "version": "${VERSION}",
             "date": "${DATE}",
             "files": {
               "linux-x64": {
-                "appimage": "${APPIMAGE}",
-                "deb": "${DEB}"
+                "appimage": "IngExpert App_${VERSION}_amd64.AppImage",
+                "deb": "IngExpert App_${VERSION}_amd64.deb"
               },
               "windows-x64": {
-                "msi": "${MSI}",
-                "nsis": "${NSIS}"
+                "msi": "IngExpert App_${VERSION}_x64_en-US.msi",
+                "nsis": "IngExpert App_${VERSION}_x64-setup.exe"
               }
             }
           }
