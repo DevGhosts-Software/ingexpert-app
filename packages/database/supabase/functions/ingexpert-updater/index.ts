@@ -14,12 +14,18 @@ serve(async (req) => {
   }
 
   try {
-    const response = await fetch(GITHUB_API_URL, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'IngExpert-Updater/1.0',
-      },
-    })
+    const token = Deno.env.get('GITHUB_TOKEN')
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'User-Agent': 'IngExpert-Updater/1.0',
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(GITHUB_API_URL, { headers })
 
     if (!response.ok) {
       throw new Error(`GitHub API returned ${response.status}`)
