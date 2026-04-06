@@ -33,14 +33,31 @@ serve(async (req) => {
 
     const release = await response.json()
 
-    // Find the AppImage asset
-    const appimageAsset = release.assets?.find((asset: any) =>
-      asset.name.endsWith('.AppImage')
-    )
+    // Determine target platform from request header or default to current Deno runtime
+    const clientOs = req.headers.get('x-os') ?? Deno.build.os
+    const isWindows = clientOs === 'windows' || clientOs === 'win'
 
-    if (!appimageAsset) {
+    // Find the appropriate asset based on platform
+    let targetAsset = release.assets?.find((asset: any) => {
+      if (isWindows) {
+        return asset.name.endsWith('.msi') || asset.name.endsWith('.exe')
+      }
+      return asset.name.endsWith('.AppImage') || asset.name.endsWith('.deb')
+    })
+
+    // Fallback: just find any asset
+    if (!targetAsset) {
+      targetAsset = release.assets?.find((asset: any) =>
+        asset.name.endsWith('.AppImage') ||
+        asset.name.endsWith('.msi') ||
+        asset.name.endsWith('.exe') ||
+        asset.name.endsWith('.deb')
+      )
+    }
+
+    if (!targetAsset) {
       return Response.json(
-        { error: 'No AppImage found in latest release' },
+        { error: 'No compatible asset found in latest release' },
         { status: 404, headers: corsHeaders }
       )
     }
@@ -52,8 +69,8 @@ serve(async (req) => {
     const body = {
       version,
       date: release.published_at?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-      path: appimageAsset.name,
-      urls: [appimageAsset.browser_download_url],
+      path: targetAsset.name,
+      urls: [targetAsset.browser_download_url],
     }
 
     return Response.json(body, { headers: corsHeaders })
