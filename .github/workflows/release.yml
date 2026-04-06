@@ -114,7 +114,7 @@ jobs:
             echo "Uploading file: $file"
             echo "Path: ${encoded_path}"
 
-            response=$(curl -s -w "\n%{http_code}" -X POST "${STORAGE_URL}/${encoded_path}" \
+            response=$(curl -s -w "\n%{http_code}" --max-time 600 -X POST "${STORAGE_URL}/${encoded_path}" \
               -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
               -H "Content-Type: application/octet-stream" \
               --data-binary @"$file")
@@ -131,23 +131,39 @@ jobs:
           # Upload artifacts from the bundle directory
           BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
 
+          echo "=== BUNDLE CONTENTS ==="
+          ls -la "${BUNDLE_DIR}/appimage/" 2>/dev/null || echo "No appimage dir"
+          ls -la "${BUNDLE_DIR}/deb/" 2>/dev/null || echo "No deb dir"
+          ls -la "${BUNDLE_DIR}/msi/" 2>/dev/null || echo "No msi dir"
+          ls -la "${BUNDLE_DIR}/nsis/" 2>/dev/null || echo "No nsis dir"
+          echo "========================"
+
           # Find and upload AppImage
           for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do
+            echo "AppImage size: $(stat -c%s "$f") bytes"
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
+          done
+
+          # Find and upload AppImage.tar.gz
+          for f in "${BUNDLE_DIR}/appimage"/*.tar.gz; do
+            echo "AppImage.tar.gz size: $(stat -c%s "$f") bytes"
             upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
           # Find and upload deb (skip .sig files)
           for f in "${BUNDLE_DIR}/deb"/*.deb; do
-            [[ "$f" != *.sig ]] && upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
+            [[ "$f" != *.sig ]] && echo "deb size: $(stat -c%s "$f") bytes" && upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
           # Find and upload msi
           for f in "${BUNDLE_DIR}/msi"/*.msi; do
+            echo "msi size: $(stat -c%s "$f") bytes"
             upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
           # Find and upload nsis
           for f in "${BUNDLE_DIR}/nsis"/*.exe; do
+            echo "nsis size: $(stat -c%s "$f") bytes"
             upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
