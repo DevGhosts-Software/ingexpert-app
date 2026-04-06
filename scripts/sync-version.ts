@@ -31,4 +31,16 @@ workspacePatterns.forEach((pattern) => {
   });
 });
 
+// Update tauri.conf.json version
+const tauriConfPath = path.join(rootDir, 'apps/frontend/src-tauri/tauri.conf.json');
+const tauriConf = JSON.parse(fs.readFileSync(tauriConfPath, 'utf8'));
+
+if (tauriConf.version !== newVersion) {
+  console.log(`Updating tauri.conf.json from ${tauriConf.version} to ${newVersion}`);
+  tauriConf.version = newVersion;
+  fs.writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
+} else {
+  console.log(`Skipping tauri.conf.json (already at ${newVersion})`);
+}
+
 console.log('Version sync complete.');
