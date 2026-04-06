@@ -41,7 +41,8 @@ serve(async (req) => {
       return Response.json({ error: 'Failed to fetch release manifest' }, { status: 404, headers: corsHeaders })
     }
 
-    const manifest = await manifestData.json()
+    const manifestText = await manifestData.text()
+    const manifest = JSON.parse(manifestText)
 
     if (!manifest.version || typeof manifest.version !== 'string') {
       return Response.json({ error: 'Invalid manifest: missing or invalid version' }, { status: 400, headers: corsHeaders })
@@ -69,8 +70,9 @@ serve(async (req) => {
 
     // Extract the path from the public URL for signed URL generation
     // URL format: https://{project}.supabase.co/storage/v1/object/public/releases/v{version}/{osArch}/{filename}
+    // Path passed to createSignedUrl must be relative to bucket (strip /storage/v1/object/public/releases/)
     const urlObj = new URL(publicUrl)
-    const publicPath = urlObj.pathname.replace('/storage/v1/object/public/', '')
+    const publicPath = urlObj.pathname.replace('/storage/v1/object/public/releases/', '')
 
     // Generate signed URL for the binary (1 hour expiry)
     const { data: signedUrlData, error: signedError } = await adminClient.storage
