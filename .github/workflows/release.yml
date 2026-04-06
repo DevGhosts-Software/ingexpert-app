@@ -74,6 +74,8 @@ jobs:
 
       - name: Upload to Supabase Storage
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Query the latest release to get the actual version (set by tauri-action)
           echo "Querying latest release from GitHub API..."
@@ -169,6 +171,8 @@ jobs:
       - name: Generate and upload latest.json
         if: matrix.platform == 'ubuntu-24.04'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Query the latest release to get the actual version (set by tauri-action)
           RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest 2>/dev/null)
