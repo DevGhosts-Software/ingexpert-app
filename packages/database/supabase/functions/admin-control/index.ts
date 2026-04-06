@@ -263,6 +263,12 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === 'create') {
+      const allowedRoles =
+        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
+      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
+      }
+
       const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
         email: payload.input.email,
         password: payload.input.password,
@@ -286,12 +292,6 @@ Deno.serve(async (req) => {
       });
       if (userError) throw new Error(userError.message);
 
-      const allowedRoles =
-        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
-      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
-        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
-      }
-
       if (payload.input.workArea) {
         const workAreaId = await ensureWorkArea(adminClient, payload.input.workArea);
         const { error: staffError } = await adminClient
@@ -310,6 +310,12 @@ Deno.serve(async (req) => {
     }
 
     if (payload.action === 'createWithoutAuth') {
+      const allowedRoles =
+        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
+      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
+        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
+      }
+
       const userId = crypto.randomUUID();
       const { error: userError } = await adminClient.from('users').insert({
         id: userId,
@@ -320,12 +326,6 @@ Deno.serve(async (req) => {
         has_auth: false,
       });
       if (userError) throw new Error(userError.message);
-
-      const allowedRoles =
-        callerRole === 'SUPERADMIN' ? ['USER', 'ADMIN', 'SUPERADMIN'] : ['USER', 'ADMIN'];
-      if (!allowedRoles.includes(payload.input.role ?? 'USER')) {
-        return json(403, { code: 'ROLE_NOT_ALLOWED', error: 'Cannot create this role' });
-      }
 
       if (payload.input.workArea) {
         const workAreaId = await ensureWorkArea(adminClient, payload.input.workArea);
