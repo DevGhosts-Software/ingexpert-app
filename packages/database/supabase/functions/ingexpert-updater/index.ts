@@ -5,13 +5,7 @@ const SIGNED_URL_EXPIRY_SECONDS = 3600
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-const getBearerToken = (req: Request): string | null => {
-  const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization')
-  if (!authHeader) return null
-  return authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, user-agent',
 }
 
 serve(async (req) => {
@@ -30,23 +24,13 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Authenticate the request
-    const token = getBearerToken(req)
-    if (!token) {
-      return Response.json({ error: 'Authentication required' }, { status: 401, headers: corsHeaders })
-    }
-
-    const { data: userData, error: userError } = await adminClient.auth.getUser(token)
-    if (userError || !userData.user?.id) {
-      return Response.json({ error: 'Invalid or expired token' }, { status: 401, headers: corsHeaders })
-    }
-
-    // Determine target platform from request header
-    const clientOs = req.headers.get('x-os') ?? Deno.build.os
-    const isWindows = clientOs === 'windows' || clientOs === 'win'
-
-    // Tauri v2 platform keys (match latest.json structure)
-    const tauriOsKey = isWindows ? 'windows-x86_64' : 'linux-x86_64'
+    // Detect platform from User-Agent header
+    // Tauri sends "tauri/<version>" in User-Agent
+    // Fallback: if User-Agent contains "Windows" or is empty, use windows-x86_64, otherwise linux-x86_64
+    const userAgent = req.headers.get('user-agent') ?? ''
+    const tauriOsKey = userAgent.toLowerCase().includes('windows') || userAgent === ''
+      ? 'windows-x86_64'
+      : 'linux-x86_64'
 
     // Read latest.json from storage (private bucket, service role)
     const { data: manifestData, error: manifestError } = await adminClient.storage
@@ -98,16 +82,13 @@ serve(async (req) => {
       return Response.json({ error: 'Failed to generate download URL' }, { status: 500, headers: corsHeaders })
     }
 
-    // Return Tauri v2-compatible format
+    // Return flat Tauri v2-compatible format
     const body = {
       version,
       pub_date: pubDate,
-      platforms: {
-        [tauriOsKey]: {
-          signature,
-          url: signedUrlData.signedUrl,
-        },
-      },
+      url: signedUrlData.signedUrl,
+      signature,
+      notes: '',
     }
 
     return Response.json(body, { headers: corsHeaders })
