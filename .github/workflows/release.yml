@@ -55,7 +55,7 @@ jobs:
           echo "NEXT_PUBLIC_POWERSYNC_URL=${{ secrets.NEXT_PUBLIC_POWERSYNC_URL }}" >> apps/frontend/.env
           echo "NEXT_PUBLIC_POWERSYNC_TOKEN=${{ secrets.NEXT_PUBLIC_POWERSYNC_TOKEN }}" >> apps/frontend/.env
           echo "PORT=3000" >> apps/frontend/.env
-        run: pnpm turbo run build --filter=@ingexpert/schema --filter=@ingexpert/database --filter=@ingexpert/config
+          pnpm turbo run build --filter=@ingexpert/schema --filter=@ingexpert/database --filter=@ingexpert/config
 
       - name: Build and Publish Tauri Release
         uses: tauri-apps/tauri-action@v0
