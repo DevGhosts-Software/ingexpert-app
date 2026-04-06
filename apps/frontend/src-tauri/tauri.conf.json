@@ -2,12 +2,12 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "IngExpert App",
   "version": "0.1.0",
-  "identifier": "com.ingexpert.app",
+  "identifier": "com.ingexpert.desktop",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm next:dev",
-    "beforeBuildCommand": "pnpm next:build"
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "windows": [
