@@ -49,6 +49,7 @@ jobs:
 
       - name: Build and Publish Tauri Release
         uses: tauri-apps/tauri-action@v0
+        working-directory: apps/frontend
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
