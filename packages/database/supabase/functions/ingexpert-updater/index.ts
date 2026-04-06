@@ -88,7 +88,7 @@ serve(async (req) => {
       pub_date: pubDate,
       url: signedUrlData.signedUrl,
       signature,
-      notes: '',
+      notes: manifest.notes ?? 'Update available',
     }
 
     return Response.json(body, { headers: corsHeaders })
