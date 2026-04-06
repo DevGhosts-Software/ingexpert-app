@@ -42,6 +42,11 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install
 
+      - name: Setup Database Environment
+        run: |
+          echo "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" > packages/database/.env
+          echo "DIRECT_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" >> packages/database/.env
+
       - name: Build and Publish Tauri Release
         uses: tauri-apps/tauri-action@v0
         env:
