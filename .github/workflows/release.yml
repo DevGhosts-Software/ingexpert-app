@@ -9,7 +9,7 @@ on:
 jobs:
   release:
     permissions:
-      contents: write 
+      contents: write
 
     strategy:
       fail-fast: false
@@ -74,10 +74,17 @@ jobs:
 
       - name: Upload to Supabase Storage
         run: |
-          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          # Extract version from GITHUB_REF (e.g., refs/tags/v0.1.3 -> 0.1.3)
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          # Fallback for non-tag refs
+          if [[ "$VERSION" == refs/* ]]; then
+            VERSION="dev"
+          fi
+
           PLATFORM=${{ matrix.platform }}
           PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
 
           # Determine OS identifier
           if [ "$PLATFORM" == "ubuntu-24.04" ]; then
@@ -87,52 +94,64 @@ jobs:
           fi
 
           echo "Uploading v${VERSION} for ${OS_ARCH} to Supabase Storage"
-          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
+
+          # Enable nullglob so globs that don't match expand to nothing
+          shopt -s nullglob
 
           upload_file() {
             local path="$1"
             local file="$2"
-            if [ -f "$file" ]; then
-              echo "Uploading $file to releases/${path}"
-              curl -s -X POST "${STORAGE_URL}/releases/${path}" \
-                -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
-                -H "Content-Type: application/octet-stream" \
-                --data-binary @"$file" > /dev/null
-              echo "Uploaded $(basename $file)"
-            fi
+            echo "Uploading $file to releases/${path}"
+            curl -s -X POST "${STORAGE_URL}/releases/${path}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$file" > /dev/null
+            echo "Uploaded $(basename "$file")"
           }
 
           # Upload artifacts from the bundle directory
           BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
 
           # Find and upload AppImage
-          for f in "${BUNDLE_DIR}/appimage"/*.AppImage 2>/dev/null; do
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
-          # Find and upload deb
-          for f in "${BUNDLE_DIR}/deb"/*.deb 2>/dev/null; do
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          # Find and upload deb (skip .sig files)
+          for f in "${BUNDLE_DIR}/deb"/*.deb; do
+            [[ "$f" != *.sig ]] && upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
           # Find and upload msi
-          for f in "${BUNDLE_DIR}/msi"/*.msi 2>/dev/null; do
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          for f in "${BUNDLE_DIR}/msi"/*.msi; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
           # Find and upload nsis
-          for f in "${BUNDLE_DIR}/nsis"/*.exe 2>/dev/null; do
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename $f)" "$f"
+          for f in "${BUNDLE_DIR}/nsis"/*.exe; do
+            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
           done
 
       - name: Generate and upload latest.json
         if: matrix.platform == 'ubuntu-24.04'
         run: |
-          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          if [[ "$VERSION" == refs/* ]]; then
+            VERSION="dev"
+          fi
           DATE=$(date -u +%Y-%m-%d)
           PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
           STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
+
+          # Collect actual filenames dynamically
+          BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
+          shopt -s nullglob
+
+          APPIMAGE=$(basename "${BUNDLE_DIR}/appimage"/IngExpert*.AppImage 2>/dev/null | head -1)
+          DEB=$(basename "${BUNDLE_DIR}/deb"/IngExpert*.deb 2>/dev/null | grep -v '.sig$' | head -1)
+          MSI=$(basename "${BUNDLE_DIR}/msi"/*.msi 2>/dev/null | head -1)
+          NSIS=$(basename "${BUNDLE_DIR}/nsis"/*.exe 2>/dev/null | head -1)
 
           cat > latest.json << EOF
           {
@@ -140,18 +159,19 @@ jobs:
             "date": "${DATE}",
             "files": {
               "linux-x64": {
-                "appimage": "IngExpert.AppImage",
-                "deb": "ingexpert_${VERSION}_amd64.deb"
+                "appimage": "${APPIMAGE}",
+                "deb": "${DEB}"
               },
               "windows-x64": {
-                "msi": "IngExpert_${VERSION}_x64.msi",
-                "nsis": "IngExpert_${VERSION}_x64-setup.exe"
+                "msi": "${MSI}",
+                "nsis": "${NSIS}"
               }
             }
           }
           EOF
 
-          echo "Uploading latest.json"
+          echo "Uploading latest.json:"
+          cat latest.json
           curl -s -X POST "${STORAGE_URL}/releases/latest.json" \
             -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
