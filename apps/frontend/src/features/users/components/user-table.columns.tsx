@@ -62,15 +62,17 @@ import type { UserEntity, UserRole } from './user-table.types';
 
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
-function canEdit(currentId: string, target: UserEntity): boolean {
+function canEdit(currentRole: string, currentId: string, target: UserEntity): boolean {
   if (target.id === currentId) return true; // can always edit yourself
-  if (target.role === 'ADMIN') return false; // can't edit other admins
+  if (target.role === 'SUPERADMIN') return false; // can't edit superadmins
+  if (target.role === 'ADMIN' && currentRole !== 'SUPERADMIN') return false; // can't edit admins unless you're superadmin
   return true;
 }
 
-function canDelete(currentId: string, target: UserEntity): boolean {
+function canDelete(currentRole: string, currentId: string, target: UserEntity): boolean {
   if (target.id === currentId) return false; // can't delete yourself
-  if (target.role === 'ADMIN') return false; // can't delete other admins
+  if (target.role === 'SUPERADMIN') return false; // can't delete superadmins
+  if (target.role === 'ADMIN' && currentRole !== 'SUPERADMIN') return false; // can't delete admins unless you're superadmin
   return true;
 }
 
@@ -447,7 +449,7 @@ function DeleteUserDialog({
 
 // ─── Row actions ──────────────────────────────────────────────────────────────
 
-function RowActions({ user }: { user: UserEntity }) {
+function RowActions({ user, currentRole }: { user: UserEntity; currentRole: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -456,10 +458,10 @@ function RowActions({ user }: { user: UserEntity }) {
 
   const { user: me } = useCurrentUser();
   const currentId = me?.id ?? '';
-  const isEditAllowed = canEdit(currentId, user);
-  const isDeleteAllowed = canDelete(currentId, user);
-  const isResetPasswordAllowed = user.has_auth && (user.id === currentId || user.role !== 'ADMIN');
-  const canChangeRole = user.id !== currentId && user.role !== 'ADMIN';
+  const isEditAllowed = canEdit(currentRole, currentId, user);
+  const isDeleteAllowed = canDelete(currentRole, currentId, user);
+  const isResetPasswordAllowed = user.has_auth && (user.id === currentId || user.role === 'USER' || (user.role === 'ADMIN' && currentRole === 'SUPERADMIN'));
+  const canChangeRole = user.id !== currentId && user.role !== 'SUPERADMIN' && (user.role !== 'ADMIN' || currentRole === 'SUPERADMIN');
 
   return (
     <>
@@ -483,7 +485,7 @@ function RowActions({ user }: { user: UserEntity }) {
           {user.has_auth ? (
             <DropdownMenuItem
               onClick={() => setRevokeOpen(true)}
-              disabled={user.id === currentId || user.role === 'ADMIN'}
+              disabled={user.id === currentId || user.role === 'SUPERADMIN' || (user.role === 'ADMIN' && currentRole !== 'SUPERADMIN')}
               className="text-orange-600 focus:text-orange-600"
             >
               <LockKeyhole className="h-4 w-4 mr-2" />
@@ -526,6 +528,14 @@ function RowActions({ user }: { user: UserEntity }) {
 // ─── Exported helpers ─────────────────────────────────────────────────────────
 
 export function RoleBadge({ role }: { role: UserRole }) {
+  if (role === 'SUPERADMIN') {
+    return (
+      <Badge className="gap-1.5 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800">
+        <ShieldCheck className="h-3 w-3" />
+        SuperAdmin
+      </Badge>
+    );
+  }
   if (role === 'ADMIN') {
     return (
       <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
@@ -660,11 +670,15 @@ export function getColumns(): ColumnDef<UserEntity>[] {
     {
       id: 'actions',
       header: () => <span className="sr-only">Acciones</span>,
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <RowActions user={row.original} />
-        </div>
-      ),
+      cell: ({ row }) => {
+        const { user: me } = useCurrentUser();
+        const currentRole = me?.role ?? 'USER';
+        return (
+          <div className="flex justify-center">
+            <RowActions user={row.original} currentRole={currentRole} />
+          </div>
+        );
+      },
       enableSorting: false,
       size: 56,
     },
