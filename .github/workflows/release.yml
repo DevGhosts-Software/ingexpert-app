@@ -102,10 +102,17 @@ jobs:
             local path="$1"
             local file="$2"
             echo "Uploading $file to releases/${path}"
-            curl -s -X POST "${STORAGE_URL}/releases/${path}" \
+            response=$(curl -s -w "\n%{http_code}" -X POST "${STORAGE_URL}/releases/${path}" \
               -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
               -H "Content-Type: application/octet-stream" \
-              --data-binary @"$file" > /dev/null
+              --data-binary @"$file")
+            http_code=$(echo "$response" | tail -1)
+            body=$(echo "$response" | sed '$d')
+            echo "HTTP ${http_code}: $body"
+            if [ "$http_code" -ge 400 ]; then
+              echo "Upload failed for $file"
+              exit 1
+            fi
             echo "Uploaded $(basename "$file")"
           }
 
