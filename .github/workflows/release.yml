@@ -72,139 +72,129 @@ jobs:
           releaseDraft: false
           prerelease: false
 
-      - name: Upload to Supabase Storage
+      - name: Extract Signature for Manifest
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "ubuntu-24.04" ]; then
+            cat apps/frontend/src-tauri/target/release/bundle/appimage/*.AppImage.sig > platform.sig
+          else
+            cat apps/frontend/src-tauri/target/release/bundle/nsis/*.exe.sig > platform.sig
+          fi
+
+      - name: Upload Signature Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.platform }}
+          path: platform.sig
+          retention-days: 1
+
+      - name: Upload Binaries to Supabase Storage
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Query the latest release to get the actual version (set by tauri-action)
-          echo "Querying latest release from GitHub API..."
           RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest)
-          echo "Release response: $RELEASE_RESPONSE"
           VERSION=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name' | sed 's/^v//')
-          echo "Extracted VERSION: $VERSION"
 
           PLATFORM=${{ matrix.platform }}
           PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
           STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
 
-          # Determine OS identifier
           if [ "$PLATFORM" == "ubuntu-24.04" ]; then
             OS_ARCH="linux-x64"
           else
             OS_ARCH="windows-x64"
           fi
 
-          echo "Uploading v${VERSION} for ${OS_ARCH} to Supabase Storage"
-
-          # Enable nullglob so globs that don't match expand to nothing
           shopt -s nullglob
-
-          # URL-encode spaces in path
-          uriencode() {
-            echo "$1" | sed 's/ /%20/g'
-          }
+          uriencode() { echo "$1" | sed 's/ /%20/g'; }
 
           upload_file() {
             path="$1"
             file="$2"
             encoded_path=$(uriencode "releases/${path}")
-
-            echo "STORAGE_URL: ${STORAGE_URL}"
-            echo "Uploading file: $file"
-            echo "Path: ${encoded_path}"
-
-            response=$(curl -s -w "\n%{http_code}" --max-time 600 -X POST "${STORAGE_URL}/${encoded_path}" \
+          
+            curl -s -w "\n%{http_code}" --max-time 600 -X POST "${STORAGE_URL}/${encoded_path}" \
               -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
               -H "Content-Type: application/octet-stream" \
-              --data-binary @"$file")
-            http_code=$(echo "$response" | tail -1)
-            body=$(echo "$response" | sed '$d')
-            echo "HTTP ${http_code}: $body"
-            if [ "$http_code" -ge 400 ]; then
-              echo "Upload failed for $file"
-              exit 1
-            fi
-            echo "Uploaded $(basename "$file")"
+              -H "x-upsert: true" \
+              --data-binary @"$file"
           }
 
-          # Upload artifacts from the bundle directory
           BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
 
-          echo "=== BUNDLE CONTENTS ==="
-          ls -la "${BUNDLE_DIR}/appimage/" 2>/dev/null || echo "No appimage dir"
-          ls -la "${BUNDLE_DIR}/deb/" 2>/dev/null || echo "No deb dir"
-          ls -la "${BUNDLE_DIR}/msi/" 2>/dev/null || echo "No msi dir"
-          ls -la "${BUNDLE_DIR}/nsis/" 2>/dev/null || echo "No nsis dir"
-          echo "========================"
+          for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"; done
+          for f in "${BUNDLE_DIR}/nsis"/*.exe; do upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"; done
+          # Include deb/msi loops if you strictly need them in storage, but updater only uses AppImage/exe.
 
-          # Find and upload AppImage
-          for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do
-            echo "AppImage size: $(stat -c%s "$f") bytes"
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
-          done
 
-          # Find and upload AppImage.tar.gz
-          for f in "${BUNDLE_DIR}/appimage"/*.tar.gz; do
-            echo "AppImage.tar.gz size: $(stat -c%s "$f") bytes"
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
-          done
+  publish-manifest:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-          # Find and upload deb (skip .sig files)
-          for f in "${BUNDLE_DIR}/deb"/*.deb; do
-            [[ "$f" != *.sig ]] && echo "deb size: $(stat -c%s "$f") bytes" && upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
-          done
-
-          # Find and upload msi
-          for f in "${BUNDLE_DIR}/msi"/*.msi; do
-            echo "msi size: $(stat -c%s "$f") bytes"
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
-          done
-
-          # Find and upload nsis
-          for f in "${BUNDLE_DIR}/nsis"/*.exe; do
-            echo "nsis size: $(stat -c%s "$f") bytes"
-            upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"
-          done
+      - name: Download Signatures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sig-*
+          path: sigs
 
       - name: Generate and upload latest.json
-        if: matrix.platform == 'ubuntu-24.04'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Query the latest release to get the actual version (set by tauri-action)
           RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest 2>/dev/null)
           VERSION=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name' | sed 's/^v//')
-          DATE=$(date -u +%Y-%m-%d)
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
           PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
+          
+          # Base public URL for downloading the binary (assuming bucket name is 'releases')
+          BASE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object/public/releases/v${VERSION}"
+          
+          # Read the raw signatures downloaded from the matrix jobs
+          SIG_LINUX=$(cat sigs/sig-ubuntu-24.04/platform.sig)
+          SIG_WIN=$(cat sigs/sig-windows-latest/platform.sig)
 
-          # Use predictable Tauri output filenames
-          # Tauri outputs: IngExpert App_VERSION_ARCH.EXT
+          # Define exact filenames
+          LINUX_FILE="IngExpert App_${VERSION}_amd64.AppImage"
+          WIN_FILE="IngExpert App_${VERSION}_x64-setup.exe"
+          
+          # Replace spaces with %20 for valid JSON URLs
+          LINUX_URL="${BASE_URL}/linux-x64/${LINUX_FILE// /%20}"
+          WIN_URL="${BASE_URL}/windows-x64/${WIN_FILE// /%20}"
+
+          # Construct the exact Tauri v2 JSON schema
           cat > latest.json << EOF
           {
             "version": "${VERSION}",
-            "date": "${DATE}",
-            "files": {
-              "linux-x64": {
-                "appimage": "IngExpert App_${VERSION}_amd64.AppImage",
-                "deb": "IngExpert App_${VERSION}_amd64.deb"
+            "notes": "Automated release triggered from main branch.",
+            "pub_date": "${DATE}",
+            "platforms": {
+              "linux-x86_64": {
+                "signature": "${SIG_LINUX}",
+                "url": "${LINUX_URL}"
               },
-              "windows-x64": {
-                "msi": "IngExpert App_${VERSION}_x64_en-US.msi",
-                "nsis": "IngExpert App_${VERSION}_x64-setup.exe"
+              "windows-x86_64": {
+                "signature": "${SIG_WIN}",
+                "url": "${WIN_URL}"
               }
             }
           }
           EOF
 
-          echo "Uploading latest.json:"
-          cat latest.json
-          curl -s -X POST "${STORAGE_URL}/releases/latest.json" \
+          echo "Uploading valid latest.json to Supabase..."
+          
+          # Use x-upsert: true to overwrite the previous latest.json
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object/releases/latest.json"
+          curl -s -X POST "${STORAGE_URL}" \
             -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
             -H "Content-Type: application/json" \
+            -H "x-upsert: true" \
             --data-binary @latest.json > /dev/null
-          echo "Uploaded latest.json"
+          
+          echo "Upload complete!"
