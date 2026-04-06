@@ -52,8 +52,9 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" > apps/frontend/.env
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> apps/frontend/.env
           echo "NEXT_PUBLIC_SUPABASE_ADMIN_CONTROL_FUNCTION=admin-control" >> apps/frontend/.env
-
-      - name: Build workspace packages
+          echo "NEXT_PUBLIC_POWERSYNC_URL=${{ secrets.NEXT_PUBLIC_POWERSYNC_URL }}" >> apps/frontend/.env
+          echo "NEXT_PUBLIC_POWERSYNC_TOKEN=${{ secrets.NEXT_PUBLIC_POWERSYNC_TOKEN }}" >> apps/frontend/.env
+          echo "PORT=3000" >> apps/frontend/.env
         run: pnpm turbo run build --filter=@ingexpert/schema --filter=@ingexpert/database --filter=@ingexpert/config
 
       - name: Build and Publish Tauri Release
