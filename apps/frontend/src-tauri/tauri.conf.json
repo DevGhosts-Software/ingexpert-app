@@ -76,7 +76,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBQzIwREY2MkVBOUIzOUEKUldTYXM2a3U5ZzNDZW9uZTdlcG5Ca0lsdTNLV3NNY2EyY25rbDczY2krOHExamI4aGdzR0poWjkK",
       "endpoints": [
-        "https://github.com/DevGhosts-Software/ingexpert-app/releases/latest/download/latest.json"
+        "https://jwetkcjdxeoyycrerrur.supabase.co/functions/v1/ingexpert-updater"
       ]
     }
   }
