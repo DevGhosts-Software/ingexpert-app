@@ -2,21 +2,33 @@
 
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export function useUpdater() {
+export type UpdaterStatus = 'idle' | 'checking' | 'downloading' | 'installed';
+
+export interface UpdaterState {
+  status: UpdaterStatus;
+  progress: number;
+  version?: string;
+}
+
+export function useUpdater(): UpdaterState {
   const hasRun = useRef(false);
+  const [state, setState] = useState<UpdaterState>({ status: 'idle', progress: 0 });
+
+  const updateState = useCallback((partial: Partial<UpdaterState>) => {
+    setState((prev) => ({ ...prev, ...partial }));
+  }, []);
 
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
 
     async function runUpdater() {
-      console.log('Checking for updates...');
+      updateState({ status: 'checking', progress: 0 });
 
       try {
-        // Get current session for authenticated requests
         const { data: { session } } = await supabase.auth.getSession();
 
         const update = await check({
@@ -26,7 +38,7 @@ export function useUpdater() {
         });
 
         if (update) {
-          console.log(`Found update ${update.version} from ${update.date}`);
+          updateState({ status: 'downloading', progress: 0, version: update.version });
 
           let downloaded = 0;
           let contentLength = 0;
@@ -35,28 +47,30 @@ export function useUpdater() {
             switch (event.event) {
               case 'Started':
                 contentLength = event.data.contentLength ?? 0;
-                console.log(`Started downloading ${contentLength} bytes`);
                 break;
               case 'Progress':
                 downloaded += event.data.chunkLength ?? 0;
-                console.log(`Downloaded ${downloaded} of ${contentLength} bytes`);
+                if (contentLength > 0) {
+                  updateState({ progress: Math.round((downloaded / contentLength) * 100) });
+                }
                 break;
               case 'Finished':
-                console.log('Download finished. Installing...');
+                updateState({ status: 'installed', progress: 100 });
                 break;
             }
           });
 
-          console.log('Update installed! Restarting app...');
           await relaunch();
         } else {
-          console.log('App is up to date.');
+          updateState({ status: 'idle', progress: 0 });
         }
-      } catch (error) {
-        console.error('Failed to check for updates:', error);
+      } catch {
+        updateState({ status: 'idle', progress: 0 });
       }
     }
 
     runUpdater();
-  }, []);
+  }, [updateState]);
+
+  return state;
 }
