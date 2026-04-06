@@ -73,6 +73,7 @@ jobs:
           prerelease: false
 
       - name: Upload to Supabase Storage
+        shell: bash
         run: |
           # Extract version from GITHUB_REF (e.g., refs/tags/v0.1.3 -> 0.1.3)
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
@@ -169,14 +170,11 @@ jobs:
 
       - name: Generate and upload latest.json
         if: matrix.platform == 'ubuntu-24.04'
+        shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
-          else
-            VERSION="dev"
-          fi
+          # Query the latest release to get the actual version (set by tauri-action)
+          RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest 2>/dev/null)
+          VERSION=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name' | sed 's/^v//')
           DATE=$(date -u +%Y-%m-%d)
           PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
           SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
