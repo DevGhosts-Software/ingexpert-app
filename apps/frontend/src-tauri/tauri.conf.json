@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm -C .. next:dev",
-    "beforeBuildCommand": "pnpm -C .. next:build"
+    "beforeDevCommand": "pnpm -F @ingexpert/frontend next:dev",
+    "beforeBuildCommand": "pnpm -F @ingexpert/frontend next:build"
   },
   "app": {
     "windows": [
