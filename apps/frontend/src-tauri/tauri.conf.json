@@ -26,7 +26,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": "all",
+    "targets": ["nsis", "msi", "appimage", "deb"],
     "publisher": "IngExpert",
     "category": "Business",
     "copyright": "Copyright © 2024 IngExpert",
@@ -45,14 +45,6 @@
         "installMode": "currentUser",
         "languages": ["English", "Spanish"],
         "displayLanguageSelector": true
-      }
-    },
-    "macOS": {
-      "dmg": {
-        "appPosition": {
-          "x": 180,
-          "y": 170
-        }
       }
     },
     "linux": {
