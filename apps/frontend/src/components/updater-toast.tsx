@@ -21,7 +21,6 @@ export function UpdaterToast({ status, progress, version }: UpdaterState) {
         {
           id: TOAST_ID,
           description: `${progress}% descargado`,
-          progress: progress / 100,
         },
       );
     }

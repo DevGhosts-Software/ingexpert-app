@@ -1,6 +1,6 @@
 {
   "name": "@ingexpert/frontend",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Ingexpert frontend built with Next.js and React",
   "private": true,
   "license": "UNLICENSED",
