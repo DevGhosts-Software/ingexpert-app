@@ -77,7 +77,10 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBQzIwREY2MkVBOUIzOUEKUldTYXM2a3U5ZzNDZW9uZTdlcG5Ca0lsdTNLV3NNY2EyY25rbDczY2krOHExamI4aGdzR0poWjkK",
       "endpoints": [
         "https://jwetkcjdxeoyycrerrur.supabase.co/functions/v1/ingexpert-updater"
-      ]
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
