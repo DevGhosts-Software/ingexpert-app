@@ -2,7 +2,7 @@
 
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export type UpdaterStatus = 'idle' | 'checking' | 'downloading' | 'installed';
@@ -29,12 +29,12 @@ export function useUpdater(): UpdaterState {
       updateState({ status: 'checking', progress: 0 });
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         const update = await check({
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {},
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
         });
 
         if (update) {
@@ -64,7 +64,8 @@ export function useUpdater(): UpdaterState {
         } else {
           updateState({ status: 'idle', progress: 0 });
         }
-      } catch {
+      } catch (error) {
+        console.error('UPDATER CRASHED:', error);
         updateState({ status: 'idle', progress: 0 });
       }
     }
