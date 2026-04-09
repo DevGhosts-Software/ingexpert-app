@@ -10,8 +10,11 @@ export function useIsAdmin(): boolean {
   const { user } = useCurrentUser();
 
   if (user) {
-    return user.role === 'ADMIN';
+    return user.role === 'ADMIN' || user.role === 'SUPERADMIN';
   }
 
-  return readOfflineValidatedUser()?.role === 'ADMIN';
+  return (
+    readOfflineValidatedUser()?.role === 'ADMIN' ||
+    readOfflineValidatedUser()?.role === 'SUPERADMIN'
+  );
 }

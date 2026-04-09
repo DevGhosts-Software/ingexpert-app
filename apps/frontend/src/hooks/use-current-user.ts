@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 type LocalCurrentUserRow = {
   id: string;
   email: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN';
   name: string | null;
   avatar: string | null;
   has_auth: number | string | null;
@@ -16,7 +16,7 @@ type LocalCurrentUserRow = {
 type CurrentUser = {
   id: string;
   email: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN';
   name: string | null;
   avatar: string | null;
   has_auth: boolean;
