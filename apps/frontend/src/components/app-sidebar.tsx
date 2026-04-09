@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/sidebar';
 
 import { useIsAdmin } from '@/hooks/use-is-admin';
+import { APP_VERSION } from '@/lib/version';
 
 const mainNavItems = [
   {
@@ -123,7 +124,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <p className="px-2 text-xs text-muted-foreground">v0.1.0</p>
+        <p className="px-2 text-xs text-muted-foreground">{APP_VERSION}</p>
       </SidebarFooter>
     </Sidebar>
   );

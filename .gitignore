@@ -50,6 +50,9 @@ apps/frontend/next-env.d.ts
 .branches
 .temp
 
+# Worktrees
+.worktrees
+
 # dotenvx
 .env.keys
 .env.local

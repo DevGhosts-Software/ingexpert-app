@@ -6,6 +6,7 @@ import { PowerSyncProvider } from '@/components/providers/powersync-provider';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { UpdaterChecker } from '@/components/updater-checker';
 
 export const metadata: Metadata = {
   title: 'IngExpert - Manejo de inventario',
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head />
       <body>
+        <UpdaterChecker />
         <AppQueryClientProvider>
           <PowerSyncProvider>
             <ThemeProvider

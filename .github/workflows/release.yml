@@ -1,0 +1,200 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-24.04
+          - platform: windows-latest
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Dependencies
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Frontend Dependencies
+        run: pnpm install
+
+      - name: Setup Database Environment
+        run: |
+          echo "DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" > packages/database/.env
+          echo "DIRECT_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder" >> packages/database/.env
+
+      - name: Setup Frontend Environment
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" > apps/frontend/.env
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> apps/frontend/.env
+          echo "NEXT_PUBLIC_SUPABASE_ADMIN_CONTROL_FUNCTION=admin-control" >> apps/frontend/.env
+          echo "NEXT_PUBLIC_POWERSYNC_URL=${{ secrets.NEXT_PUBLIC_POWERSYNC_URL }}" >> apps/frontend/.env
+          echo "NEXT_PUBLIC_POWERSYNC_TOKEN=${{ secrets.NEXT_PUBLIC_POWERSYNC_TOKEN }}" >> apps/frontend/.env
+          echo "PORT=3000" >> apps/frontend/.env
+          pnpm turbo run build --filter=@ingexpert/schema --filter=@ingexpert/database --filter=@ingexpert/config
+
+      - name: Build and Publish Tauri Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/frontend
+          tauriScript: pnpm run
+          tagName: v__VERSION__
+          releaseName: "Ingexpert v__VERSION__"
+          releaseBody: "Automated release triggered from main branch."
+          releaseDraft: false
+          prerelease: false
+
+      - name: Extract Signature for Manifest
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "ubuntu-24.04" ]; then
+            cat apps/frontend/src-tauri/target/release/bundle/appimage/*.AppImage.sig > platform.sig
+          else
+            cat apps/frontend/src-tauri/target/release/bundle/nsis/*.exe.sig > platform.sig
+          fi
+
+      - name: Upload Signature Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.platform }}
+          path: platform.sig
+          retention-days: 1
+
+      - name: Upload Binaries to Supabase Storage
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest)
+          VERSION=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name' | sed 's/^v//')
+
+          PLATFORM=${{ matrix.platform }}
+          PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
+          SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object"
+
+          if [ "$PLATFORM" == "ubuntu-24.04" ]; then
+            OS_ARCH="linux-x64"
+          else
+            OS_ARCH="windows-x64"
+          fi
+
+          shopt -s nullglob
+          uriencode() { echo "$1" | sed 's/ /%20/g'; }
+
+          upload_file() {
+            path="$1"
+            file="$2"
+            encoded_path=$(uriencode "releases/${path}")
+          
+            curl -s -w "\n%{http_code}" --max-time 600 -X POST "${STORAGE_URL}/${encoded_path}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/octet-stream" \
+              -H "x-upsert: true" \
+              --data-binary @"$file"
+          }
+
+          BUNDLE_DIR="apps/frontend/src-tauri/target/release/bundle"
+
+          for f in "${BUNDLE_DIR}/appimage"/*.AppImage; do upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"; done
+          for f in "${BUNDLE_DIR}/nsis"/*.exe; do upload_file "v${VERSION}/${OS_ARCH}/$(basename "$f")" "$f"; done
+          # Include deb/msi loops if you strictly need them in storage, but updater only uses AppImage/exe.
+
+
+  publish-manifest:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Signatures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sig-*
+          path: sigs
+
+      - name: Generate and upload latest.json
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_RESPONSE=$(gh api repos/${GITHUB_REPOSITORY}/releases/latest 2>/dev/null)
+          VERSION=$(echo "$RELEASE_RESPONSE" | jq -r '.tag_name' | sed 's/^v//')
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          PROJECT_REF="${{ secrets.SUPABASE_PROJECT_REF }}"
+          SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          
+          # Base public URL for downloading the binary (assuming bucket name is 'releases')
+          BASE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object/public/releases/v${VERSION}"
+          
+          # Read the raw signatures downloaded from the matrix jobs
+          SIG_LINUX=$(cat sigs/sig-ubuntu-24.04/platform.sig)
+          SIG_WIN=$(cat sigs/sig-windows-latest/platform.sig)
+
+          # Define exact filenames
+          LINUX_FILE="IngExpert App_${VERSION}_amd64.AppImage"
+          WIN_FILE="IngExpert App_${VERSION}_x64-setup.exe"
+          
+          # Replace spaces with %20 for valid JSON URLs
+          LINUX_URL="${BASE_URL}/linux-x64/${LINUX_FILE// /%20}"
+          WIN_URL="${BASE_URL}/windows-x64/${WIN_FILE// /%20}"
+
+          # Construct the exact Tauri v2 JSON schema
+          cat > latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "Automated release triggered from main branch.",
+            "pub_date": "${DATE}",
+            "platforms": {
+              "linux-x86_64": {
+                "signature": "${SIG_LINUX}",
+                "url": "${LINUX_URL}"
+              },
+              "windows-x86_64": {
+                "signature": "${SIG_WIN}",
+                "url": "${WIN_URL}"
+              }
+            }
+          }
+          EOF
+
+          echo "Uploading valid latest.json to Supabase..."
+          
+          # Use x-upsert: true to overwrite the previous latest.json
+          STORAGE_URL="https://${PROJECT_REF}.supabase.co/storage/v1/object/releases/latest.json"
+          curl -s -X POST "${STORAGE_URL}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "x-upsert: true" \
+            --data-binary @latest.json > /dev/null
+          
+          echo "Upload complete!"

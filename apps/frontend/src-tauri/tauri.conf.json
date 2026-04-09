@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "IngExpert App",
-  "version": "0.1.0",
-  "identifier": "com.ingexpert.app",
+  "version": "0.2.4",
+  "identifier": "com.ingexpert.desktop",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm next:dev",
-    "beforeBuildCommand": "pnpm next:build"
+    "beforeDevCommand": "pnpm -F @ingexpert/frontend next:dev",
+    "beforeBuildCommand": "pnpm -F @ingexpert/frontend next:build"
   },
   "app": {
     "windows": [
@@ -25,7 +25,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "nsis",
+      "msi",
+      "appimage",
+      "deb"
+    ],
     "publisher": "IngExpert",
     "category": "Business",
     "copyright": "Copyright © 2024 IngExpert",
@@ -42,16 +48,11 @@
       "nsis": {
         "installerIcon": "icons/icon.ico",
         "installMode": "currentUser",
-        "languages": ["English", "Spanish"],
+        "languages": [
+          "English",
+          "Spanish"
+        ],
         "displayLanguageSelector": true
-      }
-    },
-    "macOS": {
-      "dmg": {
-        "appPosition": {
-          "x": 180,
-          "y": 170
-        }
       }
     },
     "linux": {
@@ -64,7 +65,21 @@
       "deb": {
         "section": "admin",
         "priority": "standard",
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBQzIwREY2MkVBOUIzOUEKUldTYXM2a3U5ZzNDZW9uZTdlcG5Ca0lsdTNLV3NNY2EyY25rbDczY2krOHExamI4aGdzR0poWjkK",
+      "endpoints": [
+        "https://jwetkcjdxeoyycrerrur.supabase.co/functions/v1/ingexpert-updater?target={{target}}&arch={{arch}}&version={{current_version}}"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }
