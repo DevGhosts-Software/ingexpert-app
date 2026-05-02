@@ -1,6 +1,8 @@
 import {
+  buildReportEmailHtml,
   corsHeaders,
   createAdminClient,
+  formatDateTime,
   isAuthorized,
   json,
 } from '../_shared/pdf-report-utils.ts';
@@ -89,13 +91,12 @@ async function sendReportEmail(options: {
   }
 
   try {
-    const htmlBody = `<p>Hola ${options.name || 'Administrador'},</p>
-<p>Adjunto encontrarás los reportes semanales de Ingexpert:</p>
-<ul>
-  ${hasMovement ? '<li>Reporte de Movimientos</li>' : '<li>Reporte de Movimientos: <em>No disponible</em></li>'}
-  ${hasInventory ? '<li>Reporte de Inventario</li>' : '<li>Reporte de Inventario: <em>No disponible</em></li>'}
-</ul>
-<p>Saludos,<br>Equipo Ingexpert</p>`;
+    const htmlBody = buildReportEmailHtml({
+      name: options.name,
+      hasMovement,
+      hasInventory,
+      generatedAt: formatDateTime(new Date(), 'America/La_Paz'),
+    });
 
     const response = await fetch(mailApiUrl, {
       method: 'POST',
