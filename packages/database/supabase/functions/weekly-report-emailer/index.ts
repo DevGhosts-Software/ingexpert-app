@@ -91,27 +91,26 @@ async function sendReportEmail(options: {
   }
 
   try {
-    const { ConnectConfig, SMTPClient } = await import('https://deno.land/x/smtp@v0.7.0/mod.ts');
-    const client = new SMTPClient();
+    const nodemailer = await import('npm:nodemailer@6.10.0');
 
-    const config: ConnectConfig = {
-      hostname: smtpHost,
+    const transporter = nodemailer.default.createTransport({
+      host: smtpHost,
       port: smtpPort,
-      username: smtpUser,
-      password: smtpPass,
-    };
+      secure: smtpPort === 465,
+      tls: {
+        rejectUnauthorized: false, // Allow self-signed certs on VPS
+      },
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
 
-    if (smtpPort === 465) {
-      await client.connectTLS(config);
-    } else {
-      await client.connect(config);
-    }
-
-    await client.send({
-      from: `${smtpFromName} <${smtpFromEmail}>`,
+    await transporter.sendMail({
+      from: `"${smtpFromName}" <${smtpFromEmail}>`,
       to: options.to,
       subject,
-      content: textBody,
+      text: textBody,
       html: `<p>Hola ${options.name || 'Administrador'},</p>
 <p>Adjunto encontrarás los reportes semanales de Ingexpert:</p>
 <ul>
@@ -121,13 +120,11 @@ async function sendReportEmail(options: {
 <p>Saludos,<br>Equipo Ingexpert</p>`,
       attachments: attachments.map((a) => ({
         filename: a.filename,
-        content: encodeBase64(a.content),
-        encoding: 'base64',
+        content: a.content,
         contentType: a.contentType,
       })),
     });
 
-    await client.close();
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
