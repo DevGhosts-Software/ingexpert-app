@@ -508,11 +508,13 @@ export const calculateMovementAggregates = (
 ): MovementAggregate => {
   const byTypeMap = new Map<MovementType, { count: number; totalQuantity: number }>();
   let totalItemsMoved = 0;
+  let totalMovements = 0;
 
   for (const entry of movements) {
     const type = normalizeMovementType(entry.movement.type);
     if (!type) continue;
 
+    totalMovements++;
     const quantity = entry.details.reduce((s, d) => s + d.quantity, 0);
     totalItemsMoved += quantity;
 
@@ -535,7 +537,7 @@ export const calculateMovementAggregates = (
     });
 
   return {
-    totalMovements: movements.length,
+    totalMovements,
     totalItemsMoved,
     distinctTypes: byType.length,
     byType,
