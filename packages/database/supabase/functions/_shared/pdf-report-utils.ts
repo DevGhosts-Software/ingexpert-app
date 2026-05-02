@@ -481,6 +481,67 @@ export const calculateInventoryStocks = (rows: StockLedgerRow[]): InventoryStock
   return [...byItem.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'));
 };
 
+export type MovementAggregate = {
+  totalMovements: number;
+  totalItemsMoved: number;
+  distinctTypes: number;
+  byType: Array<{
+    type: MovementType;
+    label: string;
+    count: number;
+    totalQuantity: number;
+  }>;
+};
+
+const MOVEMENT_TYPE_ORDER: MovementType[] = [
+  'EXIT',
+  'PURCHASE',
+  'RETURN',
+  'WRITEOFF',
+  'STOCK_ADJUSTMENT_IN',
+  'STOCK_ADJUSTMENT_OUT',
+  'EXCEL_IMPORT',
+];
+
+export const calculateMovementAggregates = (
+  movements: ReportMovement[],
+): MovementAggregate => {
+  const byTypeMap = new Map<MovementType, { count: number; totalQuantity: number }>();
+  let totalItemsMoved = 0;
+
+  for (const entry of movements) {
+    const type = normalizeMovementType(entry.movement.type);
+    if (!type) continue;
+
+    const quantity = entry.details.reduce((s, d) => s + d.quantity, 0);
+    totalItemsMoved += quantity;
+
+    const current = byTypeMap.get(type) ?? { count: 0, totalQuantity: 0 };
+    current.count += 1;
+    current.totalQuantity += quantity;
+    byTypeMap.set(type, current);
+  }
+
+  const byType = MOVEMENT_TYPE_ORDER
+    .filter((type) => byTypeMap.has(type))
+    .map((type) => {
+      const data = byTypeMap.get(type)!;
+      return {
+        type,
+        label: movementTypeLabel(type),
+        count: data.count,
+        totalQuantity: data.totalQuantity,
+      };
+    });
+
+  return {
+    totalMovements: movements.length,
+    totalItemsMoved,
+    distinctTypes: byType.length,
+    byType,
+  };
+};
+
 export const buildReportMovements = (
   movements: MovementRow[],
   details: MovementDetailRow[],
@@ -762,6 +823,118 @@ export const drawStockSummary = (
   });
 
   writer.moveDown(72);
+};
+
+export const drawMovementAggregates = (
+  writer: ReturnType<typeof createPagedWriter>,
+  font: PDFFont,
+  boldFont: PDFFont,
+  aggregates: MovementAggregate,
+) => {
+  writer.ensureSpace(90);
+  writer.drawText('Resumen de movimientos', {
+    x: MARGIN,
+    size: 14,
+    font: boldFont,
+  });
+  writer.moveDown(20);
+
+  const summaryBoxes = [
+    { label: 'TOTAL MOVIMIENTOS', value: String(aggregates.totalMovements) },
+    { label: 'TOTAL ITEMS MOVIDOS', value: formatStock(aggregates.totalItemsMoved) },
+    { label: 'TIPOS DE MOVIMIENTO', value: String(aggregates.distinctTypes) },
+  ];
+
+  const boxWidth = (PAGE_WIDTH - MARGIN * 2 - 16) / 3;
+  summaryBoxes.forEach((box, index) => {
+    const x = MARGIN + index * (boxWidth + 8);
+    const boxHeight = 52;
+    const baseY = writer.getY();
+
+    writer.drawRectangle({
+      x,
+      y: baseY - boxHeight,
+      width: boxWidth,
+      height: boxHeight,
+      color: rgb(0.96, 0.96, 0.96),
+      borderColor: rgb(0.85, 0.85, 0.85),
+      borderWidth: 1,
+    });
+
+    writer.setY(baseY - 16);
+    writer.drawText(box.label, {
+      x: x + 10,
+      size: 9,
+      font: boldFont,
+      color: rgb(0.35, 0.35, 0.35),
+    });
+
+    writer.setY(baseY - 38);
+    writer.drawText(box.value, {
+      x: x + 10,
+      size: 16,
+      font: boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    writer.setY(baseY);
+  });
+
+  writer.moveDown(72);
+
+  if (aggregates.byType.length > 0) {
+    writer.ensureSpace(24);
+    writer.drawText('Desglose por tipo', {
+      x: MARGIN,
+      size: 12,
+      font: boldFont,
+      color: rgb(0.25, 0.25, 0.25),
+    });
+    writer.moveDown(18);
+
+    const typeBoxWidth = (PAGE_WIDTH - MARGIN * 2 - 24) / 4;
+    const typeBoxHeight = 48;
+
+    aggregates.byType.forEach((typeAgg, index) => {
+      const col = index % 4;
+      if (col === 0 && index > 0) {
+        writer.moveDown(typeBoxHeight + 10);
+      }
+
+      const x = MARGIN + col * (typeBoxWidth + 8);
+      const baseY = writer.getY();
+
+      writer.drawRectangle({
+        x,
+        y: baseY - typeBoxHeight,
+        width: typeBoxWidth,
+        height: typeBoxHeight,
+        color: rgb(0.98, 0.98, 0.98),
+        borderColor: rgb(0.88, 0.88, 0.88),
+        borderWidth: 1,
+      });
+
+      writer.setY(baseY - 14);
+      writer.drawText(typeAgg.label.toUpperCase(), {
+        x: x + 8,
+        size: 8,
+        font: boldFont,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+
+      writer.setY(baseY - 32);
+      writer.drawText(`${typeAgg.count} movs · ${formatStock(typeAgg.totalQuantity)} unid`, {
+        x: x + 8,
+        size: 10,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+
+      writer.setY(baseY);
+    });
+
+    writer.moveDown(typeBoxHeight + 10);
+  }
 };
 
 export const fetchStockLedger = async (
