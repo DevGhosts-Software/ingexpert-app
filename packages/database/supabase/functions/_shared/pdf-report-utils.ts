@@ -12,6 +12,7 @@ export const PAGE_WIDTH = 595.28;
 export const PAGE_HEIGHT = 841.89;
 export const MARGIN = 40;
 export const LINE_HEIGHT = 14;
+export const HEADER_RIGHT_PADDING = 150;
 export const SECTION_GAP = 18;
 export const DEFAULT_TIME_ZONE = Deno.env.get('PDF_REPORTS_TIMEZONE') ?? 'America/La_Paz';
 
@@ -574,8 +575,16 @@ export const startPdfDocument = async () => {
   return { pdfDoc, font, boldFont };
 };
 
+export const HEADER_HEIGHT = 60;
+export const FOOTER_HEIGHT = 30;
+export const CONTENT_TOP = PAGE_HEIGHT - MARGIN - HEADER_HEIGHT;
+export const CONTENT_BOTTOM = MARGIN + FOOTER_HEIGHT;
+
 export const createPagedWriter = (
   pdfDoc: PDFDocument,
+  font: PDFFont,
+  boldFont: PDFFont,
+  reportTitle: string,
 ): {
   ensureSpace: (height: number) => void;
   drawLines: (lines: string[], x: number, size: number, font: PDFFont, color?: ReturnType<typeof rgb>) => void;
@@ -584,23 +593,41 @@ export const createPagedWriter = (
   moveDown: (amount: number) => void;
   getY: () => number;
   setY: (value: number) => void;
+  finalizeDocument: (generatedAt: Date, timeZone: string) => void;
 } => {
+  const pages: PDFPage[] = [];
   let page: PDFPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  let y = PAGE_HEIGHT - MARGIN;
+  pages.push(page);
+  let y = CONTENT_TOP;
+
+  const drawHeader = (p: PDFPage) => {
+    p.drawText('INGEXPERT', { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 14, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+    p.drawText(reportTitle, { x: PAGE_WIDTH - MARGIN - HEADER_RIGHT_PADDING, y: PAGE_HEIGHT - MARGIN - 14, size: 10, font: boldFont, color: rgb(0.5, 0.5, 0.5) });
+    p.drawLine({
+      start: { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 20 },
+      end: { x: PAGE_WIDTH - MARGIN, y: PAGE_HEIGHT - MARGIN - 20 },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8),
+    });
+  };
+
+  drawHeader(page);
 
   const ensureSpace = (requiredHeight: number) => {
-    if (y - requiredHeight < MARGIN) {
+    if (y - requiredHeight < CONTENT_BOTTOM) {
       page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-      y = PAGE_HEIGHT - MARGIN;
+      pages.push(page);
+      y = CONTENT_TOP;
+      drawHeader(page);
     }
   };
 
   return {
     ensureSpace,
-    drawLines: (lines, x, size, font, color = rgb(0, 0, 0)) => {
+    drawLines: (lines, x, size, f, color = rgb(0, 0, 0)) => {
       for (const line of lines) {
         ensureSpace(LINE_HEIGHT);
-        page.drawText(line, { x, y, size, font, color });
+        page.drawText(line, { x, y, size, font: f, color });
         y -= LINE_HEIGHT;
       }
     },
@@ -609,6 +636,7 @@ export const createPagedWriter = (
     },
     drawText: (text, options) => {
       page.drawText(text, { ...options, y, color: options.color ?? rgb(0, 0, 0) });
+      y -= LINE_HEIGHT;
     },
     moveDown: (amount) => {
       y -= amount;
@@ -616,6 +644,15 @@ export const createPagedWriter = (
     getY: () => y,
     setY: (value) => {
       y = value;
+    },
+    finalizeDocument: (generatedAt: Date, timeZone: string) => {
+      const dateStr = formatDateTime(generatedAt, timeZone);
+      const totalPages = pages.length;
+      pages.forEach((p, i) => {
+        const pageNum = i + 1;
+        p.drawText(`Generado: ${dateStr}`, { x: MARGIN, y: MARGIN + 8, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+        p.drawText(`Página ${pageNum} / ${totalPages}`, { x: PAGE_WIDTH - MARGIN - 80, y: MARGIN + 8, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+      });
     },
   };
 };

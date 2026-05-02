@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     }
 
     const { pdfDoc, font, boldFont } = await startPdfDocument();
-    const writer = createPagedWriter(pdfDoc);
+    const writer = createPagedWriter(pdfDoc, font, boldFont, 'Reporte Semanal de Movimientos');
 
     writer.drawText('Reporte Semanal de Movimientos', {
       x: MARGIN,
@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    writer.finalizeDocument(period.start, DEFAULT_TIME_ZONE);
     const pdfBytes = await pdfDoc.save();
     const fileName = `movement_weekly_${formatDateForFileName(period.start, DEFAULT_TIME_ZONE)}_${formatDateForFileName(period.end, DEFAULT_TIME_ZONE)}.pdf`;
     const uploadedPath = await uploadPdfIfConfigured(

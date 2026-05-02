@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const generatedAt = new Date();
 
     const { pdfDoc, font, boldFont } = await startPdfDocument();
-    const writer = createPagedWriter(pdfDoc);
+    const writer = createPagedWriter(pdfDoc, font, boldFont, 'Reporte General de Inventario');
 
     writer.drawText('Reporte General de Inventario', {
       x: MARGIN,
@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    writer.finalizeDocument(generatedAt, DEFAULT_TIME_ZONE);
     const pdfBytes = await pdfDoc.save();
     const fileName = `inventory_overall_${formatDateForFileName(generatedAt, DEFAULT_TIME_ZONE)}.pdf`;
     const uploadedPath = await uploadPdfIfConfigured(
