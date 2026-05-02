@@ -657,6 +657,61 @@ export const createPagedWriter = (
   };
 };
 
+export type CardLine = {
+  text: string;
+  font: PDFFont;
+  size: number;
+  color?: ReturnType<typeof rgb>;
+};
+
+export const drawCard = (
+  writer: ReturnType<typeof createPagedWriter>,
+  lines: CardLine[],
+  options: {
+    padding?: number;
+    gap?: number;
+    backgroundColor?: ReturnType<typeof rgb>;
+    borderColor?: ReturnType<typeof rgb>;
+    borderWidth?: number;
+  } = {},
+): void => {
+  const padding = options.padding ?? 10;
+  const gap = options.gap ?? 10;
+  const backgroundColor = options.backgroundColor ?? rgb(0.985, 0.985, 0.985);
+  const borderColor = options.borderColor ?? rgb(0.88, 0.88, 0.88);
+  const borderWidth = options.borderWidth ?? 1;
+
+  const textHeight = lines.reduce((sum, line) => sum + line.size * 1.2, 0);
+  const cardHeight = textHeight + padding * 2;
+
+  writer.ensureSpace(cardHeight + gap);
+  const startY = writer.getY();
+
+  writer.drawRectangle({
+    x: MARGIN,
+    y: startY - cardHeight,
+    width: PAGE_WIDTH - MARGIN * 2,
+    height: cardHeight,
+    color: backgroundColor,
+    borderColor,
+    borderWidth,
+  });
+
+  let textY = startY - padding;
+  for (const line of lines) {
+    writer.setY(textY);
+    writer.drawText(line.text, {
+      x: MARGIN + padding,
+      size: line.size,
+      font: line.font,
+      color: line.color ?? rgb(0.1, 0.1, 0.1),
+    });
+    textY -= line.size * 1.2;
+  }
+
+  writer.setY(startY - cardHeight - gap);
+};
+
 export const drawStockSummary = (
   writer: ReturnType<typeof createPagedWriter>,
   boldFont: PDFFont,
