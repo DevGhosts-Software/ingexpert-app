@@ -58,3 +58,5 @@ apps/frontend/next-env.d.ts
 .env.local
 .env.development
 .env.*.local
+
+opencode.json
