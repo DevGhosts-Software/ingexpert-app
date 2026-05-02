@@ -2,12 +2,14 @@ import { rgb } from 'npm:pdf-lib@1.17.1';
 import {
   DEFAULT_TIME_ZONE,
   MARGIN,
+  PAGE_WIDTH,
   SECTION_GAP,
   calculateInventoryStocks,
   calculateStockSummary,
   corsHeaders,
   createAdminClient,
   createPagedWriter,
+  drawCard,
   drawStockSummary,
   escapePdfText,
   fetchStockLedger,
@@ -82,34 +84,22 @@ Deno.serve(async (req) => {
     writer.moveDown(20);
 
     if (inventoryRows.length === 0) {
-      writer.drawLines(
-        ['No se encontraron datos de inventario en el ledger de movimientos.'],
-        MARGIN,
-        11,
-        font,
-        rgb(0.35, 0.35, 0.35),
-      );
+      drawCard(writer, [
+        { text: 'No se encontraron datos de inventario en el ledger de movimientos.', font, size: 11, color: rgb(0.35, 0.35, 0.35) },
+      ]);
     } else {
       for (const row of inventoryRows) {
         const header = `[${row.code}] ${row.name}`;
         const stockLine = `Total: ${formatStock(row.total)} ${row.unit} | Almacen: ${formatStock(row.warehouse)} ${row.unit} | Obra: ${formatStock(row.onsite)} ${row.unit}`;
-        const wrappedHeader = splitText(header, 495, boldFont, 11);
-        const wrappedStock = splitText(stockLine, 495, font, 10);
-        const blockHeight = 14 + (wrappedHeader.length + wrappedStock.length) * 14;
+        const wrappedHeader = splitText(header, PAGE_WIDTH - MARGIN * 2 - 20, boldFont, 11);
+        const wrappedStock = splitText(stockLine, PAGE_WIDTH - MARGIN * 2 - 20, font, 10);
 
-        writer.ensureSpace(blockHeight + 10);
-        writer.drawRectangle({
-          x: MARGIN,
-          y: writer.getY() - blockHeight + 8,
-          width: 515,
-          height: blockHeight,
-          color: rgb(0.985, 0.985, 0.985),
-          borderColor: rgb(0.88, 0.88, 0.88),
-          borderWidth: 1,
-        });
-        writer.drawLines(wrappedHeader, MARGIN + 10, 11, boldFont);
-        writer.drawLines(wrappedStock, MARGIN + 10, 10, font, rgb(0.25, 0.25, 0.25));
-        writer.moveDown(10);
+        const cardLines: Array<{ text: string; font: PDFFont; size: number; color?: ReturnType<typeof rgb> }> = [
+          ...wrappedHeader.map((t) => ({ text: t, font: boldFont, size: 11 })),
+          ...wrappedStock.map((t) => ({ text: t, font, size: 10, color: rgb(0.25, 0.25, 0.25) })),
+        ];
+
+        drawCard(writer, cardLines, { padding: 10, gap: 10 });
       }
     }
 
