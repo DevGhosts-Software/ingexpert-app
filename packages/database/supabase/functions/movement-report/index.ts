@@ -5,17 +5,17 @@ import {
   PAGE_WIDTH,
   SECTION_GAP,
   buildReportMovements,
-  calculateStockSummary,
+  calculateMovementAggregates,
   corsHeaders,
   createAdminClient,
   createPagedWriter,
-  drawStockSummary,
+  drawCard,
+  drawMovementAggregates,
   escapePdfText,
   fetchItemsByIds,
   fetchMovementDetails,
   fetchMovementsInPeriod,
   fetchProjectsByIds,
-  fetchStockLedger,
   fetchUsersByIds,
   formatDateForFileName,
   formatDateTime,
@@ -55,12 +55,10 @@ Deno.serve(async (req) => {
 
   try {
     const period = getLastClosedSaturdayWindow(new Date(), DEFAULT_TIME_ZONE);
-    const [stockLedgerRows, movementRows] = await Promise.all([
-      fetchStockLedger(adminClient),
+    const [movementRows] = await Promise.all([
       fetchMovementsInPeriod(adminClient, period),
     ]);
 
-    const stockSummary = calculateStockSummary(stockLedgerRows);
     const movementIds = movementRows.map((movement) => movement.id);
 
     let reportMovements = [];
@@ -110,7 +108,9 @@ Deno.serve(async (req) => {
     );
 
     writer.moveDown(SECTION_GAP);
-    drawStockSummary(writer, boldFont, stockSummary);
+
+    const aggregates = calculateMovementAggregates(reportMovements);
+    drawMovementAggregates(writer, font, boldFont, aggregates);
 
     writer.drawText('Movimientos del periodo', {
       x: MARGIN,
@@ -120,72 +120,39 @@ Deno.serve(async (req) => {
     writer.moveDown(20);
 
     if (reportMovements.length === 0) {
-      writer.drawLines(
-        ['No se encontraron movimientos dentro del rango sabado 12:00 pm -> sabado 12:00 pm.'],
-        MARGIN,
-        11,
-        font,
-        rgb(0.35, 0.35, 0.35),
-      );
+      drawCard(writer, [
+        { text: 'No se encontraron movimientos dentro del rango sabado 12:00 pm -> sabado 12:00 pm.', font, size: 11, color: rgb(0.35, 0.35, 0.35) },
+      ]);
     } else {
       for (const entry of reportMovements) {
         const movementType = normalizeMovementType(entry.movement.type);
-        const headerLines = [
-          `${formatDateTime(new Date(entry.movement.date), DEFAULT_TIME_ZONE)} | ${movementTypeLabel(movementType)}`,
-          `Proyecto: ${entry.projectName} | Destino: ${escapePdfText(entry.movement.destination) || 'Sin destino'}`,
-        ];
-        const metaLines = [
-          `Creado por: ${entry.creatorName}`,
-          `Entrega: ${entry.deliveryName}`,
-          `Recibe: ${entry.receiptName}`,
-        ];
-        const observationText = escapePdfText(entry.movement.observations) || 'Sin observaciones';
-        const detailLines =
-          entry.details.length > 0
-            ? entry.details.map(
-                (detail) =>
-                  `- [${detail.itemCode}] ${detail.itemName}: ${formatStock(detail.quantity)} ${detail.unit}`,
-              )
-            : ['- Sin detalles'];
+        const headerText = `${formatDateTime(new Date(entry.movement.date), DEFAULT_TIME_ZONE)} | ${movementTypeLabel(movementType)}`;
+        const projectText = `Proyecto: ${entry.projectName} | Destino: ${escapePdfText(entry.movement.destination) || 'Sin destino'}`;
+        const metaText = `Creado por: ${entry.creatorName} | Entrega: ${entry.deliveryName} | Recibe: ${entry.receiptName}`;
+        const observationText = `Observaciones: ${escapePdfText(entry.movement.observations) || 'Sin observaciones'}`;
 
-        const wrappedObservation = splitText(
-          `Observaciones: ${observationText}`,
-          PAGE_WIDTH - MARGIN * 2 - 10,
-          font,
-          10,
-        );
+        const detailLines = entry.details.length > 0
+          ? entry.details.map((detail) => `- [${detail.itemCode}] ${detail.itemName}: ${formatStock(detail.quantity)} ${detail.unit}`)
+          : ['- Sin detalles'];
+
+        const wrappedObservation = splitText(observationText, PAGE_WIDTH - MARGIN * 2 - 20, font, 10);
         const wrappedDetailLines = detailLines.flatMap((line) =>
-          splitText(line, PAGE_WIDTH - MARGIN * 2 - 18, font, 10),
+          splitText(line, PAGE_WIDTH - MARGIN * 2 - 28, font, 10),
         );
 
-        const blockHeight =
-          18 +
-          headerLines.length * 14 +
-          metaLines.length * 14 +
-          wrappedObservation.length * 14 +
-          wrappedDetailLines.length * 14 +
-          14;
+        const cardLines = [
+          { text: headerText, font: boldFont, size: 11 },
+          { text: projectText, font: boldFont, size: 10 },
+          { text: metaText, font, size: 10, color: rgb(0.25, 0.25, 0.25) },
+          ...wrappedObservation.map((t) => ({ text: t, font, size: 10, color: rgb(0.25, 0.25, 0.25) })),
+          ...wrappedDetailLines.map((t) => ({ text: t, font, size: 10 })),
+        ];
 
-        writer.ensureSpace(blockHeight);
-        writer.drawRectangle({
-          x: MARGIN,
-          y: writer.getY() - blockHeight + 8,
-          width: PAGE_WIDTH - MARGIN * 2,
-          height: blockHeight,
-          color: rgb(0.985, 0.985, 0.985),
-          borderColor: rgb(0.88, 0.88, 0.88),
-          borderWidth: 1,
-        });
-
-        writer.drawLines(headerLines, MARGIN + 10, 11, boldFont);
-        writer.drawLines(metaLines, MARGIN + 10, 10, font, rgb(0.25, 0.25, 0.25));
-        writer.drawLines(wrappedObservation, MARGIN + 10, 10, font, rgb(0.25, 0.25, 0.25));
-        writer.drawLines(wrappedDetailLines, MARGIN + 18, 10, font);
-        writer.moveDown(10);
+        drawCard(writer, cardLines, { padding: 10, gap: 10 });
       }
     }
 
-    writer.finalizeDocument(period.start, DEFAULT_TIME_ZONE);
+    writer.finalizeDocument(new Date(), DEFAULT_TIME_ZONE);
     const pdfBytes = await pdfDoc.save();
     const fileName = `movement_weekly_${formatDateForFileName(period.start, DEFAULT_TIME_ZONE)}_${formatDateForFileName(period.end, DEFAULT_TIME_ZONE)}.pdf`;
     const uploadedPath = await uploadPdfIfConfigured(
