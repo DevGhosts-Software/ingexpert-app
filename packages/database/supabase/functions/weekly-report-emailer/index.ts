@@ -74,16 +74,14 @@ async function sendReportEmail(options: {
     `${hasInventory ? '- Reporte de Inventario' : '- Reporte de Inventario: No disponible'}\n\n` +
     `Saludos,\nEquipo Ingexpert`;
 
-  // SMTP configuration
-  const smtpHost = Deno.env.get('SMTP_HOST');
-  const smtpPort = Number(Deno.env.get('SMTP_PORT') ?? 587);
-  const smtpUser = Deno.env.get('SMTP_USER');
-  const smtpPass = Deno.env.get('SMTP_PASS');
+  // Mail bridge configuration
+  const mailApiUrl = Deno.env.get('MAIL_API_URL');
+  const mailApiKey = Deno.env.get('MAIL_API_KEY');
   const smtpFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
   const smtpFromName = Deno.env.get('SMTP_FROM_NAME') ?? 'Ingexpert';
 
-  if (!smtpHost || !smtpUser || !smtpPass || !smtpFromEmail) {
-    console.log('[EMAIL PLACEHOLDER] SMTP not configured. Would send email:');
+  if (!mailApiUrl || !mailApiKey || !smtpFromEmail) {
+    console.log('[EMAIL PLACEHOLDER] MAIL_API_URL or MAIL_API_KEY not configured.');
     console.log('  To:', options.to);
     console.log('  Subject:', subject);
     console.log('  Attachments:', attachments.map((a) => a.filename).join(', '));
@@ -91,44 +89,43 @@ async function sendReportEmail(options: {
   }
 
   try {
-    const nodemailer = await import('npm:nodemailer@6.10.0');
-
-    const transporter = nodemailer.default.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      tls: {
-        rejectUnauthorized: false, // Allow self-signed certs on VPS
-      },
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"${smtpFromName}" <${smtpFromEmail}>`,
-      to: options.to,
-      subject,
-      text: textBody,
-      html: `<p>Hola ${options.name || 'Administrador'},</p>
+    const htmlBody = `<p>Hola ${options.name || 'Administrador'},</p>
 <p>Adjunto encontrarás los reportes semanales de Ingexpert:</p>
 <ul>
   ${hasMovement ? '<li>Reporte de Movimientos</li>' : '<li>Reporte de Movimientos: <em>No disponible</em></li>'}
   ${hasInventory ? '<li>Reporte de Inventario</li>' : '<li>Reporte de Inventario: <em>No disponible</em></li>'}
 </ul>
-<p>Saludos,<br>Equipo Ingexpert</p>`,
-      attachments: attachments.map((a) => ({
-        filename: a.filename,
-        content: a.content,
-        contentType: a.contentType,
-      })),
+<p>Saludos,<br>Equipo Ingexpert</p>`;
+
+    const response = await fetch(mailApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': mailApiKey,
+      },
+      body: JSON.stringify({
+        from: `"${smtpFromName}" <${smtpFromEmail}>`,
+        to: options.to,
+        subject,
+        text: textBody,
+        html: htmlBody,
+        attachments: attachments.map((a) => ({
+          filename: a.filename,
+          content: encodeBase64(a.content),
+          contentType: a.contentType,
+        })),
+      }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+    }
 
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('SMTP send failed for', options.to, message);
+    console.error('Mail API send failed for', options.to, message);
     return { success: false, error: message };
   }
 }
