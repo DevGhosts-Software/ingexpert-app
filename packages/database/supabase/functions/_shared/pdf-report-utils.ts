@@ -1052,3 +1052,84 @@ export const uploadPdfIfConfigured = async (
   if (error) throw new Error(`No se pudo guardar el PDF en storage: ${error.message}`);
   return path;
 };
+
+export const buildReportEmailHtml = (options: {
+  name: string | null;
+  hasMovement: boolean;
+  hasInventory: boolean;
+  periodStart?: string;
+  periodEnd?: string;
+  generatedAt: string;
+}): string => {
+  const periodSection = options.periodStart && options.periodEnd
+    ? `correspondientes al periodo <strong>${options.periodStart} → ${options.periodEnd}</strong>`
+    : '';
+
+  const movementCard = options.hasMovement
+    ? `<tr>
+      <td style="border:1px solid #e0e0e0; border-radius:6px; padding:16px; margin-bottom:12px;">
+        <p style="margin:0; font-size:14px; font-weight:bold; color:#1a1a1a;">Reporte de Movimientos</p>
+        <p style="margin:4px 0 0; font-size:12px; color:#777;">Resumen semanal de salidas, compras, devoluciones y ajustes de stock.</p>
+      </td>
+    </tr>`
+    : '';
+
+  const inventoryCard = options.hasInventory
+    ? `<tr>
+      <td style="border:1px solid #e0e0e0; border-radius:6px; padding:16px; margin-bottom:12px;">
+        <p style="margin:0; font-size:14px; font-weight:bold; color:#1a1a1a;">Reporte de Inventario</p>
+        <p style="margin:4px 0 0; font-size:12px; color:#777;">Estado actual del inventario con totales por almacén y obra.</p>
+      </td>
+    </tr>`
+    : '';
+
+  const emptyCard = !options.hasMovement && !options.hasInventory
+    ? `<tr>
+      <td style="border:1px solid #e0e0e0; border-radius:6px; padding:16px;">
+        <p style="margin:0; font-size:14px; color:#777;">No hay reportes disponibles para este periodo.</p>
+      </td>
+    </tr>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
+    <tr>
+      <td align="center" style="padding:24px 0;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+          <tr>
+            <td style="background:#1a1a1a; padding:24px 32px;">
+              <span style="color:#ffffff; font-size:18px; font-weight:bold; letter-spacing:1px;">INGEXPERT</span>
+              <span style="color:#aaaaaa; font-size:12px; margin-left:12px;">Reportes Semanales</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px; font-size:16px; color:#333;">Hola ${options.name || 'Administrador'},</p>
+              <p style="margin:0 0 24px; font-size:14px; color:#555; line-height:1.5;">
+                Adjunto encontrarás los reportes semanales de Ingexpert ${periodSection}.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                ${movementCard}
+                ${inventoryCard}
+                ${emptyCard}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#fafafa; padding:16px 32px; border-top:1px solid #eee;">
+              <p style="margin:0; font-size:12px; color:#999;">Equipo Ingexpert · ${options.generatedAt}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+};
