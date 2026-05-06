@@ -38,6 +38,29 @@ export function PowerSyncProvider({ children }: { children: React.ReactNode }) {
       logger.useDefaults();
       logger.setLevel(LogLevel.DEBUG);
       await database.init();
+
+      // One-time migration: create indexes for stock calculation performance.
+      // These match the indexes declared in AppSchema for new databases.
+      // CREATE INDEX IF NOT EXISTS is idempotent — safe to rerun.
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_kit_details_kit_id ON kit_details(kit_id)',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_kit_details_item_id ON kit_details(item_id)',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_movement_details_movement_id ON movement_details(movement_id)',
+      );
+      await database.execute(
+        'CREATE INDEX IF NOT EXISTS idx_movement_details_item_id ON movement_details(item_id)',
+      );
+      await database.execute(
+        "CREATE INDEX IF NOT EXISTS idx_movements_type ON movements(type)",
+      );
+      await database.execute(
+        "CREATE INDEX IF NOT EXISTS idx_movements_date ON movements(date)",
+      );
+
       await database.connect(new IngexpertPowerSyncBackendConnector());
 
       (window as any).db = database;

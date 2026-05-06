@@ -12,26 +12,35 @@ export const AppSchema = new Schema({
     },
     { trackMetadata: true },
   ),
-  kit_details: new TableV2({
-    kit_id: column.text,
-    item_id: column.text,
-    quantity: column.real,
-  }),
-  movement_details: new TableV2({
-    movement_id: column.text,
-    item_id: column.text,
-    quantity: column.real,
-  }),
-  movements: new TableV2({
-    type: column.text,
-    created_by_id: column.text,
-    destination: column.text,
-    observations: column.text,
-    responsible_delivery_id: column.text,
-    responsible_receipt_id: column.text,
-    date: column.text,
-    project_id: column.text,
-  }),
+  kit_details: new TableV2(
+    {
+      kit_id: column.text,
+      item_id: column.text,
+      quantity: column.real,
+    },
+    { indexes: { kit: ['kit_id'], item: ['item_id'] } },
+  ),
+  movement_details: new TableV2(
+    {
+      movement_id: column.text,
+      item_id: column.text,
+      quantity: column.real,
+    },
+    { indexes: { movement: ['movement_id'], item: ['item_id'] } },
+  ),
+  movements: new TableV2(
+    {
+      type: column.text,
+      created_by_id: column.text,
+      destination: column.text,
+      observations: column.text,
+      responsible_delivery_id: column.text,
+      responsible_receipt_id: column.text,
+      date: column.text,
+      project_id: column.text,
+    },
+    { indexes: { type: ['type'], date: ['date'] } },
+  ),
   projects: new TableV2({
     name: column.text,
     contact: column.text,
