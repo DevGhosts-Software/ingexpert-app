@@ -103,4 +103,5 @@ export interface InventoryTableProps {
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
   onRowClick: (item: InventoryItem) => void;
+  onExportStart?: () => void;
 }

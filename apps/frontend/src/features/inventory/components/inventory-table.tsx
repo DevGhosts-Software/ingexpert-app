@@ -40,6 +40,7 @@ export function InventoryTable({
   sorting,
   onSortingChange,
   onRowClick,
+  onExportStart,
 }: InventoryTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
@@ -224,6 +225,7 @@ export function InventoryTable({
         globalSelectionChecked={globalSelectionState.checked}
         globalSelectionIndeterminate={globalSelectionState.indeterminate}
         onToggleGlobalSelection={handleToggleGlobalSelection}
+        onExportStart={onExportStart}
       />
 
       <div className="rounded-md border overflow-x-auto">

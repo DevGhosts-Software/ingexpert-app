@@ -215,6 +215,7 @@ export default function InventoryPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [isExportRequested, setIsExportRequested] = useState(false);
 
   const sortBy = sorting[0]?.id ?? 'name';
   const sortDirection: 'ASC' | 'DESC' = sorting[0]?.desc ? 'DESC' : 'ASC';
@@ -295,16 +296,18 @@ export default function InventoryPage() {
 
   const exportInventorySql = useMemo(
     () =>
-      buildInventoryQuerySql({
-        search: '',
-        location: 'all',
-        type: 'ALL',
-        sortBy: 'name',
-        sortDirection: 'ASC',
-        pageSize: 1000000,
-        offset: 0,
-      }),
-    [],
+      isExportRequested
+        ? buildInventoryQuerySql({
+            search: '',
+            location: 'all',
+            type: 'ALL',
+            sortBy: 'name',
+            sortDirection: 'ASC',
+            pageSize: 1000000,
+            offset: 0,
+          })
+        : `SELECT id, code, name, location, unit, type, image_url, 0 AS warehouse_inventory, 0 AS onsite_inventory, 0 AS total_inventory FROM items WHERE 1 = 0`,
+    [isExportRequested],
   );
 
   const inventoryQuery = useQuery<InventoryRow>(inventorySql);
@@ -331,19 +334,27 @@ export default function InventoryPage() {
     ORDER BY location ASC
   `);
 
-  const kitsExportQuery = useQuery<KitExportRow>(`
-    SELECT
-      kit.name AS "kitName",
-      kit.code AS "kitCode",
-      component.name AS "componentName",
-      component.code AS "componentCode",
-      kd.quantity,
-      component.unit AS "unit"
-    FROM kit_details kd
-    INNER JOIN items kit ON kit.id = kd.kit_id
-    INNER JOIN items component ON component.id = kd.item_id
-    ORDER BY kit.name, component.name
-  `);
+  const kitsExportSql = useMemo(
+    () =>
+      isExportRequested
+        ? `
+            SELECT
+              kit.name AS "kitName",
+              kit.code AS "kitCode",
+              component.name AS "componentName",
+              component.code AS "componentCode",
+              kd.quantity,
+              component.unit AS "unit"
+            FROM kit_details kd
+            INNER JOIN items kit ON kit.id = kd.kit_id
+            INNER JOIN items component ON component.id = kd.item_id
+            ORDER BY kit.name, component.name
+          `
+        : `SELECT '' AS "kitName", '' AS "kitCode", '' AS "componentName", '' AS "componentCode", 0 AS quantity, '' AS "unit" FROM kit_details WHERE 1 = 0`,
+    [isExportRequested],
+  );
+
+  const kitsExportQuery = useQuery<KitExportRow>(kitsExportSql);
 
   const tableItems = useMemo<InventoryItem[]>(
     () =>
@@ -493,6 +504,7 @@ export default function InventoryPage() {
         onRowClick={handleRowClick}
         exportItems={exportItems}
         exportKitRows={kitExportRows}
+        onExportStart={() => setIsExportRequested(true)}
       />
       <ItemDetailsSheet
         item={selectedItem}

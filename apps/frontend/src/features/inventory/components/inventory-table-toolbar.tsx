@@ -63,6 +63,7 @@ interface InventoryTableToolbarProps {
   globalSelectionChecked: boolean;
   globalSelectionIndeterminate: boolean;
   onToggleGlobalSelection: () => void;
+  onExportStart?: () => void;
 }
 
 export const InventoryTableToolbar = memo(function InventoryTableToolbar({
@@ -83,6 +84,7 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
   globalSelectionChecked,
   globalSelectionIndeterminate,
   onToggleGlobalSelection,
+  onExportStart,
 }: InventoryTableToolbarProps) {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -100,6 +102,12 @@ export const InventoryTableToolbar = memo(function InventoryTableToolbar({
   );
 
   const handleExport = useCallback(async () => {
+    if (exportItems.length === 0 && onExportStart) {
+      onExportStart();
+      toast.info('Cargando datos para exportar. Intenta de nuevo en un momento.');
+      return;
+    }
+
     setIsExporting(true);
     try {
       const TYPE_ES: Record<string, string> = {
