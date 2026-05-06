@@ -2,7 +2,7 @@ import type { AbstractPowerSyncDatabase } from '@powersync/web';
 import { PowerSyncDatabase, WASQLiteOpenFactory } from '@powersync/web';
 import { AppSchema } from './schema';
 
-const POWERSYNC_DB_FILENAME = 'ingexpert-powersync.sqlite';
+const POWERSYNC_DB_FILENAME = 'ingexpert-powersync-v2.sqlite';
 
 let databaseInstance: AbstractPowerSyncDatabase | null = null;
 
